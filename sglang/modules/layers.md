@@ -1,7 +1,7 @@
 ---
 type: module
 project: sglang
-status: verified
+status: stale
 confidence: high
 verified_against: 2026-04-19
 sources:
@@ -206,6 +206,8 @@ flowchart TB
 > **说明**：`srt/sampling/` 目录下 **未** grep 到 `from sglang.srt.layers`（本快照）；采样 wiki 仍应链至顶层 [`layers/sampler.py`](d:\design\sglang\python\sglang\srt\layers\sampler.py)。
 
 ## Notes / Caveats
+
+> [!todo] VERIFY: pin 从 `34fef07a` → `06f32bab`（2026-08-10 increment）后本页未深 verify；文件数量/行号可能漂移。优先对照 [entities/Scheduler.md](../entities/Scheduler.md) / 新模块页。
 
 > [!todo] VERIFY: ~~本工作区 `layers/**/*.py` **Glob 计数为 248**，与既有 wiki 推断的 **252** 不一致；请用上游 commit `34fef07a` 重新对齐。~~
 > **RESOLVED 2026-04-19**: 复测 Glob `d:\design\sglang\python\sglang\srt\layers\**\*.py` = **248**（[d:\design\sglang\python\sglang\srt\layers](d:\design\sglang\python\sglang\srt\layers)）；"252" 为旧 wiki 推断，应以本快照 248 为准。

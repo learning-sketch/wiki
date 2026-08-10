@@ -228,7 +228,8 @@ flowchart TB
 
 ## See also
 
-- [sglang/entities/Scheduler.md](../entities/Scheduler.md) — Scheduler 11 mixin 含本模块 2 个
+- [sglang/entities/Scheduler.md](../entities/Scheduler.md) — Scheduler（HEAD：6 mixin + composition；本模块仍贡献 Decode/Prefill 2 mixin）
+  - > [!warning] CONTRADICTION: 旧表述 “11 mixin 含本模块 2 个” 过时；见 Scheduler.md 2026-08-10 re-ingest。
 - [sglang/entities/TokenizerManager.md](../entities/TokenizerManager.md) — `start_disagg_service` 调用方
 - [sglang/modules/managers.md](managers.md) — managers/disagg_service.py 所属模块
 - [comparison/topics/pd-disaggregation.md](../../comparison/topics/pd-disaggregation.md) — 三家 PD 14 子维度深度对比（**主对照页**）

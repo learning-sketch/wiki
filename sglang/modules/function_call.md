@@ -1,7 +1,7 @@
 ---
 type: module
 project: sglang
-status: verified
+status: stale
 confidence: high
 verified_against: 2026-04-19
 sources:
@@ -214,6 +214,8 @@ flowchart TD
 | DeepSeek 变体 | 代码上 **3** 个类 + **3** 个 CLI 键（v3/v31/v32）；CLI 与类均为三分 |
 
 ## Notes / Caveats
+
+> [!todo] VERIFY: pin 从 `34fef07a` → `06f32bab`（2026-08-10 increment）后本页未深 verify；文件数量/行号可能漂移。优先对照 [entities/Scheduler.md](../entities/Scheduler.md) / 新模块页。
 
 > [!todo] VERIFY: ~~`BaseFormatDetector.detect_and_parse` 标为 `@abstractmethod` 但基类仍带默认实现（[`base_format_detector.py:97-104`](d:\design\sglang\python\sglang\srt\function_call\base_format_detector.py)）；各子类均完整覆盖，实际行为以子类为准。~~
 > **RESOLVED 2026-04-19**: 已逐字核对 [`base_format_detector.py:97-104`](d:\design\sglang\python\sglang\srt\function_call\base_format_detector.py)：`@abstractmethod` 装饰下方法体为 `action = orjson.loads(text); return StreamingParseResult(calls=self.parse_base_json(action, tools))`。这是合法 Python 模式（ABC 抽象方法可有默认实现），由 `class BaseFormatDetector(ABC)`（[base_format_detector.py:26](d:\design\sglang\python\sglang\srt\function_call\base_format_detector.py)）强制子类 override；本目录下 21 个 `*_detector.py` + `JsonArrayParser` 均显式覆盖此方法。

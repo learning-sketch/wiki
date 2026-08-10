@@ -1,7 +1,7 @@
 ---
 type: module
 project: sglang
-status: verified
+status: stale
 confidence: high
 verified_against: 2026-04-19
 sources:
@@ -188,6 +188,8 @@ flowchart LR
 - [`tool_server.py:2`](d:\design\sglang\python\sglang\srt\entrypoints\openai\tool_server.py) SPDX 指向 vLLM 贡献者。
 
 ## Notes / Caveats
+
+> [!todo] VERIFY: pin 从 `34fef07a` → `06f32bab`（2026-08-10 increment）后本页未深 verify；文件数量/行号可能漂移。优先对照 [entities/Scheduler.md](../entities/Scheduler.md) / 新模块页。
 
 > [!warning] CONTRADICTION: ~~[`EmbeddingResponse.model`](d:\design\sglang\python\sglang\srt\entrypoints\openai\serving_embedding.py) 使用 `model_path` 字段填充（[`serving_embedding.py:202-204`](d:\design\sglang\python\sglang\srt\entrypoints\openai\serving_embedding.py)），与「始终等于 `--served-model-name`」的直觉可能不一致，需与 `TokenizerManager.served_model_name` 行为交叉验证。~~
 >

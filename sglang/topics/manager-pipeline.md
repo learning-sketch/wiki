@@ -1,7 +1,7 @@
 ---
 type: topic
 project: sglang
-status: verified
+status: stale
 confidence: high
 verified_against: 2026-04-17
 sources:
@@ -187,3 +187,7 @@ else:
 - [entities/TokenizerManager.md](../entities/TokenizerManager.md)
 - [entities/Scheduler.md](../entities/Scheduler.md)
 - [vllm/topics/multiproc-ipc.md](../../vllm/topics/multiproc-ipc.md)（vLLM 同等视角的对比）
+
+## Notes / Caveats
+
+> [!todo] VERIFY: pin 从 `34fef07a` → `06f32bab`（2026-08-10 increment）后本页未深 verify；文件数量/行号可能漂移。优先对照 [entities/Scheduler.md](../entities/Scheduler.md) / 新模块页。

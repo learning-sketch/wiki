@@ -1,7 +1,7 @@
 ---
 type: module
 project: sglang
-status: verified
+status: stale
 confidence: high
 verified_against: 2026-04-19
 sources:
@@ -256,6 +256,8 @@ flowchart TB
 详细 9 子维度对比见 [comparison/topics/speculative-decoding.md](../../comparison/topics/speculative-decoding.md)；维度索引 [comparison/dimensions.md §dim-spec](../../comparison/dimensions.md)。
 
 ## Notes / Caveats
+
+> [!todo] VERIFY: pin 从 `34fef07a` → `06f32bab`（2026-08-10 increment）后本页未深 verify；文件数量/行号可能漂移。优先对照 [entities/Scheduler.md](../entities/Scheduler.md) / 新模块页。
 
 > [!todo] VERIFY: ~~[comparison/topics/speculative-decoding.md](../../comparison/topics/speculative-decoding.md) TL;DR 写"`srt/speculative/` 24 文件"——本轮 Glob 实测 **27** `.py`。可能上游已新增 `*_v2.py`（V2 系列：`eagle_worker_v2.py` / `multi_layer_eagle_worker_v2.py` / `standalone_worker_v2.py` / `eagle_info_v2.py`）+ DFLASH 全家族。建议下次 verify pass 主动 sync compare 页数字。~~
 > **RESOLVED 2026-04-19**: 实测仍为 **27** `.py` — 23 个根目录 + 2 个 `triton_ops/` + 2 个 `cpp_ngram/`（[`d:\design\sglang\python\sglang\srt\speculative\`](d:\design\sglang\python\sglang\srt\speculative)）。**[comparison/topics/speculative-decoding.md L80](d:\design\wiki\comparison\topics\speculative-decoding.md) 的 "24 文件" 数字已过期**，留待 lint pass / 该 compare 页下次 verify 主动 sync（本次 verify 任务范围为 6 个模块页，不修改 comparison 页）。

@@ -1,7 +1,7 @@
 ---
 type: topic
 project: sglang
-status: draft
+status: stale
 confidence: high
 verified_against: 2026-04-19
 sources:
@@ -201,6 +201,8 @@ SGLang spec 验证调用 **2 个独立 sgl-kernel CUDA 算子**：
 DFlash 校验：[`_handle_speculative_decoding` L3134-3160](d:\design\sglang\python\sglang\srt\server_args.py) 强制 `dp_attention=False` / `pp_size=1` / `speculative_num_steps = 1` / `speculative_eagle_topk = 1`、必须设 draft model。DFlash 与 NGRAM 在 [`create_worker` L70-72 / L113-116](d:\design\sglang\python\sglang\srt\speculative\spec_info.py) 强制 disable overlap（V2 路径会 raise）。
 
 ## Notes / Caveats
+
+> [!todo] VERIFY: pin 从 `34fef07a` → `06f32bab`（2026-08-10 increment）后本页未深 verify；文件数量/行号可能漂移。优先对照 [entities/Scheduler.md](../entities/Scheduler.md) / 新模块页。
 
 > [!warning] CONTRADICTION（cross-page lint follow-up pending）
 > [comparison/topics/speculative-decoding.md L80](d:\design\wiki\comparison\topics\speculative-decoding.md) 写"SGLang **24** 文件 / vLLM **12** 文件"；本轮 Glob 实测 **SGLang 27 .py**（23 根 + 2 `triton_ops/` + 2 `cpp_ngram/`）、**vLLM 11 .py**（[`d:\design\vllm\vllm\v1\spec_decode\`](d:\design\vllm\vllm\v1\spec_decode)）。L439 `vllm/topics/spec-decode-eagle.md` 链接描述同样写"12"。

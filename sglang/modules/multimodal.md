@@ -1,7 +1,7 @@
 ---
 type: module
 project: sglang
-status: verified
+status: stale
 confidence: high
 verified_against: 2026-04-19
 sources:
@@ -212,6 +212,8 @@ flowchart TD
 | 模态枚举 | **3**：`IMAGE`、`VIDEO`、`AUDIO`（[`base_processor.py:67-76`](d:\design\sglang\python\sglang\srt\multimodal\processors\base_processor.py)） |
 
 ## Notes / Caveats
+
+> [!todo] VERIFY: pin 从 `34fef07a` → `06f32bab`（2026-08-10 increment）后本页未深 verify；文件数量/行号可能漂移。优先对照 [entities/Scheduler.md](../entities/Scheduler.md) / 新模块页。
 
 > [!todo] VERIFY: ~~是否存在名为 `MMEmbeddingCache` 的类：当前在 `srt/` grep **无** 该标识符；缓存相关见 [`MultiModalStaticCache`](d:\design\sglang\python\sglang\srt\mem_cache\multimodal_cache.py) 与 [`EmbeddingCacheController`](d:\design\sglang\python\sglang\srt\mem_cache\storage\mooncake_store\embedding_cache_controller.py)。~~
 >
