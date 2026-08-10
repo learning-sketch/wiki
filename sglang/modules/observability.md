@@ -193,7 +193,7 @@ flowchart TB
 |---|---|
 | **SGLang（本页）** | 指标集中在 [`observability/metrics_collector.py`](d:\design\sglang\python\sglang\srt\observability\metrics_collector.py)；与调度强耦合的 mixin [`scheduler_metrics_mixin.py`](d:\design\sglang\python\sglang\srt\observability\scheduler_metrics_mixin.py)；OTel 在 [`trace.py`](d:\design\sglang\python\sglang\srt\observability\trace.py) |
 | **vLLM** | [`vllm/v1/metrics/`](d:\design\vllm\vllm\v1\metrics)（如 [`prometheus.py`](d:\design\vllm\vllm\v1\metrics\prometheus.py) 的 `setup_multiprocess_prometheus`）—— synthesis: 同样使用 `PROMETHEUS_MULTIPROC_DIR` + 多进程收集器模式 |
-| **MindIE** | 本工作区 [`wiki/mindie/modules`](d:\design\wiki\mindie\modules) 下无独立 `metrics` 模块页；MindIE 通常有独立监控导出管线 |
+| **MindIE** | 本工作区 `mindie/` wiki 已删除（2026-08-10）；MindIE 通常有独立监控导出管线 |
 
 ## Notes / Caveats
 

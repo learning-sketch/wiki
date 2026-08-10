@@ -30,8 +30,6 @@ sources:
 related:
   - comparison/index.md
   - comparison/dimensions.md
-  - mindie/topics/kv-cache.md
-  - mindie/entities/BlockSpaceManager.md
   - vllm/entities/KVCacheManager.md
   - sglang/modules/mem_cache.md
   - sglang/topics/kv-cache.md
@@ -49,7 +47,7 @@ related:
 | **实现语言** | C++ 块管理 + Python tensor pool | 全 Python | 全 Python（含 C++ radix tree 加速版） |
 | **抽象层数** | 3（C++ BlockSpaceManager + Python KVCachePool + MemPool） | 3（KVCacheManager / Coordinator / BlockPool） | 4（PrefixCache / Allocator / KVCache / HiCache Storage） |
 | **Prefix cache 数据结构** | C++ 块 hash（见 `GetRankedHashValues`） | Python `BlockHashToBlockMap` | radix tree（[radix_cache.py](d:\design\sglang\python\sglang\srt\mem_cache\radix_cache.py)）+ HiRadixCache 二层 |
-| **多 attention 类型抽象** | `BlockManagerType` **5 枚举槽位**（`SELFATTN`/`LWDSELFATTN`/`COMPOSITE`/`REQUESTSINGLE`/`REQUESTSLIDINGWINDOW`），但 **工厂仅产 2 种**（`SELFATTN`/`LWDSELFATTN`）+ 1 独立类（`RequestSingleBlockManager`，未接工厂）；详 [entities/BlockSpaceManager.md](../../mindie/entities/BlockSpaceManager.md) | `KVCacheSpec` 多态 + 多种 spec 子类 | 独立 `*KVPool` class（MHA / MLA / NSA / DoubleSparse / Hybrid） |
+| **多 attention 类型抽象** | `BlockManagerType` **5 枚举槽位**（`SELFATTN`/`LWDSELFATTN`/`COMPOSITE`/`REQUESTSINGLE`/`REQUESTSLIDINGWINDOW`），但 **工厂仅产 2 种**（`SELFATTN`/`LWDSELFATTN`）+ 1 独立类（`RequestSingleBlockManager`，未接工厂）；详 `entities/BlockSpaceManager.md`（已删） | `KVCacheSpec` 多态 + 多种 spec 子类 | 独立 `*KVPool` class（MHA / MLA / NSA / DoubleSparse / Hybrid） |
 | **Hybrid（混合 cache 类型）** | `COMPOSITEBLOCKMANAGER` 枚举存在但 **类未实现**（`subManagers` 字段保留为 future use） | `HybridKVCacheCoordinator` + `verify_and_split_kv_cache_groups` | `hybrid_cache/hybrid_pool_assembler.py` |
 | **Eviction 策略** | LRU（C++ `AccessAllblocksInSeq`） | LRU（`FreeKVCacheBlockQueue` 双向链表） | **7 种**（LRU / LFU / FIFO / MRU / FILO / Priority / SLRU） |
 | **多层存储 (HiCache / KV store)** | `MemPool` 2 后端（memcache / mooncake） | `KVConnector` 钩子（PD 分离用） | **HiCache 一等公民，7 后端**（mooncake / nixl / hf3fs / lmcache / aibrix / eic / simm） |
@@ -234,8 +232,6 @@ flowchart TB
 ## See also
 - [comparison/dimensions.md](../dimensions.md) §dim-kv / §dim-prefix-cache
 - [comparison/topics/prefix-cache.md](prefix-cache.md) — 子页：三家 prefix cache 深度对比（11 子维度），本页 §2 Prefix cache 数据结构对比的深化
-- [mindie/topics/kv-cache.md](../../mindie/topics/kv-cache.md)
-- [mindie/topics/prefix-cache.md](../../mindie/topics/prefix-cache.md)
 - [vllm/entities/KVCacheManager.md](../../vllm/entities/KVCacheManager.md)
 - [vllm/topics/prefix-cache.md](../../vllm/topics/prefix-cache.md)
 - [sglang/modules/mem_cache.md](../../sglang/modules/mem_cache.md)

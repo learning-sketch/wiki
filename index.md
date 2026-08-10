@@ -11,7 +11,6 @@ related:
   - log.md
   - source-versions.md
   - comparison/index.md
-  - mindie/index.md
   - vllm/index.md
   - sglang/index.md
 ---
@@ -27,7 +26,7 @@ related:
 
 | 项目 | Overview | Index | 主代码根 |
 |---|---|---|---|
-| **MindIE-LLM** | [overview](mindie/overview.md) | [index](mindie/index.md) | [d:\design\MindIE-LLM\mindie_llm\](d:\design\MindIE-LLM\mindie_llm) |
+| **MindIE-LLM** | N/A（`mindie/` wiki 已删除 2026-08-10） | N/A | [d:\design\MindIE-LLM\mindie_llm\](d:\design\MindIE-LLM\mindie_llm) |
 | **vLLM** | [overview](vllm/overview.md) | [index](vllm/index.md) | [d:\design\vllm\vllm\](d:\design\vllm\vllm) |
 | **SGLang** | [overview](sglang/overview.md) | [index](sglang/index.md) | [d:\design\sglang\python\sglang\srt\](d:\design\sglang\python\sglang\srt) |
 
@@ -58,7 +57,7 @@ related:
 | KV 传输 | **覆盖在 PD 分离对比 §3** → [comparison/topics/pd-disaggregation.md](comparison/topics/pd-disaggregation.md) |
 | **Speculative Decoding** | **DONE** → [comparison/topics/speculative-decoding.md](comparison/topics/speculative-decoding.md) |
 | **Prefix Cache** | **DONE** → [comparison/topics/prefix-cache.md](comparison/topics/prefix-cache.md)（11 子维度，**hash table vs trie 三家两派**：MindIE C++ `unordered_map`+Python plugin 双段 / vLLM Python `BlockHashToBlockMap` 单段 / SGLang `RadixCache` trie + 8+ 实现工厂分支） |
-| Compilation / Graph capture | TODO（MindIE 已有 [aclgraph-pp.md](mindie/topics/aclgraph-pp.md)） |
+| Compilation / Graph capture | TODO |
 | Sampling | TODO |
 | LoRA | TODO |
 | 量化 | TODO |
@@ -76,16 +75,16 @@ related:
 
 | 关键词 | MindIE | vLLM | SGLang |
 |---|---|---|---|
-| 生成层入口 / Engine | [mindie/modules/text_generator.md](mindie/modules/text_generator.md) | [vllm/modules/engine.md](vllm/modules/engine.md) | [sglang/modules/entrypoints.md](sglang/modules/entrypoints.md) |
-| Executor / 调度进程 | [mindie/modules/runtime_model_runner.md](mindie/modules/runtime_model_runner.md) | [vllm/modules/executor.md](vllm/modules/executor.md) | [sglang/modules/managers.md](sglang/modules/managers.md) |
-| 主对象（顶层 class） | [mindie/entities/Generator.md](mindie/entities/Generator.md) | [vllm/entities/LLMEngine.md](vllm/entities/LLMEngine.md) / [AsyncLLM.md](vllm/entities/AsyncLLM.md) | [sglang/entities/Engine.md](sglang/entities/Engine.md) |
-| 模型执行器 / Worker | [mindie/entities/ModelRunner.md](mindie/entities/ModelRunner.md) | [vllm/entities/GPUWorker.md](vllm/entities/GPUWorker.md) + [GPUModelRunner.md](vllm/entities/GPUModelRunner.md) | [sglang/entities/TpModelWorker.md](sglang/entities/TpModelWorker.md) |
-| **Scheduler** | [mindie/entities/BatchScheduler.md](mindie/entities/BatchScheduler.md) (C++) | [vllm/entities/Scheduler.md](vllm/entities/Scheduler.md) | [sglang/entities/Scheduler.md](sglang/entities/Scheduler.md) |
-| **KV Cache** | [mindie/topics/kv-cache.md](mindie/topics/kv-cache.md) (C++ + Python) | [vllm/entities/KVCacheManager.md](vllm/entities/KVCacheManager.md) | [sglang/modules/mem_cache.md](sglang/modules/mem_cache.md) (62 .py) |
-| Request lifecycle | [mindie/topics/request-lifecycle.md](mindie/topics/request-lifecycle.md) | [vllm/topics/request-lifecycle.md](vllm/topics/request-lifecycle.md) | [sglang/topics/request-lifecycle.md](sglang/topics/request-lifecycle.md) |
-| Multi-process IPC / Pipeline | [mindie/topics/request-lifecycle.md](mindie/topics/request-lifecycle.md)（含 PD 链路） | [vllm/topics/multiproc-ipc.md](vllm/topics/multiproc-ipc.md) | [sglang/topics/manager-pipeline.md](sglang/topics/manager-pipeline.md) |
-| **Pipeline Parallel** | [mindie/topics/aclgraph-pp.md](mindie/topics/aclgraph-pp.md) | TODO | TODO |
-| **PD 分离** | [mindie/topics/request-lifecycle.md](mindie/topics/request-lifecycle.md) §PD 分离链路 | [comparison/topics/pd-disaggregation.md](comparison/topics/pd-disaggregation.md) §1 vLLM 分支（KVConnector_V1 + entrypoints/serve/disagg） | [comparison/topics/pd-disaggregation.md](comparison/topics/pd-disaggregation.md) §1 SGLang 分支（disaggregation/ + scheduler 两 mixin） |
+| 生成层入口 / Engine | N/A（wiki removed） | [vllm/modules/engine.md](vllm/modules/engine.md) | [sglang/modules/entrypoints.md](sglang/modules/entrypoints.md) |
+| Executor / 调度进程 | N/A（wiki removed） | [vllm/modules/executor.md](vllm/modules/executor.md) | [sglang/modules/managers.md](sglang/modules/managers.md) |
+| 主对象（顶层 class） | N/A（wiki removed） | [vllm/entities/LLMEngine.md](vllm/entities/LLMEngine.md) / [AsyncLLM.md](vllm/entities/AsyncLLM.md) | [sglang/entities/Engine.md](sglang/entities/Engine.md) |
+| 模型执行器 / Worker | N/A（wiki removed） | [vllm/entities/GPUWorker.md](vllm/entities/GPUWorker.md) + [GPUModelRunner.md](vllm/entities/GPUModelRunner.md) | [sglang/entities/TpModelWorker.md](sglang/entities/TpModelWorker.md) |
+| **Scheduler** | N/A（wiki removed） | [vllm/entities/Scheduler.md](vllm/entities/Scheduler.md) | [sglang/entities/Scheduler.md](sglang/entities/Scheduler.md) |
+| **KV Cache** | N/A（wiki removed） | [vllm/entities/KVCacheManager.md](vllm/entities/KVCacheManager.md) | [sglang/modules/mem_cache.md](sglang/modules/mem_cache.md) (62 .py) |
+| Request lifecycle | N/A（wiki removed） | [vllm/topics/request-lifecycle.md](vllm/topics/request-lifecycle.md) | [sglang/topics/request-lifecycle.md](sglang/topics/request-lifecycle.md) |
+| Multi-process IPC / Pipeline | N/A（wiki removed） | [vllm/topics/multiproc-ipc.md](vllm/topics/multiproc-ipc.md) | [sglang/topics/manager-pipeline.md](sglang/topics/manager-pipeline.md) |
+| **Pipeline Parallel** | N/A（wiki removed） | TODO | TODO |
+| **PD 分离** | N/A（wiki removed；见对比页 MindIE 列源码锚点） | [comparison/topics/pd-disaggregation.md](comparison/topics/pd-disaggregation.md) §1 vLLM 分支（KVConnector_V1 + entrypoints/serve/disagg） | [comparison/topics/pd-disaggregation.md](comparison/topics/pd-disaggregation.md) §1 SGLang 分支（disaggregation/ + scheduler 两 mixin） |
 
 ---
 

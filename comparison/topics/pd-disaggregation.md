@@ -59,12 +59,6 @@ related:
   - comparison/dimensions.md
   - comparison/topics/scheduler.md
   - comparison/topics/kv-cache.md
-  - mindie/topics/request-lifecycle.md
-  - mindie/topics/kv-cache.md
-  - mindie/entities/Generator.md
-  - mindie/entities/SeparateDeploymentEngine.md
-  - mindie/entities/LlmEngine.md
-  - mindie/topics/connector.md
   - vllm/topics/request-lifecycle.md
   - vllm/topics/kv-connector.md
   - sglang/topics/request-lifecycle.md
@@ -244,7 +238,7 @@ flowchart TB
 | RDMA 调优 | `kv_rdma_sl` (0-7) / `kv_rdma_tc` (0-255) / `kv_trans_timeout` / `kv_link_timeout` | [separate_deployment_engine.py:269-305](d:\design\MindIE-LLM\mindie_llm\text_generator\utils\separate_deployment_engine.py) |
 | Mooncake (持久化层) | `mempool/mooncake_mempool.py` —— **独立的 mooncake transfer engine**（`get_global_te` 单例 + `transfer_engine.initialize(hostname, "P2PHANDSHAKE", "ascend", device_name)`），与 LLMDataDist 是**两套独立传输栈** | [mempool/mooncake_mempool.py:32-51, 252-271, 292-313](d:\design\MindIE-LLM\mindie_llm\text_generator\mempool\mooncake_mempool.py) |
 
-> [x] RESOLVED (2026-04-18): `_ascend_transport_put` / `_ascend_transport_get` **不走 LLMDataDist**——它们直接调 `mooncake.store.batch_put_from_ascend` / `batch_get_into_ascend`（[mooncake_mempool.py:264, 307](d:\design\MindIE-LLM\mindie_llm\text_generator\mempool\mooncake_mempool.py)）。两条路径完全分开：`SeparateDeploymentEngine` → LLMDataDist；`MooncakeMempool` → 自己的 mooncake transfer engine（虽然底层都是 RDMA + Ascend NPU，但 init / 单例 / API 完全独立）。所以 SDE 与 Mooncake mempool 可以**同时启用**做不同事：SDE 走直传，Mempool 做持久化（详见 [mindie/topics/kv-cache.md §"MemPool 的两种用途"](../../mindie/topics/kv-cache.md)）。
+> [x] RESOLVED (2026-04-18): `_ascend_transport_put` / `_ascend_transport_get` **不走 LLMDataDist**——它们直接调 `mooncake.store.batch_put_from_ascend` / `batch_get_into_ascend`（[mooncake_mempool.py:264, 307](d:\design\MindIE-LLM\mindie_llm\text_generator\mempool\mooncake_mempool.py)）。两条路径完全分开：`SeparateDeploymentEngine` → LLMDataDist；`MooncakeMempool` → 自己的 mooncake transfer engine（虽然底层都是 RDMA + Ascend NPU，但 init / 单例 / API 完全独立）。所以 SDE 与 Mooncake mempool 可以**同时启用**做不同事：SDE 走直传，Mempool 做持久化（详见 `mindie/topics/kv-cache.md`（已删））。
 
 ### vLLM: KVConnector V1（**14 个 v1 backend，已 verified**）
 
@@ -557,7 +551,7 @@ SGLang 还有 `DISAGGREGATION_TEST_FAILURE_PROB` env（[utils.py:44](d:\design\s
 
 | 项目 | chunked prefill | spec decoding |
 |---|---|---|
-| MindIE | splitfuse plugin 与 PD 兼容（plugin 体系正交，但具体细节 TODO） | mtp / la / memory_decoding plugin 与 PD 兼容（详见 [mindie/topics/aclgraph-pp.md](../../mindie/topics/aclgraph-pp.md)） |
+| MindIE | splitfuse plugin 与 PD 兼容（plugin 体系正交，但具体细节 TODO） | mtp / la / memory_decoding plugin 与 PD 兼容（详见 `mindie/topics/aclgraph-pp.md`（已删）） |
 | vLLM | scheduler 内 `num_computed_tokens` / `num_tokens_with_spec` 抽象统一处理 | spec decoding 的 hidden states 由 connector 自管 |
 | SGLang | **`send_kv_chunk(req, last_chunk, end_idx)`** + `process_prefill_chunk` 显式分块（[prefill.py:540, 579, 722-749, 750-828](d:\design\sglang\python\sglang\srt\disaggregation\prefill.py)） | **专门的 metadata buffer 字段**：`output_topk_p` / `output_topk_index` / `output_hidden_states` 提前拷贝 + 透传（[utils.py:182-191](d:\design\sglang\python\sglang\srt\disaggregation\utils.py)） |
 
@@ -592,7 +586,7 @@ SGLang 还有 `DISAGGREGATION_TEST_FAILURE_PROB` env（[utils.py:44](d:\design\s
 2. **从 SGLang 借鉴 metadata buffer**：[utils.py:135-296](d:\design\sglang\python\sglang\srt\disaggregation\utils.py) 把"P 端首 token / logprobs / hidden_states"打包到一块预分配 buffer，**D 端一次 RDMA 拉走**——MindIE 当前是把首 token 跟 KV 分开走（首 token 在 RPC 返回，KV 走 LLMDataDist），有两次延迟。
 3. **从 SGLang 借鉴跨 TP rank 状态同步**：`poll_and_all_reduce` 用 `dist.ReduceOp.MIN`（[utils.py:47-60](d:\design\sglang\python\sglang\srt\disaggregation\utils.py)）—— MindIE 当前每个 rank 独立判断 link 状态，可能存在 partial transfer 导致的故障难定位。
 4. **从 vLLM 借鉴块级失败粒度**：`get_block_ids_with_load_errors`（[base.py:381-399](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\base.py)）—— MindIE 目前 `pull_kv` 失败就整 req abort，浪费已成功 pull 的块。
-5. **关注 chunked prefill + PD**：SGLang 的 `send_kv_chunk(last_chunk=...)`（[prefill.py:540, 750-...](d:\design\sglang\python\sglang\srt\disaggregation\prefill.py)）支持 P 端边算边送，能压低 D 端等待时间。MindIE 的 splitfuse plugin 与 PD 是否做到 layerwise / chunkwise 流水，需要确认（参考 [mindie/topics/aclgraph-pp.md](../../mindie/topics/aclgraph-pp.md) 设计文档）。
+5. **关注 chunked prefill + PD**：SGLang 的 `send_kv_chunk(last_chunk=...)`（[prefill.py:540, 750-...](d:\design\sglang\python\sglang\srt\disaggregation\prefill.py)）支持 P 端边算边送，能压低 D 端等待时间。MindIE 的 splitfuse plugin 与 PD 是否做到 layerwise / chunkwise 流水，需要确认（参考 `mindie/topics/aclgraph-pp.md`（已删） 设计文档）。
 6. **角色弹性**：MindIE 的 `switch_role` 已有，**比 vLLM/SGLang 都领先**——但要确认 `BlockSpaceManager` 能否运行时在 P/D mode 间切换（目前 C++ 的 `BlockManagerType` 是 init 时定的）。
 7. **`LinkResult` 状态可视化**：MindIE 已经有 4 态机（[separate_deployment_engine.py:36-92](d:\design\MindIE-LLM\mindie_llm\text_generator\utils\separate_deployment_engine.py)），可考虑暴露到 metrics / 日志，便于压测时定位"链路阻塞 vs KV 传输慢"。
 
@@ -638,10 +632,5 @@ SGLang 还有 `DISAGGREGATION_TEST_FAILURE_PROB` env（[utils.py:44](d:\design\s
 - [comparison/topics/scheduler.md §6 PD 分离支持](scheduler.md)
 - [comparison/topics/kv-cache.md §7 PD 分离原生支持](kv-cache.md)
 - [vllm/topics/kv-connector.md](../../vllm/topics/kv-connector.md)（**vLLM 14 backend + v1/kv_offload/ + entrypoints/serve/disagg/ 单家深度**，与本页 §3 vLLM 行互链）
-- [mindie/topics/request-lifecycle.md §PD 分离链路](../../mindie/topics/request-lifecycle.md)
-- [mindie/topics/kv-cache.md §3 MemPool 跨节点 KV store](../../mindie/topics/kv-cache.md)
-- [mindie/topics/aclgraph-pp.md](../../mindie/topics/aclgraph-pp.md)（PP + aclgraph 与 PD 的协同）
-- [mindie/topics/connector.md](../../mindie/topics/connector.md)（MindIE connector / KV_TRANSFER 路径）
-- [mindie/entities/Generator.md](../../mindie/entities/Generator.md)（`PDInterface` + `Generator`）
 - [sglang/modules/mem_cache.md](../../sglang/modules/mem_cache.md)（HiCache 7 backend 与 vLLM 14 backend 跨家对照）
 - [comparison/index.md](../index.md)

@@ -31,12 +31,6 @@ related:
   - sglang/entities/Engine.md
   - sglang/entities/DataParallelController.md
   - sglang/topics/manager-pipeline.md
-  - mindie/entities/LlmEngine.md
-  - mindie/entities/PluginManager.md
-  - mindie/entities/Generator.md
-  - mindie/entities/SeparateDeploymentEngine.md
-  - mindie/topics/connector.md
-  - mindie/modules/connector.md
 ---
 
 # Cross-project Comparison: Multi-process IPC
@@ -124,12 +118,12 @@ flowchart TB
 
 > **无 MessageQueue / 共享内存 / TensorIPC** —— SGLang 全 IPC 路径走 ZMQ + pickle。
 
-### MindIE 1 类（详 [mindie/modules/connector.md](../../mindie/modules/connector.md) / [mindie/topics/connector.md](../../mindie/topics/connector.md)）
+### MindIE 1 类（详 `mindie/modules/connector.md`（已删） / `mindie/topics/connector.md`（已删））
 
 | 类别 | 用途 | 关键锚点 |
 |---|---|---|
 | **共享内存 + protobuf**（4 + 1 channel） | generator ↔ connector backend 子进程之间 | `connector/shared_mem_communication.py:50` 等；C++ 端 [`src/include/utils/shared_memory.h`](d:\design\MindIE-LLM\src\include\utils\shared_memory.h) |
-| Channel 名 + 大小（**严格双向对齐**） | `execute` (32 MB) / `shared_sync_link` (0.5 MB) / `transfer` (0.5 MB) / `recover_command` (0.5 MB) + 1 reserved | [`mindie/modules/connector.md` §3 hidden cross-reference grep 表](../../mindie/modules/connector.md) |
+| Channel 名 + 大小（**严格双向对齐**） | `execute` (32 MB) / `shared_sync_link` (0.5 MB) / `transfer` (0.5 MB) / `recover_command` (0.5 MB) + 1 reserved | ``mindie/modules/connector.md` §3 hidden cross-reference grep 表`（已删） |
 | **进程 fork 协议** | C++ `Executor::BuildConnectorCommand` 拼进程启动参数 → fork connector backend | [`src/executor/executor.cpp:794-809`](d:\design\MindIE-LLM\src\executor\executor.cpp) |
 
 > **无独立 ZMQ / MessageQueue 共享内存框架** —— 自研协议，与 Mooncake / LLMDataDist 的传输栈正交（后者用于 KV 跨节点，不属"engine 内 IPC"）。
@@ -281,7 +275,7 @@ flowchart TB
 
 > [!todo] VERIFY: SGLang DP 路径下 TM ↔ DPC 的 ZMQ 端口是否与非 DP 路径的 TM ↔ Scheduler 共用？需对照 [`server_args.py PortArgs`](d:\design\sglang\python\sglang\srt\server_args.py) 完整字段表澄清"`scheduler_input_ipc_name` 在 dp_size==1 vs dp_size>1 的双重身份"。
 
-> [!todo] VERIFY: MindIE 4 channel 之外是否还有"reserved"通道（grep 显示 4+1 但没读到第 5 个的具体用途）—— [mindie/modules/connector.md `[!todo] VERIFY` 1](../../mindie/modules/connector.md) 同条。
+> [!todo] VERIFY: MindIE 4 channel 之外是否还有"reserved"通道（grep 显示 4+1 但没读到第 5 个的具体用途）——原 `mindie/modules/connector.md` wiki 页已删除，同条待重新 verify。
 
 > [!warning] CONTRADICTION: §5 "vLLM death 检测最 robust"是 synthesis 评价。从 lines of code 看 vLLM 多得多（~700 行 vs SGLang ~200 行），但 SGLang 是否更可靠是另一维度（如 watchdog 漏检率）；本页未做实测对比。
 
@@ -299,12 +293,6 @@ flowchart TB
 - [comparison/topics/pd-disaggregation.md](pd-disaggregation.md)（PD 跨节点 KV 传输属另一层 IPC）
 
 ### MindIE 端
-- [mindie/modules/connector.md](../../mindie/modules/connector.md)
-- [mindie/topics/connector.md](../../mindie/topics/connector.md)
-- [mindie/entities/SeparateDeploymentEngine.md](../../mindie/entities/SeparateDeploymentEngine.md)
-- [mindie/entities/Generator.md](../../mindie/entities/Generator.md)
-- [mindie/entities/PluginManager.md](../../mindie/entities/PluginManager.md)
-- [mindie/entities/LlmEngine.md](../../mindie/entities/LlmEngine.md)
 
 ### vLLM 端
 - [vllm/topics/multiproc-ipc.md](../../vllm/topics/multiproc-ipc.md)（最详细的 vLLM IPC 全景图）

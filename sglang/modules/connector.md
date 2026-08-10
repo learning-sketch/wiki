@@ -24,7 +24,6 @@ related:
   - sglang/modules/weight_sync.md
   - sglang/modules/checkpoint_engine.md
   - sglang/modules/model_loader.md
-  - mindie/modules/connector.md
   - vllm/topics/kv-connector.md
   - comparison/dimensions.md
 ---
@@ -43,7 +42,7 @@ related:
 >
 > | 子系统 | 实质 | wiki 页 |
 > |---|---|---|
-> | **MindIE `connector/`** | 独立 PD 子进程（KV 通道 + reorganize） | [mindie/modules/connector.md](../../mindie/modules/connector.md) |
+> | **MindIE `connector/`** | 独立 PD 子进程（KV 通道 + reorganize） | `mindie/modules/connector.md`（已删） |
 > | **vLLM `kv_connector/v1/`** | KV cache 跨节点传输 14 backend | [vllm/topics/kv-connector.md](../../vllm/topics/kv-connector.md) |
 > | **SGLang `disaggregation/`** | KV PD 跨节点传输 5 backend | [sglang/modules/disaggregation.md](disaggregation.md) |
 > | **SGLang `connector/`（本模块）** | **模型权重 / 配置文件**远程加载 3 backend + serde | 本页 |
@@ -190,7 +189,7 @@ flowchart LR
 
 | 项目 / 路径 | 实质 | wiki 锚点 |
 |---|---|---|
-| MindIE `connector/` | 独立 PD 子进程（KV 通道 + reorganize） | [mindie/modules/connector.md](../../mindie/modules/connector.md) |
+| MindIE `connector/` | 独立 PD 子进程（KV 通道 + reorganize） | `mindie/modules/connector.md`（已删） |
 | vLLM `kv_connector/v1/` | **KV cache** 跨节点传输，14 backend | [vllm/topics/kv-connector.md](../../vllm/topics/kv-connector.md) |
 | SGLang `disaggregation/` | **KV** PD 跨节点传输，5 backend | [sglang/modules/disaggregation.md](disaggregation.md) |
 | **SGLang `connector/`（本模块）** | **模型权重 / 配置文件** 远程加载：Redis（张量 KV + serde）/ S3（文件 + safetensors）/ RemoteInstance（NCCL 进程组） | 本页 |
@@ -221,6 +220,5 @@ flowchart LR
 
 - [sglang/modules/disaggregation.md](disaggregation.md) — SGLang **KV PD 传输**模块（与本页**非同一概念**）
 - [sglang/modules/managers.md](managers.md)
-- [mindie/modules/connector.md](../../mindie/modules/connector.md) — MindIE PD 子进程（命名陷阱对照）
 - [vllm/topics/kv-connector.md](../../vllm/topics/kv-connector.md) — vLLM KV transfer 14 backend（命名陷阱对照）
 - [comparison/dimensions.md](../../comparison/dimensions.md)

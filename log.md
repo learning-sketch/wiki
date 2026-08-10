@@ -693,7 +693,7 @@
 
 1. **`topics/moe.md` / `topics/speculative.md` body 反向链接 asymmetric**：两个 topic 页 link out 到 module 页（modules/eplb.md / modules/elastic_ep.md / modules/layers.md / modules/batch_overlap.md / modules/speculative.md），但 module 页 body 未反向 link 到 topic 页。**建议**：在 module 页的 `## Architecture` 或 `## Notes` 段加 `> 跨子系统视角见 [topics/moe.md](...)` 一行。Fix #3 已修 frontmatter `related:`，但 body backlink 待补。
 2. **`[!warning] CONTRADICTION` 50% 是永久 NAMING-TRAP / 设计 caveat**（30 retained 中 ~20 个）：包括 `disaggregation/ ≠ vLLM kv_connector/` / `model_executor ≠ vLLM Executor` / `update_config.py ≠ CLI merge` / 4 同名 tokenizer / SGMV vs BGMV 等。**建议 schema-update**：引入 `> [!info] NAMING-TRAP` 或 `[!info] DESIGN-CAVEAT` marker 类型，与 actionable `CONTRADICTION` 区分；这是 modules verify pass 已沉淀过的 lessons learned 第 2 项的延续。
-3. **`verified_against` 字段格式漂移**（7 页含 `(verify pass: <date>)` 注解）：[speculative-decoding.md](comparison/topics/speculative-decoding.md) / [vllm/entities/AsyncLLM.md](vllm/entities/AsyncLLM.md) / LLMEngine / GPUWorker / GPUModelRunner / EngineCoreClient / [mindie/topics/moe.md](mindie/topics/moe.md)。§3 接受但解析不友好。**建议 schema-update**：移到独立 `verify_pass:` 字段。
+3. **`verified_against` 字段格式漂移**（7 页含 `(verify pass: <date>)` 注解）：[speculative-decoding.md](comparison/topics/speculative-decoding.md) / [vllm/entities/AsyncLLM.md](vllm/entities/AsyncLLM.md) / LLMEngine / GPUWorker / GPUModelRunner / EngineCoreClient / `mindie/topics/moe.md`（已删）。§3 接受但解析不友好。**建议 schema-update**：移到独立 `verify_pass:` 字段。
 4. **vLLM `index.md` 6 处 "DEMO" status 非 §3 enum**：`engine.md` / `executor.md` / `request-lifecycle.md` / `multiproc-ipc.md` / `EngineCore.md` / `MultiprocExecutor.md` 用 `DEMO` 标记。§3 `status: draft|verified|stale` 未注册 DEMO。**建议**：要么注册 enum，要么升 verified（这些页都已经过 verify pass）。
 5. **comparison/index.md merge markers 不一致**：L55 "Continuous batching" / L58 "KV 传输" 用自然语言合并标记（"已合并到 chunked-prefill" / "覆盖在 PD 分离对比 §3"），未来如机器解析表格会 fragile。**建议**：加专用 state 列。
 
@@ -830,11 +830,11 @@
 |---|---|
 | [vllm/entities/EngineCore.md](vllm/entities/EngineCore.md) | comparison/topics/scheduler-architecture.md |
 | [vllm/entities/Scheduler.md](vllm/entities/Scheduler.md) | comparison/topics/scheduler-architecture.md |
-| [mindie/entities/BatchScheduler.md](mindie/entities/BatchScheduler.md) | comparison/topics/scheduler-architecture.md |
-| [mindie/entities/LlmEngine.md](mindie/entities/LlmEngine.md) | comparison/topics/scheduler-architecture.md |
+| `mindie/entities/BatchScheduler.md`（已删） | comparison/topics/scheduler-architecture.md |
+| `mindie/entities/LlmEngine.md`（已删） | comparison/topics/scheduler-architecture.md |
 | [comparison/topics/scheduler.md](comparison/topics/scheduler.md) | comparison/topics/scheduler-architecture.md（兄弟页互链） |
 | [comparison/topics/engine-architecture.md](comparison/topics/engine-architecture.md) | comparison/topics/scheduler-architecture.md |
-| [mindie/topics/moe.md](mindie/topics/moe.md) | comparison/topics/moe.md |
+| `mindie/topics/moe.md`（已删） | comparison/topics/moe.md |
 
 **净变化**
 
@@ -887,4 +887,24 @@
 7. **被动等待**：三仓 HEAD 都未动
 
 ---
+
+
+## [2026-08-10] lint-fix | cross | remove mindie wiki + neutralize dead links
+
+**触发**：用户删除 `mindie/` 目录后要求清理死链。
+
+**变更**
+1. 删除整个 `mindie/` 子树（22 页）——见同分支先前 commit。
+2. 活跃 wiki 页（排除 `log-archive/`，archive 不可重写）中所有指向 `mindie/**` 的 markdown 链接与 `related:` 条目已清除或标为 N/A。
+3. 入口页同步：
+   - [README.md](README.md)：去掉 mindie 入口与目录树
+   - [index.md](index.md)：MindIE 项目行 / 关键词表改为 `N/A（wiki removed）`
+   - [comparison/index.md](comparison/index.md)：项目跳转去掉 mindie
+   - [AGENTS.md](AGENTS.md)：§8/§10/§11/§12 示例与映射注明 `wiki/mindie/` 已删
+   - [source-versions.md](source-versions.md)：working-tree caveat 去掉失效 wiki 链接
+4. comparison / vllm / sglang 页的 See also / related / inline wiki 回链已清理；**对比页 MindIE 列的源码锚点（`d:\design\MindIE-LLM\...`）保留**。
+
+**未改**
+- `log-archive/log-00N.md`（§11 不可重写；历史死链保留）
+- 对比表三列结构（MindIE | vLLM | SGLang）——仅去掉失效 wiki 页链接
 

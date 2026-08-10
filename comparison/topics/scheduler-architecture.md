@@ -48,10 +48,6 @@ related:
   - vllm/entities/Scheduler.md
   - vllm/entities/EngineCore.md
   - vllm/entities/EngineCoreClient.md
-  - mindie/entities/BatchScheduler.md
-  - mindie/entities/Generator.md
-  - mindie/entities/LlmEngine.md
-  - mindie/entities/PluginManager.md
 ---
 
 # Cross-project Comparison: Scheduler 架构（架构分解视角）
@@ -125,7 +121,7 @@ related:
 
 | 维度 | MindIE | vLLM | SGLang |
 |---|---|---|---|
-| **主循环入口** | C++ [`SchedulerThreadEntry`](d:\design\MindIE-LLM\src\engine\llm_engine.cpp)（[L457-696](d:\design\MindIE-LLM\src\engine\llm_engine.cpp)）单一 8 步 while 循环（详 [LlmEngine.md §主循环全貌](../../mindie/entities/LlmEngine.md)） | Python [`EngineCore.run_busy_loop`](d:\design\vllm\vllm\v1\engine\core.py)（[L1160-1168](d:\design\vllm\vllm\v1\engine\core.py)）调 `step_fn` | Python [`dispatch_event_loop`](d:\design\sglang\python\sglang\srt\managers\scheduler.py)（[L3628-3654](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）按 mode 分派 |
+| **主循环入口** | C++ [`SchedulerThreadEntry`](d:\design\MindIE-LLM\src\engine\llm_engine.cpp)（[L457-696](d:\design\MindIE-LLM\src\engine\llm_engine.cpp)）单一 8 步 while 循环（详 `LlmEngine.md §主循环全貌`（已删）） | Python [`EngineCore.run_busy_loop`](d:\design\vllm\vllm\v1\engine\core.py)（[L1160-1168](d:\design\vllm\vllm\v1\engine\core.py)）调 `step_fn` | Python [`dispatch_event_loop`](d:\design\sglang\python\sglang\srt\managers\scheduler.py)（[L3628-3654](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）按 mode 分派 |
 | **Mode 数量（运行时分支）** | **1 主循环 + 内部分支**：`role_ ∈ {P,D,Flex,PnD}` × `layerwiseDisaggregated` × `distributedEnable` × dummy/real；分支散落 8 步内（如 `ScheduleExecTransfer` 仅 P/D 跑，[llm_engine.cpp:485-488, 698-737](d:\design\MindIE-LLM\src\engine\llm_engine.cpp)） | **2 种 step_fn**：`step` (普通) vs `step_with_batch_queue` (PP 流水)，由 `max_concurrent_batches > 1` 决定（[core.py:187-193, 212-214](d:\design\vllm\vllm\v1\engine\core.py)） | **8 路独立 event_loop**：`event_loop_normal` / `_overlap` / `_pdmux` / `_pp` / `_normal_disagg_prefill` / `_overlap_disagg_prefill` / `_normal_disagg_decode` / `_overlap_disagg_decode` / `_pp_disagg_prefill` / `_pp_disagg_decode`（共 10 方法，dispatch 表 8 路命中）|
 | **分派语义在哪定义** | 散落 [llm_engine.cpp](d:\design\MindIE-LLM\src\engine\llm_engine.cpp) 多处 if/else（[L219, 232, 254, 262, 307, 461, 627-629](d:\design\MindIE-LLM\src\engine\llm_engine.cpp)） | `EngineCore.__init__` 末尾一次性绑定 `step_fn` ([core.py:212-214](d:\design\vllm\vllm\v1\engine\core.py))，运行时不切 | 集中在 `dispatch_event_loop`，按 `disaggregation_mode × pp_size × enable_pdmux × enable_overlap` 4 维 truth table 路由 |
 | **重复代码问题** | C++ 8 步内部 if/else **不重复** 但单函数 240 行 | `step` 与 `step_with_batch_queue` 部分重复（schedule + grammar_bitmask） | **重复显著**：`event_loop_pp` 复刻 `event_loop_normal` 全 step（[scheduler_pp_mixin.py:79-145](d:\design\sglang\python\sglang\srt\managers\scheduler_pp_mixin.py)）；`event_loop_pdmux` 同样复刻（[multiplex/multiplexing_mixin.py:96-119](d:\design\sglang\python\sglang\srt\multiplex\multiplexing_mixin.py)）；详 [scheduler-mixins.md Chain 5](../../sglang/topics/scheduler-mixins.md) |
@@ -255,11 +251,6 @@ related:
 
 ### MindIE 端
 
-- [mindie/entities/BatchScheduler.md](../../mindie/entities/BatchScheduler.md)（C++ `Scheduler` + 15 Policy）
-- [mindie/entities/Generator.md](../../mindie/entities/Generator.md)（Python 装配栈）
-- [mindie/entities/LlmEngine.md](../../mindie/entities/LlmEngine.md)（C++ engine + 8 步主循环）
-- [mindie/entities/PluginManager.md](../../mindie/entities/PluginManager.md)（Python plugin chain + forward_thread）
-- [mindie/modules/text_generator.md](../../mindie/modules/text_generator.md)
 
 ### vLLM 端
 

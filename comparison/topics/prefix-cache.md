@@ -56,10 +56,6 @@ related:
   - comparison/dimensions.md
   - comparison/topics/kv-cache.md
   - comparison/topics/pd-disaggregation.md
-  - mindie/topics/prefix-cache.md
-  - mindie/topics/kv-cache.md
-  - mindie/entities/BlockSpaceManager.md
-  - mindie/entities/PluginManager.md
   - vllm/topics/prefix-cache.md
   - vllm/topics/kv-connector.md
   - vllm/entities/KVCacheManager.md
@@ -137,7 +133,7 @@ flowchart TB
 | 工厂 PREFIXCACHING / HASHLESS 二选 | [self_attn_block_manager.cpp:43-63](d:\design\MindIE-LLM\src\block_manager\self_attn_block_manager.cpp) |
 | Python 插件入口 | [prefix_cache_plugin.py:51-409](d:\design\MindIE-LLM\mindie_llm\text_generator\plugins\prefix_cache\prefix_cache_plugin.py) |
 
-详见 [mindie/topics/prefix-cache.md §C++ 块层](../../mindie/topics/prefix-cache.md#c-块层hash-table--lru不是-trie)。
+详见 `mindie/topics/prefix-cache.md#c-块层hash-table--lru不是-trie`（已删）。
 
 ### vLLM — 全 Python hash table 一段
 
@@ -270,7 +266,7 @@ flowchart TB
 >
 > - **vLLM 单一抽象 + 多态扫**：`HybridKVCacheCoordinator` 把多种 attention 视为"多个 KV 组"，统一用 fixed-point 收敛算法找公共最长命中；FullAttn 排第一以提供更紧上界。**适合"少数标准模型"场景**（Gemma3 5:1 sw:full、LLaMA4 3:1 local:full）。
 > - **SGLang 多实现并存**：`SWARadixCache` / `MambaRadixCache` / `HiMambaRadixCache` 各自独立实现 prefix 语义，互不干扰。**适合"多种新型模型并行支持"场景**（Mamba2 / linear attention / NSA 等）。
-> - **MindIE 占位但未实现**：`COMPOSITEBLOCKMANAGER` 枚举存在，但 `subManagers` 字段保留为 future use（详 [BlockSpaceManager.md](../../mindie/entities/BlockSpaceManager.md)）；当前实战靠**单一 BlockManager 类型 + 配置层选择**。
+> - **MindIE 占位但未实现**：`COMPOSITEBLOCKMANAGER` 枚举存在，但 `subManagers` 字段保留为 future use（详 `BlockSpaceManager.md`（已删））；当前实战靠**单一 BlockManager 类型 + 配置层选择**。
 >
 > 当上游模型加新 attention 类型（如 RWKV / Linear Attention 变体）：vLLM 加新 `KVCacheSpec` 子类（轻量），SGLang 加新 `BasePrefixCache` 子类（中量但隔离），MindIE 改 C++ enum + 写新 `BlockSpaceManager` 实现（重量）。
 
@@ -393,7 +389,7 @@ flowchart TB
 
 > [!todo] VERIFY: vLLM `HybridKVCacheCoordinator.find_longest_cache_hit` 在**复杂多 attn 类型**（>2 group）+ `use_eagle` 下的 EAGLE spiral block dropping 问题（[kv_cache_coordinator.py:487-496](d:\design\vllm\vllm\v1\core\kv_cache_coordinator.py) 注释引 issue [#32802](https://github.com/vllm-project/vllm/issues/32802)）—— 如果未来三家都要支持 spec decode + 3+ attention type 模型，这个 corner case 是 vLLM 当前的已知 gap。
 
-> [!warning] CONTRADICTION（综合层）：MindIE 用户文档"PD 分离场景下，**仅 P 节点需要开启**该特性"（[docs:24](d:\design\MindIE-LLM\docs\zh\user_guide\feature\prefix_cache.md)）—— 与 D 节点要走 `GetRemoteComputedBlockIds` + `MemPool.LookUp` 才能享受 KV pool 命中**矛盾**；精确含义已在 [mindie/topics/prefix-cache.md `[!warning]`](../../mindie/topics/prefix-cache.md#notes--caveats) 第 1 条澄清（"P 端开启本地 hash table 主索引，KV pool 二级存储两端都要 enable"）。**本对比页 sync 此结论**。
+> [!warning] CONTRADICTION（综合层）：MindIE 用户文档"PD 分离场景下，**仅 P 节点需要开启**该特性"（[docs:24](d:\design\MindIE-LLM\docs\zh\user_guide\feature\prefix_cache.md)）—— 与 D 节点要走 `GetRemoteComputedBlockIds` + `MemPool.LookUp` 才能享受 KV pool 命中**矛盾**；精确含义："P 端开启本地 hash table 主索引，KV pool 二级存储两端都要 enable"（原 `mindie/topics/prefix-cache.md` wiki 页已删除）。**本对比页 sync 此结论**。
 
 > [!warning] CONTRADICTION（命名陷阱）：[comparison/topics/kv-cache.md §3 Eviction 策略表](kv-cache.md#3-eviction-策略) 写"SGLang 7 种"，本页澄清 SGLang **CLI 默认仅暴露 3 种** `{lru, lfu, slru}`（[server_args.py:206](d:\design\sglang\python\sglang\srt\server_args.py)），其余 4 种（FIFO/MRU/FILO/Priority）是 `evict_policy.py` 注册类但未默认走 CLI（需调 `add_radix_eviction_policy_choices` 扩展）。**两页表述不一致由本页消化**——**精确说**："SGLang 注册 7 类策略但 CLI 默认 3 种，可扩展"。
 
@@ -408,10 +404,7 @@ flowchart TB
 - [comparison/dimensions.md §dim-prefix-cache](../dimensions.md) — 跨项目维度
 - [comparison/topics/kv-cache.md](kv-cache.md) — 父级 KV cache 对比页（本页是 §dim-kv 中 prefix cache cell 的深化）
 - [comparison/topics/pd-disaggregation.md](pd-disaggregation.md) — PD 跨节点 KV 复用（与本页 §6 / §11 互补）
-- [mindie/topics/prefix-cache.md](../../mindie/topics/prefix-cache.md) — MindIE prefix cache 详细页
 - [vllm/topics/prefix-cache.md](../../vllm/topics/prefix-cache.md) — vLLM prefix cache 详细页
 - [vllm/topics/kv-connector.md](../../vllm/topics/kv-connector.md) — vLLM 14 backend KV connector（与本页 §6 互补）
 - [sglang/modules/mem_cache.md](../../sglang/modules/mem_cache.md) — SGLang mem_cache 模块全景（含 HiCache 7 后端）
-- [mindie/entities/BlockSpaceManager.md](../../mindie/entities/BlockSpaceManager.md) — MindIE C++ 块管理器接口
-- [mindie/entities/PluginManager.md](../../mindie/entities/PluginManager.md) §MemPool 与 prefix cache — Python 插件编排
 - [vllm/entities/KVCacheManager.md](../../vllm/entities/KVCacheManager.md) — vLLM Manager / Coordinator / BlockPool 实体

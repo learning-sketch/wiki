@@ -147,4 +147,3 @@ SGLang 的核心架构：**3 个独立进程 + ZMQ pipeline**：
 ## See also
 - [sglang/index.md](index.md) — 项目内目录
 - [comparison/index.md](../comparison/index.md)
-- [mindie/overview.md](../mindie/overview.md), [vllm/overview.md](../vllm/overview.md)

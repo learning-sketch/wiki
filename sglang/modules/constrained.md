@@ -23,7 +23,6 @@ related:
   - sglang/modules/sampling.md
   - sglang/modules/function_call.md
   - sglang/modules/managers.md
-  - mindie/topics/structured-output.md
 ---
 
 # `srt/constrained` — 语法约束解码（多后端 + 异步编译 + bitmask）
@@ -224,7 +223,7 @@ flowchart TB
 
 | 项目 | 等价模块 | 后端可插拔 | jump-forward | bitmask 内核 |
 |---|---|---|---|---|
-| **MindIE-LLM** | `mindie_llm/text_generator/.../structured_output/` 等 | 见 [mindie/topics/structured-output.md](../../mindie/topics/structured-output.md) | ❌ | C++/Ascend 路径 |
+| **MindIE-LLM** | `mindie_llm/text_generator/.../structured_output/` 等 | 见 `mindie/topics/structured-output.md`（已删） | ❌ | C++/Ascend 路径 |
 | **vLLM** | `vllm/v1/structured_output/` | xgrammar / outlines / lm-format-enforcer 等 | ❌（无 LMSYS-style FSM jump-forward） | xgrammar 自带 + 部分 Triton |
 | **SGLang**（本模块） | `srt/constrained/` | **4 选 1 + Reasoner wrap**（实际 8 种实例形态） | ✅ outlines 独享 | sgl-kernel `apply_token_bitmask_inplace_cuda` + xgrammar Triton fallback |
 
@@ -260,5 +259,4 @@ flowchart TB
 - [sglang/modules/sampling.md](sampling.md) — bitmask 在 logits 上的应用位置
 - [sglang/modules/function_call.md](function_call.md) — 间接消费方（产出 `structural_tag` / `json_schema` 约束）
 - [sglang/modules/managers.md](managers.md) — `Scheduler.grammar_manager` 集成点
-- [mindie/topics/structured-output.md](../../mindie/topics/structured-output.md) — MindIE 对偶（cross compare 候选种子）
 - [LMSYS Compressed FSM blog](https://lmsys.org/blog/2024-02-05-compressed-fsm/) — outlines jump-forward 的设计文档

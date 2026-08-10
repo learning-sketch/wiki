@@ -62,7 +62,6 @@ related:
   - vllm/topics/request-lifecycle.md
   - comparison/topics/pd-disaggregation.md
   - comparison/dimensions.md
-  - mindie/topics/connector.md
   - sglang/modules/mem_cache.md
 ---
 
@@ -783,5 +782,4 @@ NIXL worker 端实现：在 `recv_complete` 失败时 `self._invalid_block_ids.u
 - [vllm/topics/request-lifecycle.md](request-lifecycle.md)
 - [comparison/topics/pd-disaggregation.md](../../comparison/topics/pd-disaggregation.md)（§3 KV 传输栈 vLLM 列与本页互链）
 - [comparison/dimensions.md §dim-kv-transfer](../../comparison/dimensions.md)
-- [mindie/topics/connector.md](../../mindie/topics/connector.md)（对位的 MindIE connector / KV_TRANSFER 路径）
 - [sglang/modules/mem_cache.md](../../sglang/modules/mem_cache.md)（HiCache 7 backend 与本页 14 backend 对照）

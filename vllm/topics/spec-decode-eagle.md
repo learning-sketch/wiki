@@ -40,7 +40,6 @@ related:
   - comparison/topics/speculative-decoding.md
   - comparison/topics/async-schedule.md
   - comparison/dimensions.md
-  - mindie/topics/speculative.md
 ---
 
 # Speculative Decoding（v1/spec_decode/ 全家 + EagleSpeculator GPU 路径）
@@ -574,5 +573,4 @@ E2E 路径 `d:\design\vllm\tests\v1\e2e\spec_decode\`：
 - [comparison/topics/async-schedule.md §7 spec decode + structured output 三家协议对照](../../comparison/topics/async-schedule.md)（与本页 §5 / §9 对应）
 - [comparison/dimensions.md §dim-spec](../../comparison/dimensions.md)
 - [vllm/entities/Scheduler.md](../entities/Scheduler.md)（spec 接入点：`use_eagle` flag、`num_lookahead_tokens`、`scheduled_spec_decode_tokens` dict、`AsyncScheduler` placeholder 协议）
-- [mindie/topics/speculative.md](../../mindie/topics/speculative.md)（MindIE 端 3 plugin + `MtpWorker` + C++ `speculationGamma` placeholder——对照"vLLM 怎么把同样的语义拆到三层"）
 - 官方文档（vLLM）：[docs/features/speculative_decoding/README.md](d:\design\vllm\docs\features\speculative_decoding\README.md), [eagle.md](d:\design\vllm\docs\features\speculative_decoding\eagle.md), [mtp.md](d:\design\vllm\docs\features\speculative_decoding\mtp.md), [n_gram.md](d:\design\vllm\docs\features\speculative_decoding\n_gram.md), [parallel_draft_model.md](d:\design\vllm\docs\features\speculative_decoding\parallel_draft_model.md)（DFlash + parallel）, [suffix.md](d:\design\vllm\docs\features\speculative_decoding\suffix.md), [draft_model.md](d:\design\vllm\docs\features\speculative_decoding\draft_model.md)
