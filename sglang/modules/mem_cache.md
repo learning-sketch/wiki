@@ -277,12 +277,7 @@ classDiagram
 - 一组 KV pool（`MHATokenToKVPool` / `MLATokenToKVPool` 等，按 model 配置）
 - `ReqToTokenPool`
 
-> [!todo] VERIFY: ~~`init_cache_with_memory_pool` 内部具体的工厂逻辑（按 model_config.attention_type / dtype / FP4 / NSA / DoubleSparse / Hybrid 等条件分支）。~~
-> **RESOLVED 2026-04-19**: 工厂在 [`Scheduler.init_cache_with_memory_pool`](d:\design\sglang\python\sglang\srt\managers\scheduler.py)（[L754-L915](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）按以下优先级 **10 分支** 构造 `tree_cache`（即 10 种可被实例化的 `tree_cache` 类）：①`disable_radix_cache + chunked_prefill` → `ChunkCache` 或 `SWAChunkCache`（L819-827，含 2 个独立类）→ ②`SGLANG_EXPERIMENTAL_CPP_RADIX_TREE` env → `RadixCacheCpp`（L830-835）→ ③`enable_hierarchical_cache` + `is_hybrid_ssm` → `HiMambaRadixCache`，否则 `HiRadixCache`（L836-853，含 2 个独立类）→ ④`SGLANG_ENABLE_UNIFIED_RADIX_TREE` env → `UnifiedRadixCache`（L854-868）→ ⑤`is_hybrid_swa` → `SWARadixCache`（L869-872）→ ⑥`is_hybrid_ssm` → `MambaRadixCache`（L873-876）→ ⑦`enable_lmcache` → `LMCRadixCache`（L877-888）→ ⑧默认 `RadixCache`（L890）。`enable_streaming_session` 再外裹 `SessionAwareCache`（L892-893）。KV pool 与 allocator 由 `tp_worker.get_memory_pool()` 提供（L779-781），不在本函数内分支。
->
-> **完整 10 类清单**：`ChunkCache` / `SWAChunkCache` / `RadixCacheCpp` / `HiMambaRadixCache` / `HiRadixCache` / `UnifiedRadixCache` / `SWARadixCache` / `MambaRadixCache` / `LMCRadixCache` / `RadixCache`。详 [sglang/topics/kv-cache.md §10 个 `tree_cache` 实现矩阵](../topics/kv-cache.md)。
->
-> **NOTE 2026-04-19 lint fix**: 8 → 10 branches stale 修复（含 `SWARadixCache` / `MambaRadixCache` / `LMCRadixCache` 3 子类显式列出；之前的 8 是按"if/elif 顶层分支"计，实际可被构造的 `tree_cache` 类数为 10）。
+> ~~[!todo] VERIFY: `init_cache_with_memory_pool` 10 分支工厂…~~ **SUPERSEDED 2026-08-10**：`init_cache_with_memory_pool` 已移除；现为 [`kv_cache_builder.build_kv_cache`](d:\design\sglang\python\sglang\srt\mem_cache\kv_cache_builder.py) + [`registry.default_radix_cache_factory`](d:\design\sglang\python\sglang\srt\mem_cache\registry.py)。`HiMambaRadixCache`/`SessionAwareCache` 删除；hybrid 汇入 `UnifiedRadixCache`；新增 FlexKV。详 [topics/kv-cache.md](../topics/kv-cache.md)。
 
 ## 与 vLLM 对比的设计差异（synthesis）
 
@@ -297,6 +292,8 @@ classDiagram
 ## Notes / Caveats
 
 > [!todo] VERIFY: pin 从 `34fef07a` → `06f32bab`（2026-08-10 increment）后本页未深 verify；文件数量/行号可能漂移。优先对照 [entities/Scheduler.md](../entities/Scheduler.md) / 新模块页。
+
+> [!warning] CONTRADICTION: 本页仍描述 `init_cache_with_memory_pool` / 62 文件 / 单体 `allocator.py` / 7 HiCache 后端。HEAD `06f32bab` 已改为 [`kv_cache_builder.build_kv_cache`](d:\design\sglang\python\sglang\srt\mem_cache\kv_cache_builder.py) + [`registry.create_tree_cache`](d:\design\sglang\python\sglang\srt\mem_cache\registry.py)、**116** `.py`、`allocator/` 包、**9** 个 storage 注册名；`HiMambaRadixCache`/`session_aware_cache` 已删。权威工厂矩阵见 [topics/kv-cache.md](../topics/kv-cache.md)（re-ingest 2026-08-10）。
 > [!todo] VERIFY: ~~`unified_cache_components/` 与 `unified_radix_cache.py` 的关系（疑是新一代统一接口，旧 RadixCache 在迁移）。~~
 > **RESOLVED 2026-04-19**: `unified_cache_components/` 提供 `FullComponent` / `SWAComponent` / `MambaComponent` / `TreeComponent` 等组件（[unified_radix_cache.py L31-L41 import](d:\design\sglang\python\sglang\srt\mem_cache\unified_radix_cache.py)），由 `UnifiedRadixCache(BasePrefixCache)` 组合 `tree_components` 元组（FULL + 可选 SWA/MAMBA）。**触发**：env `SGLANG_ENABLE_UNIFIED_RADIX_TREE`（[scheduler.py L854-L868](d:\design\sglang\python\sglang\srt\managers\scheduler.py)），优先级位于 hierarchical/HiCache 之后、`SWARadixCache`/`MambaRadixCache` 之前——确认是新一代统一接口，旧多个 RadixCache 子类按 env 显式切换，**未默认启用**。
 > [!todo] VERIFY: ~~`multimodal_cache.py` 与各 entrypoint 的串联（多模态 encoder 输出 cache）。~~
@@ -307,6 +304,6 @@ classDiagram
 ## See also
 - [entities/Scheduler.md](../entities/Scheduler.md)
 - [topics/request-lifecycle.md](../topics/request-lifecycle.md)
-- [topics/kv-cache.md](../topics/kv-cache.md) — SGLang KV cache 全景（§10 个 `tree_cache` 实现矩阵 = `Scheduler.init_cache_with_memory_pool` 工厂详解）
+- [topics/kv-cache.md](../topics/kv-cache.md) — SGLang KV cache 全景（`kv_cache_builder` + `registry` 工厂矩阵，re-ingest 2026-08-10）
 - [comparison/topics/kv-cache.md](../../comparison/topics/kv-cache.md)
 - [comparison/topics/prefix-cache.md](../../comparison/topics/prefix-cache.md) — 三家 prefix cache 深度对比（SGLang `RadixCache` trie 派 + 10 实现工厂分支详解）

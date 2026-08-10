@@ -119,7 +119,7 @@ related:
 | **Manager 模式 + ZMQ pipeline** | [topics/manager-pipeline.md](topics/manager-pipeline.md) | **DONE** |
 | **Scheduler mixin / composition 拆解** | [topics/scheduler-mixins.md](topics/scheduler-mixins.md) | **DONE**（re-ingest 2026-08-10 / HEAD `06f32bab`：MRO **6 mixin**（Decode/Prefill/Multiplex/PP/Dllm/MlxOverlap）+ `scheduler_components/` 19 模块 composition；前 Output/Weights/Profiler/Metrics/RuntimeChecker/DPAttn → 组合对象） |
 | **PD 分离 多后端**（NIXL/Mooncake/MORI/Ascend/Fake） | [topics/pd-disaggregation.md](topics/pd-disaggregation.md) | **DONE** (P1)（5 backend 3 层继承树 `Base*→Common*→具体` + 2 mixin（prefill 9 方法 / decode 6 方法 不对称）+ EPD encode 三段 + PD-Disagg vs PD-Mux 互斥本质 + 4 维度对偶矩阵） |
-| **KV cache**（unified / paged / radix / sparsity / hierarchical / mamba / SWA / LMC） | [topics/kv-cache.md](topics/kv-cache.md) | **DONE** (P1)（**10** RadixCache 变体（**纠正 mem_cache.md 8 → 10**）+ `BasePrefixCache` 子类树 + `UnifiedRadixCache` 4-component 重构进行中 + HiCache `init_load_back/ready_to_load_host_cache` 仅 `Hi*RadixCache` 实现 + multimodal embedding cache 3 子图正交 + 8 触发器→10 分支 不一一对应） |
+| **KV cache**（unified / paged / radix / sparsity / hierarchical / mamba / SWA / LMC） | [topics/kv-cache.md](topics/kv-cache.md) | **DONE**（re-ingest 2026-08-10 / HEAD `06f32bab`：工厂迁至 `kv_cache_builder`+`registry`；hybrid/DSA+Hi → `UnifiedRadixCache`；`HiMamba`/`session_aware` 已删；HiCache storage **9** 注册名；FlexKV；`StreamingSession`；allocator 分包；与 `kv_canary` attach） |
 | Continuous batching / chunked prefill | `topics/continuous-batching.md` | TODO |
 | **MoE**（dispatch/combine, EPLB, Elastic EP, TBO/SBO, sgl-kernel 绑定） | [topics/moe.md](topics/moe.md) | **DONE** |
 | DP attention | `topics/dp-attention.md` | TODO |

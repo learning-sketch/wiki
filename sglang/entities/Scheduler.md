@@ -350,4 +350,6 @@ flowchart TB
 - [topics/request-lifecycle.md](../topics/request-lifecycle.md)
 - [topics/scheduler-mixins.md](../topics/scheduler-mixins.md) — **DONE**（re-ingest 2026-08-10：6 mixin + `scheduler_components/`）
 - [topics/pd-disaggregation.md](../topics/pd-disaggregation.md)
+- [topics/kv-cache.md](../topics/kv-cache.md) — `build_kv_cache` / `registry` 工厂矩阵（re-ingest 2026-08-10）
+- [modules/mem_cache.md](../modules/mem_cache.md) — mem_cache 模块全景（stale；以 kv-cache topic 为准）
 - [comparison/topics/scheduler-architecture.md](../../comparison/topics/scheduler-architecture.md)

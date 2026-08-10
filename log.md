@@ -933,3 +933,35 @@
 **Lessons**
 - 跨 ~4 个月 / 4k+ commits 时，§12 应先做**顶层包 inventory + 核心 entity re-ingest**，其余标 stale，避免假 verified。
 
+
+## [2026-08-10] ingest | sglang topics kv-cache | re-ingest against HEAD 06f32bab
+
+**触发**：用户 `ingest sglang topics kv-cache`。
+
+**范围（源）**
+- 主链：`managers/scheduler.py:516+` → `mem_cache/kv_cache_builder.py` → `mem_cache/registry.py`
+- 抽象 / 实现：`base_prefix_cache`、`allocator/`、`radix_*`、`hiradix`、`unified_*`、`chunk_cache`、`pure_swa_*`、`storage/{lmcache,flexkv}`、`hicache_storage`、`backend_factory`、`session/streaming_session`、`multimodal_cache`、`evict_policy`、`environ`/`server_args`
+
+**重大漂移（相对旧页）**
+1. `Scheduler.init_cache_with_memory_pool` **已删除** → `kv_cache_builder.build_kv_cache` + `registry.create_tree_cache`
+2. `HiMambaRadixCache` / `session_aware_cache.py` / `unified_cache_components/` **已删**
+3. hybrid SWA/SSM (+ hierarchical/DSA) 默认汇入 **`UnifiedRadixCache`**；`SWARadixCache`/`MambaRadixCache` 类仍在但工厂 0 构造
+4. `StreamingSession` 迁 `session/`；HiCache storage 注册名 **9**；新增 FlexKV；`allocator.py` → `allocator/` 包
+5. `kv_canary.attach_radix_cache(tree_cache)` 新协作点
+
+**页面**
+- 重写 [sglang/topics/kv-cache.md](sglang/topics/kv-cache.md)（`status:verified`，`verified_against:2026-08-10`）
+- [sglang/index.md](sglang/index.md) topics 行更新
+- [sglang/modules/mem_cache.md](sglang/modules/mem_cache.md) 加 CONTRADICTION + SUPERSEDED 旧 10-branch RESOLVED
+- [sglang/entities/Scheduler.md](sglang/entities/Scheduler.md) See also 回链
+
+**Hidden cross-ref**
+- C++：`cpp_radix_tree/` + `RadixCacheCpp`；`HiMamba` 全树 0
+- 协作：Scheduler / TpWorker / kv_canary / session / platforms / Mooncake…
+- 测试：storage 内 `test_simm` / `test_mooncake_store` / aibrix unit_test
+- docs：`hicache_design.mdx` / `session_radix_cache.mdx` 等
+
+**未做**
+- 未整页 re-ingest `modules/mem_cache.md`（仍 stale）
+- 未批量更新 `comparison/topics/{kv-cache,prefix-cache}.md` 单元格
+
