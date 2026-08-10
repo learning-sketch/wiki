@@ -3,10 +3,11 @@ type: module
 project: sglang
 status: verified
 confidence: high
-verified_against: 2026-04-19
+verified_against: 2026-08-10
 sources:
   - d:\design\sglang\python\sglang\srt\managers
   - d:\design\sglang\python\sglang\srt\managers\scheduler.py
+  - d:\design\sglang\python\sglang\srt\managers\scheduler_components\
   - d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py
   - d:\design\sglang\python\sglang\srt\managers\detokenizer_manager.py
   - d:\design\sglang\python\sglang\srt\managers\tp_worker.py
@@ -37,11 +38,11 @@ related:
 # `srt/managers` — Managers module (核心进程层)
 
 ## Summary
-synthesis: `srt/managers` 是 SGLang **进程级管理**的核心，定义了 `TokenizerManager` / `Scheduler` / `DetokenizerManager` / `TpModelWorker` / `DataParallelController` 等核心组件。最复杂的是 `Scheduler`，本身用 **11 个 mixin** 拼装（精确 class 定义见 [scheduler.py:317-329](d:\design\sglang\python\sglang\srt\managers\scheduler.py)，详见本页 §"Scheduler 的 11 个 mixin"）；连辅助类（`SchedulerInputBlocker`, `SchedulerRecvSkipper` 等独立文件）一起共 32 个 .py。
+synthesis: `srt/managers` 是 SGLang **进程级管理**的核心，定义了 `TokenizerManager` / `Scheduler` / `DetokenizerManager` / `TpModelWorker` / `DataParallelController` 等核心组件。HEAD `06f32bab` 上 `Scheduler` 为 **6 个职责 mixin + 条件性 `SchedulerMlxOverlapMixin`**，原先 Output/Weights/Profiler/Metrics/RuntimeChecker/DPAttn 等已迁到 [`scheduler_components/`](d:\design\sglang\python\sglang\srt\managers\scheduler_components) **组合对象**（权威页：[entities/Scheduler.md](../entities/Scheduler.md)）。目录下共 **49** 个 `.py`（含 `scheduler_components/` 内模块）。
 
 ## Sources
-- 模块目录：[d:\design\sglang\python\sglang\srt\managers\](d:\design\sglang\python\sglang\srt\managers)（32 .py）
-- 关键 7 文件：[scheduler.py](d:\design\sglang\python\sglang\srt\managers\scheduler.py)（3700+ 行）、[tokenizer_manager.py](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)（2700+ 行）、[detokenizer_manager.py](d:\design\sglang\python\sglang\srt\managers\detokenizer_manager.py)、[tp_worker.py](d:\design\sglang\python\sglang\srt\managers\tp_worker.py)、[schedule_policy.py](d:\design\sglang\python\sglang\srt\managers\schedule_policy.py)、[schedule_batch.py](d:\design\sglang\python\sglang\srt\managers\schedule_batch.py)、[data_parallel_controller.py](d:\design\sglang\python\sglang\srt\managers\data_parallel_controller.py)
+- 模块目录：[d:\design\sglang\python\sglang\srt\managers\](d:\design\sglang\python\sglang\srt\managers)（49 `.py`，含 `scheduler_components/`）
+- 关键文件：[scheduler.py](d:\design\sglang\python\sglang\srt\managers\scheduler.py)（~5046 行）、[scheduler_components/](d:\design\sglang\python\sglang\srt\managers\scheduler_components)、[tokenizer_manager.py](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)（~3644 行）、[detokenizer_manager.py](d:\design\sglang\python\sglang\srt\managers\detokenizer_manager.py)、[tp_worker.py](d:\design\sglang\python\sglang\srt\managers\tp_worker.py)、[schedule_policy.py](d:\design\sglang\python\sglang\srt\managers\schedule_policy.py)、[schedule_batch.py](d:\design\sglang\python\sglang\srt\managers\schedule_batch.py)、[data_parallel_controller.py](d:\design\sglang\python\sglang\srt\managers\data_parallel_controller.py)
 
 ## 文件分组
 
@@ -54,61 +55,65 @@ synthesis: `srt/managers` 是 SGLang **进程级管理**的核心，定义了 `T
 
 详见 [topics/manager-pipeline.md](../topics/manager-pipeline.md)。
 
-### Scheduler 的 11 个 mixin
+### Scheduler：6 mixin + `scheduler_components/` composition
 
-> [!warning] CONTRADICTION: 本节仍描述 **11 mixin** 与已删除的 `scheduler_*_mixin.py` / `scheduler_recv_skipper.py`。HEAD `06f32bab` 为 **6 mixin + MlxOverlap** + [scheduler_components/](d:\design\sglang\python\sglang\srt\managers\scheduler_components) composition（含迁出的 `IdleSleeper` / `SenderWrapper` / `SchedulerRecvSkipper`）。权威页：[entities/Scheduler.md](../entities/Scheduler.md)（2026-08-10）。
+> ~~[!warning] CONTRADICTION: 本节仍描述 **11 mixin** 与已删除的 `scheduler_*_mixin.py` / `scheduler_recv_skipper.py`。~~
+> **RESOLVED 2026-08-10**: 与 [entities/Scheduler.md](../entities/Scheduler.md) 对齐——MRO 为 6 mixin + 条件性 `SchedulerMlxOverlapMixin`；`IdleSleeper` / `SchedulerRecvSkipper` / 原 Output/Weights/Profiler/Metrics/RuntimeChecker/DPAttn 职责迁入 [scheduler_components/](d:\design\sglang\python\sglang\srt\managers\scheduler_components)。**Caveat:** [topics/scheduler-mixins.md](../topics/scheduler-mixins.md) 仍可能写 11 mixin → 该 topic 页仍 stale。
 
-精确 class 定义来自 [scheduler.py:317-329](d:\design\sglang\python\sglang\srt\managers\scheduler.py)：
+精确 class 定义来自 [scheduler.py:375-382](d:\design\sglang\python\sglang\srt\managers\scheduler.py)：
 
 ```python
 class Scheduler(
-    SchedulerOutputProcessorMixin,
-    SchedulerUpdateWeightsMixin,
-    SchedulerProfilerMixin,
-    SchedulerMetricsMixin,
     SchedulerDisaggregationDecodeMixin,
     SchedulerDisaggregationPrefillMixin,
     SchedulerMultiplexMixin,
-    SchedulerRuntimeCheckerMixin,
     SchedulerPPMixin,
-    SchedulerDPAttnMixin,
     SchedulerDllmMixin,
+    SchedulerMlxOverlapMixin,
 ):
 ```
 
 | # | Mixin | 来源 | 职责 |
 |---|---|---|---|
-| 1 | `SchedulerOutputProcessorMixin` | [scheduler_output_processor_mixin.py](d:\design\sglang\python\sglang\srt\managers\scheduler_output_processor_mixin.py) | 输出处理 |
-| 2 | `SchedulerUpdateWeightsMixin` | [scheduler_update_weights_mixin.py](d:\design\sglang\python\sglang\srt\managers\scheduler_update_weights_mixin.py) | 权重更新（RLHF） |
-| 3 | `SchedulerProfilerMixin` | [scheduler_profiler_mixin.py](d:\design\sglang\python\sglang\srt\managers\scheduler_profiler_mixin.py) | profiling |
-| 4 | `SchedulerMetricsMixin` | [observability/scheduler_metrics_mixin.py:91](d:\design\sglang\python\sglang\srt\observability\scheduler_metrics_mixin.py) | metrics |
-| 5 | `SchedulerDisaggregationDecodeMixin` | [disaggregation/decode.py](d:\design\sglang\python\sglang\srt\disaggregation\decode.py) | PD 分离 decoder 端调度 |
-| 6 | `SchedulerDisaggregationPrefillMixin` | [disaggregation/prefill.py](d:\design\sglang\python\sglang\srt\disaggregation\prefill.py) | PD 分离 prefill 端调度 |
-| 7 | `SchedulerMultiplexMixin` | [multiplex/multiplexing_mixin.py:32](d:\design\sglang\python\sglang\srt\multiplex\multiplexing_mixin.py) | 多任务复用（PD-Multiplexing 同卡多 stream，非 HTTP 多路复用） |
-| 8 | `SchedulerRuntimeCheckerMixin` | [scheduler_runtime_checker_mixin.py](d:\design\sglang\python\sglang\srt\managers\scheduler_runtime_checker_mixin.py) | 运行时一致性检查 |
-| 9 | `SchedulerPPMixin` | [scheduler_pp_mixin.py](d:\design\sglang\python\sglang\srt\managers\scheduler_pp_mixin.py) | Pipeline Parallel 调度 |
-| 10 | `SchedulerDPAttnMixin` | [scheduler_dp_attn_mixin.py](d:\design\sglang\python\sglang\srt\managers\scheduler_dp_attn_mixin.py) | DP attention（同步 batch） |
-| 11 | `SchedulerDllmMixin` | [dllm/mixin/scheduler.py:20](d:\design\sglang\python\sglang\srt\dllm\mixin\scheduler.py) | Diffusion LLM 调度 |
+| 1 | `SchedulerDisaggregationDecodeMixin` | [disaggregation/decode.py](d:\design\sglang\python\sglang\srt\disaggregation\decode.py) | PD 分离 decoder 端调度 |
+| 2 | `SchedulerDisaggregationPrefillMixin` | [disaggregation/prefill.py](d:\design\sglang\python\sglang\srt\disaggregation\prefill.py) | PD 分离 prefill 端调度 |
+| 3 | `SchedulerMultiplexMixin` | [multiplex/multiplexing_mixin.py](d:\design\sglang\python\sglang\srt\multiplex\multiplexing_mixin.py) | 多任务复用（PD-Multiplexing） |
+| 4 | `SchedulerPPMixin` | [scheduler_pp_mixin.py](d:\design\sglang\python\sglang\srt\managers\scheduler_pp_mixin.py) | Pipeline Parallel 调度 |
+| 5 | `SchedulerDllmMixin` | [dllm/mixin/scheduler.py](d:\design\sglang\python\sglang\srt\dllm\mixin\scheduler.py) | Diffusion LLM 调度 |
+| 6 | `SchedulerMlxOverlapMixin` | [hardware_backend/mlx/scheduler_mixin.py](d:\design\sglang\python\sglang\srt\hardware_backend\mlx\scheduler_mixin.py)（非 MPS 时 stub） | MLX overlap |
 
-另有 2 个独立辅助类（不是 mixin）：
+#### 前 mixin → 现 composition（摘要）
+
+| 旧 mixin（源文件已删） | 现组件 |
+|---|---|
+| `SchedulerOutputProcessorMixin` | `SchedulerBatchResultProcessor` + `SchedulerOutputStreamer` + `SchedulerLogprobResultProcessor` |
+| `SchedulerUpdateWeightsMixin` | `SchedulerWeightUpdaterManager` |
+| `SchedulerProfilerMixin` | `SchedulerProfilerManager` |
+| `SchedulerMetricsMixin` | `SchedulerMetricsReporter` |
+| `SchedulerRuntimeCheckerMixin` | `SchedulerInvariantChecker` |
+| `SchedulerDPAttnMixin` | `SchedulerDPAttnAdapter` |
+| （辅助）`IdleSleeper` / `SchedulerRecvSkipper` / `SenderWrapper` | `scheduler_components/idle_sleeper.py` / `recv_skipper.py` / `output_sender.py` 等 |
+
+另有独立辅助类（仍在 `managers/` 顶层）：
 
 | 类 | 文件 | 用途 |
 |---|---|---|
 | `SchedulerInputBlocker` | [scheduler_input_blocker.py](d:\design\sglang\python\sglang\srt\managers\scheduler_input_blocker.py) | 输入背压控制 |
-| `SchedulerRecvSkipper` | [scheduler_recv_skipper.py](d:\design\sglang\python\sglang\srt\managers\scheduler_recv_skipper.py) | 慢消费时跳过 recv |
 
-> [!todo] VERIFY: ~~`SchedulerMetricsMixin`、`SchedulerDisaggregationDecode/PrefillMixin`、`SchedulerMultiplexMixin`、`SchedulerDllmMixin` 5 个 mixin 的具体文件位置（不在 `managers/` 目录的明显文件名里，可能在 [srt/disaggregation/](d:\design\sglang\python\sglang\srt\disaggregation) / [srt/multiplex/](d:\design\sglang\python\sglang\srt\multiplex) / [srt/dllm/](d:\design\sglang\python\sglang\srt\dllm) / [srt/metrics/](d:\design\sglang\python\sglang\srt\metrics) 下）。~~
-> **RESOLVED 2026-04-19**: 5 个 mixin 的真实位置已逐一定位 — `SchedulerMetricsMixin` → [observability/scheduler_metrics_mixin.py:91](d:\design\sglang\python\sglang\srt\observability\scheduler_metrics_mixin.py)（**非** `srt/metrics/`）；`SchedulerDisaggregationDecodeMixin` → [disaggregation/decode.py](d:\design\sglang\python\sglang\srt\disaggregation\decode.py)；`SchedulerDisaggregationPrefillMixin` → [disaggregation/prefill.py](d:\design\sglang\python\sglang\srt\disaggregation\prefill.py)；`SchedulerMultiplexMixin` → [multiplex/multiplexing_mixin.py:32](d:\design\sglang\python\sglang\srt\multiplex\multiplexing_mixin.py)；`SchedulerDllmMixin` → [dllm/mixin/scheduler.py:20](d:\design\sglang\python\sglang\srt\dllm\mixin\scheduler.py)。`scheduler.py:44-57` 处的 import 链与多重继承列表（[scheduler.py:317-329](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）一致。
+完整映射与 init 锚点见 [entities/Scheduler.md](../entities/Scheduler.md)。
 
 ### Tokenizer 相关
 | 文件 | 角色 |
 |---|---|
 | `tokenizer_manager.py` | `TokenizerManager` 主体 |
 | `tokenizer_manager_score_mixin.py` | `TokenizerManagerScoreMixin` (score / rerank) |
-| `tokenizer_communicator_mixin.py` | `TokenizerCommunicatorMixin`（与 scheduler 通信封装） |
-| `multi_tokenizer_mixin.py` | 多 tokenizer worker 模式 + `SenderWrapper` |
+| `tokenizer_control_mixin.py` | `TokenizerControlMixin`（control-plane：weights / cache / lora / profile；**原 `tokenizer_communicator_mixin.py` 已删除**） |
+| `multi_tokenizer_mixin.py` | 多 tokenizer worker 模式 + `MultiTokenizerRouter` / `TokenizerWorker` |
 | `async_dynamic_batch_tokenizer.py` | 动态批 tokenize |
-| `template_manager.py` | chat template |
+| `communicator.py` | `FanOutCommunicator` 等 |
+| `load_snapshot.py` | DP 负载快照 reader/writer |
+
+> synthesis: `TemplateManager` 已迁至 [parser/template_manager.py](d:\design\sglang\python\sglang\srt\parser\template_manager.py)；`SessionController` 在 [session/session_controller.py](d:\design\sglang\python\sglang\srt\session\session_controller.py)——均不在本目录。
 
 ### 调度核心
 | 文件 | 角色 |
@@ -116,6 +121,8 @@ class Scheduler(
 | `schedule_policy.py` | 调度策略（FCFS / priority / 等） |
 | `schedule_batch.py` | `ScheduleBatch` / `Req` / `ModelWorkerBatch` 数据结构 |
 | `prefill_delayer.py` | prefill 延迟（PD 分离背压用） |
+| `min_free_slots_delayer.py` | free-slots 延迟 |
+| `mm_schedule.py` | 多模态调度辅助 |
 
 ### Worker 与并行
 | 文件 | 角色 |
@@ -135,14 +142,15 @@ class Scheduler(
 |---|---|
 | `cache_controller.py` | KV cache 控制 |
 | `hisparse_coordinator.py` | HiSparse 稀疏 attention 协调 |
-| `session_controller.py` | session 管理 |
 | `overlap_utils.py` | overlap 模式辅助 |
 | `io_struct.py` | scheduler IO 数据结构（很多 `*ReqInput` / `*ReqOutput` Msg） |
 | `utils.py` | 通用工具 |
 | `configure_logging.py` | 日志配置 |
+| `rust_server.py` | Rust server 相关入口辅助 |
 | `detokenizer_manager.py` | DetokenizerManager 进程主体 |
+| `scheduler_components/*.py` | Scheduler 组合组件（~19 模块 + `__init__.py`） |
 
-## TpModelWorker 类层次（[tp_worker.py:62-411](d:\design\sglang\python\sglang\srt\managers\tp_worker.py)）
+## TpModelWorker 类层次（[tp_worker.py:73-298](d:\design\sglang\python\sglang\srt\managers\tp_worker.py)）
 
 ```mermaid
 classDiagram
@@ -150,17 +158,10 @@ classDiagram
         <<abstract>>
         +forward_batch_generation(forward_batch)
         +model_runner() ModelRunner
-        +sliding_window_size()
-        +is_hybrid_swa()
-        +get_tokens_per_layer_info()
-        +get_pad_input_ids_func()
         +get_memory_pool() Tuple
-        +update_weights_from_disk(...)
-        +update_weights_from_distributed(...)
-        +update_weights_from_tensor(...)
-        +update_weights_from_ipc(...)
+        +alloc_memory_pool(...)
+        +update_weights_*()
         +load_lora_adapter(...)
-        +unload_lora_adapter(...)
         +forward_batch_embedding(...)
     }
     class TpModelWorker {
@@ -168,11 +169,6 @@ classDiagram
         +_init_model_runner()
         +_init_multi_layer_eagle_model_runners()
         +_init_dllm_algorithm()
-        +register_hicache_layer_transfer_counter(counter)
-        +set_hicache_consumer(consumer_index)
-        +register_hisparse_coordinator(coordinator)
-        +get_worker_info()
-        +is_dllm()
         +forward_batch_generation(...)
         +forward_batch_split_prefill(batch)
     }
@@ -181,9 +177,8 @@ classDiagram
 
 要点：
 
-- `BaseTpWorker` 是 ABC（[tp_worker.py:62](d:\design\sglang\python\sglang\srt\managers\tp_worker.py)），抽象方法只有 `forward_batch_generation`
-- 19 个 default 方法（update_weights / load_lora 等）让子类只实现一两个就能用
-- `TpModelWorker` 内 `_init_model_runner()`（[tp_worker.py:340](d:\design\sglang\python\sglang\srt\managers\tp_worker.py)）创建 `ModelRunner`（来自 [srt/model_executor/](d:\design\sglang\python\sglang\srt\model_executor)）
+- `BaseTpWorker` 是 ABC（[tp_worker.py:73](d:\design\sglang\python\sglang\srt\managers\tp_worker.py)），抽象方法为 `forward_batch_generation` + `model_runner` property
+- `TpModelWorker` 内 `_init_model_runner()`（[tp_worker.py:450](d:\design\sglang\python\sglang\srt\managers\tp_worker.py)）创建 `ModelRunner`（来自 [srt/model_executor/](d:\design\sglang\python\sglang\srt\model_executor)；部分逻辑在 `model_runner_components/`）
 - **直接被 Scheduler 调用**——SGLang 没有独立的 Executor 层（vLLM 有 `Executor` 抽象，SGLang 没有）。这是架构上的关键差异
 
 ## 与 entrypoints 的关系
@@ -206,5 +201,8 @@ flowchart TB
 - [modules/entrypoints.md](entrypoints.md)
 - [entities/TokenizerManager.md](../entities/TokenizerManager.md)
 - [entities/Scheduler.md](../entities/Scheduler.md)
+- [entities/TpModelWorker.md](../entities/TpModelWorker.md)
+- [entities/DataParallelController.md](../entities/DataParallelController.md)
+- [entities/Engine.md](../entities/Engine.md)
 - [topics/manager-pipeline.md](../topics/manager-pipeline.md)
 - [topics/request-lifecycle.md](../topics/request-lifecycle.md)

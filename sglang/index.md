@@ -34,7 +34,7 @@ related:
 ### 调度与请求生命周期
 | 模块 | wiki 页 | 状态 |
 |---|---|---|
-| `managers` | [modules/managers.md](modules/managers.md) | **DONE** |
+| `managers` | [modules/managers.md](modules/managers.md) | **DONE**（verify 2026-08-10：49 `.py`；Scheduler 6 mixin + `scheduler_components/`；`TokenizerControlMixin`） |
 | **`disaggregation`** | [modules/disaggregation.md](modules/disaggregation.md) | **DONE** (P0)（5 backend + EPD encode_*.py + 2 Scheduler mixin） |
 | `multiplex` | [modules/multiplex.md](modules/multiplex.md) | **DONE** (P5)（2 .py + PD-Multiplexing：同一 GPU 上 Prefill/Decode SM 分区 + green context streams + `SchedulerMultiplexMixin.event_loop_pdmux` + `--enable-pdmux` / `--pdmux-config-path` / `--sm-group-num`；与 disaggregation **互斥**） |
 | `session` | [modules/session.md](modules/session.md) | **DONE** (P2)（3 .py + `SessionController` open/close/reap + `StreamingSession` KV/Mamba slot 保活；Scheduler 持有 controller） |
@@ -97,12 +97,12 @@ related:
 
 | 实体 | 源文件 | wiki 页 | 状态 |
 |---|---|---|---|
-| `Engine` | [entrypoints/engine.py](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | [entities/Engine.md](entities/Engine.md) | **DONE** (P0)（含 `HttpServerEngineAdapter`） |
-| `TokenizerManager` | [managers/tokenizer_manager.py](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) | [entities/TokenizerManager.md](entities/TokenizerManager.md) | **DONE**（含 `DetokenizerManager`） |
+| `Engine` | [entrypoints/engine.py](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) (~1827 行) | [entities/Engine.md](entities/Engine.md) | **DONE** (P0；verify 2026-08-10 / HEAD `06f32bab`：`Engine` L199；`_launch_scheduler_processes` L832；`_launch_subprocesses` L1036；含 `HttpServerEngineAdapter`) |
+| `TokenizerManager` | [managers/tokenizer_manager.py](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) (~3644 行) | [entities/TokenizerManager.md](entities/TokenizerManager.md) | **DONE**（re-ingest 2026-08-10：`TokenizerControlMixin` 取代已删 `TokenizerCommunicatorMixin`；`ReqState` L200；`TokenizerManager` L373；含 `DetokenizerManager` L91） |
 | `Scheduler` | [managers/scheduler.py](d:\design\sglang\python\sglang\srt\managers\scheduler.py) (~5046 行) + [scheduler_components/](d:\design\sglang\python\sglang\srt\managers\scheduler_components) | [entities/Scheduler.md](entities/Scheduler.md) | **DONE**（re-ingest 2026-08-10 / HEAD `06f32bab`：MRO **6 mixin + MlxOverlap**；前 Output/Weights/Profiler/Metrics/RuntimeChecker/DPAttn mixin → composition；`IdleSleeper`/`SenderWrapper` 已迁出；TpModelWorker 见独立页）。**Caveat:** [topics/scheduler-mixins.md](topics/scheduler-mixins.md) 仍写 11 mixin → CONTRADICTION / stale |
-| `DetokenizerManager` | [managers/detokenizer_manager.py](d:\design\sglang\python\sglang\srt\managers\detokenizer_manager.py) | 见 [entities/TokenizerManager.md](entities/TokenizerManager.md) | DONE（合并） |
-| `TpModelWorker` | [managers/tp_worker.py](d:\design\sglang\python\sglang\srt\managers\tp_worker.py) | [entities/TpModelWorker.md](entities/TpModelWorker.md) | **DONE** (P0)（独立页，含 `BaseTpWorker`、`forward_batch_generation` 三分支、`get_memory_pool` spec 共享） |
-| `DataParallelController` | [managers/data_parallel_controller.py](d:\design\sglang\python\sglang\srt\managers\data_parallel_controller.py) | [entities/DataParallelController.md](entities/DataParallelController.md) | **DONE** (P0)（含 `LoadBalanceMethod` 4 策略 + `routed_dp_rank` 钉死） |
+| `DetokenizerManager` | [managers/detokenizer_manager.py](d:\design\sglang\python\sglang\srt\managers\detokenizer_manager.py) | 见 [entities/TokenizerManager.md](entities/TokenizerManager.md) | DONE（合并；verify 2026-08-10） |
+| `TpModelWorker` | [managers/tp_worker.py](d:\design\sglang\python\sglang\srt\managers\tp_worker.py) | [entities/TpModelWorker.md](entities/TpModelWorker.md) | **DONE** (P0；verify 2026-08-10：`BaseTpWorker` L73；`TpModelWorker` L298；`forward_batch_generation` L561；`ModelRunner` ~2056 行 + `model_runner_components/`；pool 经 `alloc_memory_pool` 共享) |
+| `DataParallelController` | [managers/data_parallel_controller.py](d:\design\sglang\python\sglang\srt\managers\data_parallel_controller.py) | [entities/DataParallelController.md](entities/DataParallelController.md) | **DONE** (P0；verify 2026-08-10：`DataParallelController` L132；`LoadBalanceMethod` L79；`DPBudget` L96；`run_...` L812；负载经 `load_snapshot`；doc → `dp_dpa_smg_guide.mdx`) |
 | `SchedulePolicy` | [managers/schedule_policy.py](d:\design\sglang\python\sglang\srt\managers\schedule_policy.py) | `entities/SchedulePolicy.md` | TODO (P1) |
 | `ScheduleBatch` | [managers/schedule_batch.py](d:\design\sglang\python\sglang\srt\managers\schedule_batch.py) | `entities/ScheduleBatch.md` | TODO (P1，110 KB 最大单文件) |
 | `CacheController` | [managers/cache_controller.py](d:\design\sglang\python\sglang\srt\managers\cache_controller.py) | `entities/CacheController.md` | TODO (P2) |
