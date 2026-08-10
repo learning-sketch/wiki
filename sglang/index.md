@@ -45,7 +45,7 @@ related:
 | 模块 | wiki 页 | 状态 |
 |---|---|---|
 | `model_executor` | [modules/model_executor.md](modules/model_executor.md) | **DONE** (P0)（13 .py + 命名陷阱：≠ vLLM Executor 抽象；ModelRunner / ForwardBatch / CudaGraphRunner / Attention 注册表） ；**file count @06f32bab = 54.py**（待深 verify） |
-| `model_loader` | [modules/model_loader.md](modules/model_loader.md) | **DONE** (P4)（6 .py + `LoadFormat` 19 枚举 + `BaseModelLoader` 11 子类 + `get_model_loader` 工厂 + Adapted from vLLM v0.6.4 + **4 条权重通道闭环**：connector/weight_sync/checkpoint_engine/model_loader） |
+| `model_loader` | [modules/model_loader.md](modules/model_loader.md) | **DONE** (P4)（6 .py + `LoadFormat` 含 `IPC_CACHE` + `BaseModelLoader` 子类 + `get_model_loader` 工厂；权重通道：connector / weight_sync / checkpoint_engine / **weight_cache**） |
 | `models` | [modules/models.md](modules/models.md) | **DONE** (Turn 4)（**185 .py**（实测；既有 wiki 推断 186）+ ~22 模型族矩阵 + `ModelRegistry.register("sglang.srt.models")` 自动发现 + `EntryClass` 注册 + 共 **54** 文件 `Adapted from vllm-project/vllm` URL + Llama 模板 / DeepSeek MLA+MoE / Qwen3-VL / LLaDA2 DLLM / Llama embedding 等代表实现） ；**file count @06f32bab = 244.py**（待深 verify） |
 | `layers` | [modules/layers.md](modules/layers.md) | **DONE** (Turn 5)（**248 .py**（实测；既有 wiki 推断 252）+ 5 子系统 attention(94)/quantization(66)/moe(42)/rotary_embedding(9)/utils(6) + 顶层 31 + `ATTENTION_BACKENDS` **17** 注册名 + `moe_a2a_backend` 7 取值 + Triton `@triton.jit` ≥71 文件 + `from sgl_kernel import` 33 文件） ；**file count @06f32bab = 312.py**（待深 verify） |
 | `lora` | [modules/lora.md](modules/lora.md) | **DONE** (P4)（33 .py + `LoRAManager` + 4 backend triton/csgmv/ascend/torch_native + `LoRAMemoryPool` 槽位池 + 13 Triton kernel + S-LoRA/Punica 谱系；CUDA adapter LoRA = 0） ；**file count @06f32bab = 45.py**（待深 verify） |
@@ -56,10 +56,10 @@ related:
 ### 内存与缓存
 | 模块 | wiki 页 | 状态 |
 |---|---|---|
-| `mem_cache` | [modules/mem_cache.md](modules/mem_cache.md) | **DONE** ；**file count @06f32bab = 116.py**（待深 verify） |
+| `mem_cache` | [modules/mem_cache.md](modules/mem_cache.md) | **DONE** / **stale@06f32bab**（116 `.py`，原 62；待深 verify；与 `session`/`kv_canary` 协作） |
 | `kv_canary` | [modules/kv_canary.md](modules/kv_canary.md) | **DONE** (P0)（~50 .py + `install_canary` patch `model.forward` + pool_patcher MHA/SWA/DSV4 + runner/perturb/token_oracle；`--kv-canary {none,log,raise}`） |
 | `checkpoint_engine` | [modules/checkpoint_engine.md](modules/checkpoint_engine.md) | **DONE** (P3)（3 .py + Moonshot **checkpoint-engine==0.1.2** ParameterServer + ZMQ IPC + `/update_weights_from_ipc` HTTP；与 `weight_sync` 并列正交通道） |
-| `weight_sync` | [modules/weight_sync.md](modules/weight_sync.md) | **DONE** (P3)（2 .py 无 `__init__` + `FlattenedTensorBucket` `uint8` flatten + `update_weights` 训练 SPMD 桥接；NCCL broadcast 主体在 `model_runner`；与 `connector`/`checkpoint_engine` 形成**3 条正交权重通道**） |
+| `weight_sync` | [modules/weight_sync.md](modules/weight_sync.md) | **DONE** (P3)（2 .py 无 `__init__` + `FlattenedTensorBucket` `uint8` flatten + `update_weights` 训练 SPMD 桥接；NCCL broadcast 主体在 `model_runner`；与 `connector`/`checkpoint_engine`/`weight_cache` 形成**4 条正交权重通道**） |
 | `weight_cache` | [modules/weight_cache.md](modules/weight_cache.md) | **DONE** (P0)（4 .py + `WeightCacheDaemon` Unix sock + `IpcModelLoader` CUDA IPC 零拷贝；`--weight-cache-mode {off,daemon,client}`；与 sync/connector/checkpoint_engine 正交的**第四条权重通道**） |
 
 ### 分布式与硬件
