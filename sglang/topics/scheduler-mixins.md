@@ -1,8 +1,8 @@
 ---
 type: topic
 project: sglang
-status: draft
-confidence: high
+status: stale
+confidence: low
 verified_against: 2026-04-19
 sources:
   - d:\design\sglang\python\sglang\srt\managers\scheduler.py:317-329
@@ -30,6 +30,8 @@ related:
 ---
 
 # Scheduler Mixin 架构
+
+> [!warning] CONTRADICTION: 本页按 **11 mixin**（锚点 `scheduler.py:317-329`）撰写，但 HEAD `06f32bab` 上 `Scheduler` MRO 已变为 **6 mixin + `SchedulerMlxOverlapMixin`**（[scheduler.py:375-382](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）；`SchedulerOutputProcessorMixin` / `SchedulerUpdateWeightsMixin` / `SchedulerProfilerMixin` / `SchedulerMetricsMixin` / `SchedulerRuntimeCheckerMixin` / `SchedulerDPAttnMixin` 源文件已删除，逻辑迁入 [managers/scheduler_components/](d:\design\sglang\python\sglang\srt\managers\scheduler_components)。权威现状见 [entities/Scheduler.md](../entities/Scheduler.md)（re-ingest 2026-08-10）。本 topic 正文尚未重写，`status` 应视为 stale。
 
 ## Summary
 synthesis: SGLang 的 `Scheduler` 用 **11-mixin 多继承拼装** 而成（[scheduler.py:317-329](d:\design\sglang\python\sglang\srt\managers\scheduler.py)），每个 mixin 独立承担一类正交职责（输出处理、权重更新、profile、metrics、PD prefill/decode、PDMux、watchdog、PP、DP-attn 同步、DLLM）。其中 **6 个内置** 在 `srt/managers/`（与 Scheduler 紧耦合的辅助逻辑），**5 个外置** 到各自子系统目录（`disaggregation/` / `multiplex/` / `dllm/` / `observability/`，跟随子系统演进）。这种切分既避免单文件超长，又让"Scheduler 的某种行为属于哪个子系统"在 import 路径上一目了然。

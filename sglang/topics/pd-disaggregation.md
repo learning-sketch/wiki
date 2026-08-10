@@ -52,6 +52,7 @@ SGLang 的 PD 分离子系统由 **5 个 KV 传输 backend**（[`TransferBackend
 - **2 mixin**：[`decode.py:1171-1370`](d:\design\sglang\python\sglang\srt\disaggregation\decode.py)（6 方法）+ [`prefill.py:355-800`](d:\design\sglang\python\sglang\srt\disaggregation\prefill.py)（9 方法）
 - **EPD 三件套**：[`encode_server.py`](d:\design\sglang\python\sglang\srt\disaggregation\encode_server.py) + [`encode_receiver.py`](d:\design\sglang\python\sglang\srt\disaggregation\encode_receiver.py) + [`encode_grpc_server.py`](d:\design\sglang\python\sglang\srt\disaggregation\encode_grpc_server.py)
 - **Scheduler 接入**：[`scheduler.py:317-329`](d:\design\sglang\python\sglang\srt\managers\scheduler.py)（11 mixin MRO）+ [`L1051-1182`](d:\design\sglang\python\sglang\srt\managers\scheduler.py)（`init_disaggregation`：DECODE L1073-1125 / PREFILL L1127-1167 / EPD L1170-1181）+ [`L3628-3654`](d:\design\sglang\python\sglang\srt\managers\scheduler.py)（`dispatch_event_loop` 9 路）+ [`disagg_service.py:14-44`](d:\design\sglang\python\sglang\srt\managers\disagg_service.py)
+  - > [!warning] CONTRADICTION: 上行 “11 mixin MRO / L317-329 / init_disaggregation L1051…” 相对 HEAD `06f32bab` 已 stale。权威：MRO [scheduler.py:375-382](d:\design\sglang\python\sglang\srt\managers\scheduler.py)（6 mixin + Mlx）；`init_disaggregation` [L1266](d:\design\sglang\python\sglang\srt\managers\scheduler.py)；`dispatch_event_loop` [L4861](d:\design\sglang\python\sglang\srt\managers\scheduler.py)。见 [entities/Scheduler.md](../entities/Scheduler.md)。
 - **CLI / 校验**：[`server_args.py:706-718`](d:\design\sglang\python\sglang\srt\server_args.py)（字段定义）+ [`L6138-6215`](d:\design\sglang\python\sglang\srt\server_args.py)（argparse）+ [`L160` choices](d:\design\sglang\python\sglang\srt\server_args.py) + [`L6510-6523`](d:\design\sglang\python\sglang\srt\server_args.py)（PD-Mux 互斥）
 
 ## Architecture / Data flow
@@ -223,7 +224,7 @@ if self.enable_pdmux:
 3. `disaggregation_mode == "null"`（PD 分离关闭，**本互斥与本页相关**）
 4. `disable_overlap_schedule == True`（overlap schedule 关闭）
 
-> synthesis: **互斥本质 = 调度循环结构不兼容**——PD-Disagg 的 `event_loop_normal_disagg_*` 把 KV 传输状态机塞进 event loop；PD-Mux 的 [`event_loop_pdmux`](d:\design\sglang\python\sglang\srt\multiplex\multiplexing_mixin.py) 把 prefill/decode SM 切换塞进 event loop。两者在 [`dispatch_event_loop`](d:\design\sglang\python\sglang\srt\managers\scheduler.py) 是**互斥分支**：`enable_pdmux` 仅在 `disaggregation_mode == NULL` 路径下被检查。`Scheduler` 11 mixin 中 PD-Disagg 占 2 席、PD-Mux 占 1 席，全部静态加进 MRO，运行期通过 `dispatch_*` 选择——SGLang 统一 mixin 模式（见 [`sglang/entities/Scheduler.md`](../entities/Scheduler.md)）。
+> synthesis: **互斥本质 = 调度循环结构不兼容**——PD-Disagg 的 `event_loop_normal_disagg_*` 把 KV 传输状态机塞进 event loop；PD-Mux 的 [`event_loop_pdmux`](d:\design\sglang\python\sglang\srt\multiplex\multiplexing_mixin.py) 把 prefill/decode SM 切换塞进 event loop。两者在 [`dispatch_event_loop`](d:\design\sglang\python\sglang\srt\managers\scheduler.py) 是**互斥分支**：`enable_pdmux` 仅在 `disaggregation_mode == NULL` 路径下被检查。HEAD 上 `Scheduler` **残留 mixin** 中 PD-Disagg 占 2 席、PD-Mux 占 1 席，全部静态加进 MRO，运行期通过 `dispatch_*` 选择（见 [`sglang/entities/Scheduler.md`](../entities/Scheduler.md)）。
 
 ## CLI 参数全表
 
@@ -287,7 +288,7 @@ if self.enable_pdmux:
 - [sglang/modules/multimodal.md](../modules/multimodal.md) — EPD `encode_server.py` `from sglang.srt.multimodal.processors.qwen_vl import preprocess_video` 的被依赖方
 - [sglang/modules/multiplex.md](../modules/multiplex.md) — PD-Multiplex（互斥的另一边）
 - [sglang/modules/managers.md](../modules/managers.md) — `disagg_service.py` 所属模块
-- [sglang/entities/Scheduler.md](../entities/Scheduler.md) — `init_disaggregation` ([L1051-L1182](d:\design\sglang\python\sglang\srt\managers\scheduler.py)) 与 11 mixin 含本页 2 个的整体视图
+- [sglang/entities/Scheduler.md](../entities/Scheduler.md) — `init_disaggregation`（HEAD [L1266](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）与残留 Decode/Prefill mixin 整体视图
 - [comparison/topics/pd-disaggregation.md](../../comparison/topics/pd-disaggregation.md) — **三家 PD 14 子维度跨项目对比**（对照页，本页是其 SGLang 行展开）
 - [comparison/dimensions.md](../../comparison/dimensions.md) — 维度索引（`§dim-pd` / `§dim-kv-transfer`）
 - [vllm/topics/kv-connector.md](../../vllm/topics/kv-connector.md) — vLLM 14 backend 的 connector 抽象（对照参考）

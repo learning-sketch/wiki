@@ -3,12 +3,20 @@ type: entity
 project: sglang
 status: verified
 confidence: high
-verified_against: 2026-04-19
+verified_against: 2026-08-10
 sources:
-  - d:\design\sglang\python\sglang\srt\managers\scheduler.py
-  - d:\design\sglang\python\sglang\srt\managers\tp_worker.py
-  - d:\design\sglang\python\sglang\srt\managers\schedule_batch.py
-  - d:\design\sglang\python\sglang\srt\managers\schedule_policy.py
+  - d:\design\sglang\python\sglang\srt\managers\scheduler.py:L375-L5046
+  - d:\design\sglang\python\sglang\srt\managers\scheduler_components\
+  - d:\design\sglang\python\sglang\srt\managers\scheduler_pp_mixin.py
+  - d:\design\sglang\python\sglang\srt\disaggregation\decode.py:L2112
+  - d:\design\sglang\python\sglang\srt\disaggregation\prefill.py:L485
+  - d:\design\sglang\python\sglang\srt\multiplex\multiplexing_mixin.py:L33
+  - d:\design\sglang\python\sglang\srt\dllm\mixin\scheduler.py:L22
+  - d:\design\sglang\python\sglang\srt\hardware_backend\mlx\scheduler_mixin.py
+  - d:\design\sglang\python\sglang\srt\session\session_controller.py:L353
+  - d:\design\sglang\python\sglang\srt\entrypoints\engine.py:L832-L918
+  - d:\design\sglang\python\sglang\srt\managers\data_parallel_controller.py
+  - d:\design\sglang\python\sglang\srt\ray\scheduler_actor.py
 related:
   - sglang/modules/managers.md
   - sglang/modules/disaggregation.md
@@ -23,293 +31,320 @@ related:
   - sglang/topics/request-lifecycle.md
 ---
 
-# `Scheduler` (and `TpModelWorker`, `BaseTpWorker`, `IdleSleeper`)
+# `Scheduler`
 
 ## Summary
-`Scheduler` 是 SGLang 的**核心调度器**，跑在子进程里，每个 PP×TP 组合一个实例。它直接持有 `TpModelWorker`（也即 `ModelRunner`），不经过 vLLM 那种独立的 `Executor` 抽象。Scheduler 由 11 个 mixin 拼装而成，提供两套主循环：`event_loop_normal` 与 `event_loop_overlap`（CPU/GPU overlap）。本页梳理类结构、初始化序列、IPC 端点、两种事件循环。
+
+`Scheduler` 是 SGLang 的核心调度器，跑在子进程（或 Ray actor）里，每 PP×TP 组合一个实例；直接持有 `TpModelWorker` / draft worker，无独立 Executor 层。HEAD `06f32bab` 上类定义在 [scheduler.py:375-382](d:\design\sglang\python\sglang\srt\managers\scheduler.py)，**MRO 剩 6 个职责 mixin + 条件性 `SchedulerMlxOverlapMixin`**；原先 OutputProcessor / UpdateWeights / Profiler / Metrics / RuntimeChecker / DPAttn 等已迁到 [scheduler_components/](d:\design\sglang\python\sglang\srt\managers\scheduler_components) **组合对象**。主循环经 `run_event_loop` → `dispatch_event_loop` 分发到 normal / overlap / PP / PD-disagg / PDMux / MLX 变体。
 
 ## Sources
-- [scheduler.py](d:\design\sglang\python\sglang\srt\managers\scheduler.py)（约 3700 行）
-- [tp_worker.py](d:\design\sglang\python\sglang\srt\managers\tp_worker.py)（含 `BaseTpWorker` + `TpModelWorker`）
-- [schedule_batch.py](d:\design\sglang\python\sglang\srt\managers\schedule_batch.py)
-- [schedule_policy.py](d:\design\sglang\python\sglang\srt\managers\schedule_policy.py)
 
-## 类层次
+- [d:\design\sglang\python\sglang\srt\managers\scheduler.py:375-5046](d:\design\sglang\python\sglang\srt\managers\scheduler.py)（整文件 ~5046 行；`class Scheduler` L375；`dispatch_event_loop` L4861；`configure_scheduler_process` L4892；`run_scheduler_process` L4957）
+- [d:\design\sglang\python\sglang\srt\managers\scheduler_components\](d:\design\sglang\python\sglang\srt\managers\scheduler_components)（19 个组件模块 + `__init__.py`）
+- [d:\design\sglang\python\sglang\srt\managers\scheduler_pp_mixin.py](d:\design\sglang\python\sglang\srt\managers\scheduler_pp_mixin.py)（`SchedulerPPMixin`）
+- [d:\design\sglang\python\sglang\srt\disaggregation\decode.py:2112](d:\design\sglang\python\sglang\srt\disaggregation\decode.py)（`SchedulerDisaggregationDecodeMixin`）
+- [d:\design\sglang\python\sglang\srt\disaggregation\prefill.py:485](d:\design\sglang\python\sglang\srt\disaggregation\prefill.py)（`SchedulerDisaggregationPrefillMixin`）
+- [d:\design\sglang\python\sglang\srt\multiplex\multiplexing_mixin.py:33](d:\design\sglang\python\sglang\srt\multiplex\multiplexing_mixin.py)（`SchedulerMultiplexMixin`）
+- [d:\design\sglang\python\sglang\srt\dllm\mixin\scheduler.py:22](d:\design\sglang\python\sglang\srt\dllm\mixin\scheduler.py)（`SchedulerDllmMixin`）
+- [d:\design\sglang\python\sglang\srt\hardware_backend\mlx\scheduler_mixin.py](d:\design\sglang\python\sglang\srt\hardware_backend\mlx\scheduler_mixin.py)（`SchedulerMlxOverlapMixin`；非 MPS 时 scheduler.py 内 stub）
+- [d:\design\sglang\python\sglang\srt\session\session_controller.py:353](d:\design\sglang\python\sglang\srt\session\session_controller.py)（`SessionController`）
+- [d:\design\sglang\python\sglang\srt\entrypoints\engine.py:832-918](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)（`_launch_scheduler_processes` → `mp.Process(target=run_scheduler_process_func)`）
+- [d:\design\sglang\python\sglang\srt\managers\tp_worker.py](d:\design\sglang\python\sglang\srt\managers\tp_worker.py)（`TpModelWorker`；独立实体页）
+- [d:\design\sglang\python\sglang\srt\managers\schedule_batch.py:3376](d:\design\sglang\python\sglang\srt\managers\schedule_batch.py)（`NextBatchPlan`）
+- [d:\design\sglang\python\sglang\srt\managers\schedule_policy.py](d:\design\sglang\python\sglang\srt\managers\schedule_policy.py)（`SchedulePolicy`）
+
+## Architecture / Data flow
+
+### 类层次：mixin（少）+ composition（多）
 
 ```mermaid
 classDiagram
     class Scheduler {
-        +server_args
-        +tokenizer
-        +tp_worker : TpModelWorker
-        +recv_from_tokenizer : zmq.PULL
-        +send_to_tokenizer : SenderWrapper
-        +send_to_detokenizer : SenderWrapper
-        +recv_from_rpc : zmq.DEALER
-        +last_batch : ScheduleBatch
-        +cur_batch : ScheduleBatch
-        +running_batch : ScheduleBatch
-        +schedule_stream : Stream
+        +ipc_channels : SchedulerIpcChannels
+        +request_receiver : SchedulerRequestReceiver
+        +batch_result_processor : SchedulerBatchResultProcessor
+        +output_streamer : SchedulerOutputStreamer
+        +weight_updater : SchedulerWeightUpdaterManager
+        +metrics_reporter : SchedulerMetricsReporter
+        +profiler_manager : SchedulerProfilerManager
+        +dp_attn_adapter : SchedulerDPAttnAdapter
+        +invariant_checker : SchedulerInvariantChecker
+        +idle_sleeper
+        +session_controller : SessionController
+        +tp_worker / model_worker
         +run_event_loop()
         +event_loop_normal()
         +event_loop_overlap()
-        +recv_requests()
-        +process_input_requests(recv_reqs)
-        +get_next_batch_to_run()
-        +run_batch(batch)
-        +process_batch_result(batch, result)
     }
-    class SchedulerOutputProcessorMixin
-    class SchedulerUpdateWeightsMixin
-    class SchedulerProfilerMixin
-    class SchedulerMetricsMixin
     class SchedulerDisaggregationDecodeMixin
     class SchedulerDisaggregationPrefillMixin
     class SchedulerMultiplexMixin
-    class SchedulerRuntimeCheckerMixin
     class SchedulerPPMixin
-    class SchedulerDPAttnMixin
     class SchedulerDllmMixin
-    Scheduler --|> SchedulerOutputProcessorMixin
-    Scheduler --|> SchedulerUpdateWeightsMixin
-    Scheduler --|> SchedulerProfilerMixin
-    Scheduler --|> SchedulerMetricsMixin
+    class SchedulerMlxOverlapMixin
     Scheduler --|> SchedulerDisaggregationDecodeMixin
     Scheduler --|> SchedulerDisaggregationPrefillMixin
     Scheduler --|> SchedulerMultiplexMixin
-    Scheduler --|> SchedulerRuntimeCheckerMixin
     Scheduler --|> SchedulerPPMixin
-    Scheduler --|> SchedulerDPAttnMixin
     Scheduler --|> SchedulerDllmMixin
+    Scheduler --|> SchedulerMlxOverlapMixin
+    Scheduler o-- SchedulerIpcChannels
+    Scheduler o-- SchedulerRequestReceiver
+    Scheduler o-- SchedulerBatchResultProcessor
+    Scheduler o-- SchedulerWeightUpdaterManager
+    Scheduler o-- SchedulerMetricsReporter
     Scheduler o-- TpModelWorker
 ```
 
-精确 class 定义见 [scheduler.py:317-329](d:\design\sglang\python\sglang\srt\managers\scheduler.py)。
-
-## 入口函数
-
-子进程 `mp.Process(target=run_scheduler_process, ...)` 由 `Engine._launch_scheduler_processes` 启动（[entrypoints/engine.py:553-587](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)），最终调用 [scheduler.py:3714 run_scheduler_process](d:\design\sglang\python\sglang\srt\managers\scheduler.py)，再实例化 `Scheduler` 调 `run_event_loop`。
-
-## `Scheduler.__init__` 关键序列
-
-构造签名（[scheduler.py:332-343](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）：
+精确 MRO 声明见 [scheduler.py:375-382](d:\design\sglang\python\sglang\srt\managers\scheduler.py)：
 
 ```python
-def __init__(
-    self,
-    server_args: ServerArgs,
-    port_args: PortArgs,
-    gpu_id: int,
-    tp_rank: int,
-    moe_ep_rank: int,
-    pp_rank: int,
-    attn_cp_rank: int,
-    moe_dp_rank: int,
-    dp_rank: Optional[int],
+class Scheduler(
+    SchedulerDisaggregationDecodeMixin,
+    SchedulerDisaggregationPrefillMixin,
+    SchedulerMultiplexMixin,
+    SchedulerPPMixin,
+    SchedulerDllmMixin,
+    SchedulerMlxOverlapMixin,
 ):
 ```
 
-约 17 个 init 子方法（[scheduler.py:344-1356](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）：
+`SchedulerMlxOverlapMixin`：`is_mps()` 时从 [hardware_backend/mlx/scheduler_mixin.py](d:\design\sglang\python\sglang\srt\hardware_backend\mlx\scheduler_mixin.py) 导入；否则在 [scheduler.py:330-331](d:\design\sglang\python\sglang\srt\managers\scheduler.py) 定义为空 stub。
 
-| init 子方法 | 行号 | 角色 |
+### 前 mixin → 现 composition 映射
+
+| 旧 mixin（已删除源文件） | 现组件 / 归属 | 初始化锚点 |
 |---|---|---|
-| `init_soft_watchdog(server_args)` | [1021](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | 软看门狗 |
-| `init_model_config()` | [477](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | 模型配置 |
-| `init_ipc_channels(port_args)` | [498](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | **ZMQ socket 创建（重点）** |
-| `init_tokenizer()` | [545](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | tokenizer（scheduler 也持有，为了某些 detokenize 场景） |
-| `init_mamba_backend()` | [596](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | Mamba 状态后端 |
-| `init_moe_gemm_config()` | [599](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | MoE gemm 配置 |
-| `init_tp_model_worker()` | [615](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | **创建 `TpModelWorker`** |
-| `maybe_init_draft_worker()` | [639](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | spec decode 的 draft worker |
-| `init_model_worker()` | [681](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | 真正绑定 model_runner |
-| `init_cache_with_memory_pool()` | [754](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | KV cache + memory pool |
-| `init_running_status()` | [917](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | 运行时状态 |
-| `init_chunked_prefill()` | [934](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | chunked prefill |
-| `init_schedule_policy()` | [972](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | schedule policy（FCFS / priority / 等） |
-| `init_watch_dog_memory_saver_input_blocker()` | [1027](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | 内存看门狗 |
-| `init_disaggregation()` | [1051](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | **PD 分离 init** |
-| `init_overlap()` | [1183](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | overlap 模式参数 |
-| `maybe_init_ngram_embedding()` | [1208](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | n-gram embedding |
-| `init_deterministic_inference_config()` | [1259](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | 确定性推理 |
-| `init_request_dispatcher()` | [1276](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | RPC 请求派发器 |
+| `SchedulerOutputProcessorMixin` | `SchedulerBatchResultProcessor` + `SchedulerOutputStreamer` + `SchedulerLogprobResultProcessor` | [scheduler.py:2112-2147](d:\design\sglang\python\sglang\srt\managers\scheduler.py) |
+| `SchedulerUpdateWeightsMixin` | `SchedulerWeightUpdaterManager` | [scheduler.py:1913-1923](d:\design\sglang\python\sglang\srt\managers\scheduler.py) |
+| `SchedulerProfilerMixin` | `SchedulerProfilerManager` | [scheduler.py:1906-1911](d:\design\sglang\python\sglang\srt\managers\scheduler.py) |
+| `SchedulerMetricsMixin` | `SchedulerMetricsReporter` + `SchedulerMetricsCollector` + `SchedulerKvEventsPublisher` + `SchedulerLoadInquirer` | [scheduler.py:715-728](d:\design\sglang\python\sglang\srt\managers\scheduler.py)、[L1179-1190](d:\design\sglang\python\sglang\srt\managers\scheduler.py)、[L2066-2110](d:\design\sglang\python\sglang\srt\managers\scheduler.py) |
+| `SchedulerRuntimeCheckerMixin` | `SchedulerInvariantChecker` + `SchedulerPoolStatsObserver` + `create_scheduler_watchdog` | [scheduler.py:2031-2064](d:\design\sglang\python\sglang\srt\managers\scheduler.py)、[L1237-1247](d:\design\sglang\python\sglang\srt\managers\scheduler.py) |
+| `SchedulerDPAttnMixin` | `SchedulerDPAttnAdapter` | [scheduler.py:2008-2029](d:\design\sglang\python\sglang\srt\managers\scheduler.py) |
+| （同文件辅助类）`IdleSleeper` | [idle_sleeper.py:15](d:\design\sglang\python\sglang\srt\managers\scheduler_components\idle_sleeper.py) | [scheduler.py:770-784](d:\design\sglang\python\sglang\srt\managers\scheduler.py) |
+| （同文件辅助类）`SenderWrapper` | [output_sender.py:8](d:\design\sglang\python\sglang\srt\managers\scheduler_components\output_sender.py)；经 `SchedulerIpcChannels` | [ipc_channels.py:67-68](d:\design\sglang\python\sglang\srt\managers\scheduler_components\ipc_channels.py) |
 
-## `init_ipc_channels` （[scheduler.py:498-543](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）— ZMQ 端点
+> synthesis: HEAD 把“正交横切职责”从多重继承拆成可测试的组合对象；仍保留的 5+1 mixin 主要是 **事件循环变体 / PD / PP / DLLM / MLX** 这类需要改写主循环或大量覆盖方法的路径。
 
-只有 PP rank 0 + attn TP rank 0 + attn CP rank 0 才创建 socket（其余 rank 是 `None`）：
+### `scheduler_components/` 关键类清单
 
-```python
-if self.pp_rank == 0 and self.attn_tp_rank == 0 and self.attn_cp_rank == 0:
-    self.recv_from_tokenizer = get_zmq_socket(context, zmq.PULL, port_args.scheduler_input_ipc_name, False)
-    self.recv_from_rpc = get_zmq_socket(context, zmq.DEALER, port_args.rpc_ipc_name, False)
-    send_to_tokenizer = get_zmq_socket(context, zmq.PUSH, port_args.tokenizer_ipc_name, False)
-    if server_args.skip_tokenizer_init:
-        send_to_detokenizer = get_zmq_socket(context, zmq.PUSH, port_args.tokenizer_ipc_name, False)
-    else:
-        send_to_detokenizer = get_zmq_socket(context, zmq.PUSH, port_args.detokenizer_ipc_name, False)
-    self.send_to_tokenizer = SenderWrapper(send_to_tokenizer)
-    self.send_to_detokenizer = SenderWrapper(send_to_detokenizer)
-    if server_args.sleep_on_idle:
-        self.idle_sleeper = IdleSleeper([self.recv_from_tokenizer, self.recv_from_rpc])
-```
+| 文件 | 关键类 | 角色 |
+|---|---|---|
+| [ipc_channels.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\ipc_channels.py) | `SchedulerIpcChannels` | ZMQ PULL/DEALER/PUSH + `SenderWrapper` 封装 |
+| [output_sender.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\output_sender.py) | `SenderWrapper` | `send_output`；`socket is None` 时 no-op |
+| [idle_sleeper.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\idle_sleeper.py) | `IdleSleeper`, `RustServerIdleSleeper` | idle 时 poll/sleep；Rust 环用 `wait_ingress` |
+| [request_receiver.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\request_receiver.py) | `SchedulerRequestReceiver` | `recv_requests` + TP/CP broadcast |
+| [batch_result_processor.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\batch_result_processor.py) | `SchedulerBatchResultProcessor` | prefill/decode/idle/prebuilt 结果处理 |
+| [output_streamer.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\output_streamer.py) | `SchedulerOutputStreamer` | 向 detokenizer / Rust egress 推流 |
+| [logprob_result_processor.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\logprob_result_processor.py) | `SchedulerLogprobResultProcessor` | logprob 后处理 |
+| [weight_updater.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\weight_updater.py) | `SchedulerWeightUpdaterManager` | 在线权重 / IPC / memory occupation |
+| [profiler_manager.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\profiler_manager.py) | `SchedulerProfilerManager` | torch/CUDA profiler RPC |
+| [metrics_reporter.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\metrics_reporter.py) | `SchedulerMetricsReporter` | 步级 metrics + FPM |
+| [dp_attn.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\dp_attn.py) | `SchedulerDPAttnAdapter` | DP-attn MLP sync batch |
+| [invariant_checker.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\invariant_checker.py) | `SchedulerInvariantChecker`, `create_scheduler_watchdog` | pool/tree 不变量 + watchdog 工厂 |
+| [pool_stats_observer.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\pool_stats_observer.py) | `SchedulerPoolStatsObserver` | KV/req pool 用量观察 |
+| [load_inquirer.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\load_inquirer.py) | `SchedulerLoadInquirer` | `/v1/loads` 等负载查询 |
+| [kv_events_publisher.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\kv_events_publisher.py) | `SchedulerKvEventsPublisher` | KV events 外发 |
+| [flush_wrapper.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\flush_wrapper.py) | `SchedulerFlushWrapper` | `FlushCacheReqInput` 包装 |
+| [recv_skipper.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\recv_skipper.py) | `SchedulerRecvSkipper` | 慢消费跳过 recv |
+| [new_token_ratio_tracker.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\new_token_ratio_tracker.py) | `NewTokenRatioTracker` | 新 token 比例估计 |
+| [memory_usage.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\memory_usage.py) | `build_memory_usage` 等 | 内存用量汇总 helper |
 
-要点：
+### 入口：`run_scheduler_process`
 
-- 4 个 socket：tokenizer→sched、rpc→sched、sched→tokenizer、sched→detokenizer
-- `skip_tokenizer_init` 时短路 detokenizer，scheduler 直接发回 tokenizer manager
-- `sleep_on_idle` 启 `IdleSleeper`（[scheduler.py:3558-3586](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）— 当 socket 都没消息时短暂 sleep，省 CPU
-- 非 leader rank（其它 PP/TP rank）的 socket 都是 `None` 或空 `SenderWrapper`（[scheduler.py:534-538](d:\design\sglang\python\sglang\srt\managers\scheduler.py)），它们靠 `tp_worker` / `pp_worker` 内部 broadcast 同步
+子进程由 `Engine._launch_scheduler_processes` 以 `mp.Process(target=run_scheduler_process_func, ...)` 拉起（[engine.py:881-895](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)）；DP>1 时改走 `run_data_parallel_controller_process`（[engine.py:904-918](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)）。
 
-## `run_event_loop` 与两种循环
+[run_scheduler_process](d:\design\sglang\python\sglang\srt\managers\scheduler.py)（[L4957-5046](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）：
+
+1. `load_plugins()`（[L4973](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）
+2. `configure_scheduler_process`（[L4892-4954](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）：`kill_itself_when_parent_died`、`setproctitle`、`faulthandler.enable`、`configure_logger`、可选 CPU affinity / NUMA bind
+3. `publish(server_args, role="scheduler")`（[L4989](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）
+4. 构造 `Scheduler(...)` → `pipe_writer.send(scheduler.get_init_info())` → `scheduler.run_event_loop()`（[L5009-5025](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）
+5. 异常：`parent_process.send_signal(SIGQUIT)`；可选 `SGLANG_KILLPG_ON_SCHEDULER_EXCEPTION`（[L5027-5037](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）
+6. `finally`：`metrics_reporter._shutdown_fpm()`；graceful 时 `release_host_resources()`（[L5038-5046](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）
+
+Ray 路径不走 `run_scheduler_process`，由 [ray/scheduler_actor.py](d:\design\sglang\python\sglang\srt\ray\scheduler_actor.py) 直接构造 `Scheduler`（注释 [L102-107](d:\design\sglang\python\sglang\srt\ray\scheduler_actor.py)）。
+
+### `Scheduler.__init__` 编排
+
+构造签名 [scheduler.py:385-396](d:\design\sglang\python\sglang\srt\managers\scheduler.py)。`__init__` 明确约定为 orchestrator：只顺序调 `init_*` / `maybe_init_*`（[L397-400](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）。主序列（[L401-651](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）：
+
+| 步骤 | 锚点 | 角色 |
+|---|---|---|
+| `init_soft_watchdog` | [L406](d:\design\sglang\python\sglang\srt\managers\scheduler.py) / [L1237](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | 可选 soft daemon watchdog |
+| `init_model_config` | [L480](d:\design\sglang\python\sglang\srt\managers\scheduler.py) / [L702](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | `ModelConfig` |
+| `init_metrics_collector` | [L483](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | Prometheus collector 上下文 |
+| `init_ipc_channels` + `init_idle_sleeper` | [L486-487](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | ZMQ + IdleSleeper |
+| `init_tokenizer` / MoE / mamba | [L497-503](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | tokenizer + gemm/mamba |
+| `init_model_worker` | [L510](d:\design\sglang\python\sglang\srt\managers\scheduler.py) / [L979](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | `TpModelWorker` + draft + pools + graphs |
+| `kv_cache_builder.build_kv_cache` | [L516-551](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | tree_cache / token pools |
+| `init_running_status` | [L578](d:\design\sglang\python\sglang\srt\managers\scheduler.py) / [L1119](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | queues + `SessionController` + `FlushWrapper` |
+| `init_chunked_prefill` / `init_diffusion_llm` / `init_schedule_policy` | [L581-589](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | 调度策略 |
+| `init_watch_dog_memory_saver_input_blocker` | [L592](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | hard watchdog + recv skipper + input blocker |
+| `init_profiler` / `maybe_init_rust_server` / `init_disaggregation` | [L595-607](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | profiler / Rust FE / PD queues |
+| `init_overlap` | [L610](d:\design\sglang\python\sglang\srt\managers\scheduler.py) / [L1416](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | `future_map` + CUDA streams |
+| `init_weight_updater` / `init_request_dispatcher` | [L618-621](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | RPC `TypeBasedDispatcher` |
+| `init_request_receiver` … `init_batch_result_processor` | [L634-648](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | 组合对象收尾 |
+
+`ParallelState` 在 [L457-477](d:\design\sglang\python\sglang\srt\managers\scheduler.py) 固化 tp/pp/dp/attn_cp/moe 等 rank。`enable_overlap` = `not disable_overlap_schedule and not use_mlx()`（[L425](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）。
+
+### IPC：`SchedulerIpcChannels`
+
+[init_ipc_channels](d:\design\sglang\python\sglang\srt\managers\scheduler.py)（[L730-768](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）委托 [SchedulerIpcChannels.create](d:\design\sglang\python\sglang\srt\managers\scheduler_components\ipc_channels.py)（[L25-88](d:\design\sglang\python\sglang\srt\managers\scheduler_components\ipc_channels.py)）：
+
+- leader（`pp_rank==0 and attn_tp_rank==0 and attn_cp_rank==0`）：`recv_from_tokenizer` = ZMQ PULL（`scheduler_input_ipc_name`）；`recv_from_rpc` = DEALER；`send_to_tokenizer` / `send_to_detokenizer` = PUSH（`skip_tokenizer_init` 时 detokenizer 也指向 tokenizer IPC）
+- 非 leader：recv 为 `None`，send 为 `SenderWrapper(None)`（[ipc_channels.py:69-73](d:\design\sglang\python\sglang\srt\managers\scheduler_components\ipc_channels.py)）
+- metrics 开启时额外 `send_metrics_from_scheduler` PUSH（[L75-80](d:\design\sglang\python\sglang\srt\managers\scheduler_components\ipc_channels.py)）
+
+`IdleSleeper` 在 leader + `sleep_on_idle` 时注册 tokenizer/rpc 两 socket（[scheduler.py:770-784](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）；Rust server 模式用 `RustServerIdleSleeper` 覆盖（[L1982-1983](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）。
+
+### 事件循环
 
 ```mermaid
 flowchart TB
-    Run["run_event_loop<br/>(scheduler.py:1371)"] --> Stream["self.schedule_stream = Stream(priority=0)<br/>StreamContext"]
-    Stream --> Dispatch["dispatch_event_loop(self)"]
-    Dispatch --> Normal{"overlap?"}
-    Normal -- no --> EN["event_loop_normal<br/>(scheduler.py:1384)"]
-    Normal -- yes --> EO["event_loop_overlap<br/>(scheduler.py:1412)"]
+    Run["run_event_loop<br/>scheduler.py:1636"] --> MLX{"use_mlx()?"}
+    MLX -- yes --> Disp1["dispatch_event_loop"]
+    MLX -- no --> Stream["schedule_stream = Stream(priority=0)<br/>+ StreamContext"]
+    Stream --> Disp2["dispatch_event_loop<br/>scheduler.py:4861"]
+    Disp2 --> Null{"disaggregation_mode"}
+    Null -- NULL --> Pdmux{"enable_pdmux?"}
+    Pdmux -- yes --> EPdmux["event_loop_pdmux"]
+    Pdmux -- no --> PP{"pp_size > 1?"}
+    PP -- yes --> EPP["event_loop_pp"]
+    PP -- no --> Ov{"enable_overlap / mlx?"}
+    Ov --> EN["event_loop_normal / overlap / overlap_mlx"]
+    Null -- PREFILL --> Pref["normal/overlap/pp_disagg_prefill"]
+    Null -- DECODE --> Dec["normal/overlap/pp_disagg_decode"]
 ```
 
-`dispatch_event_loop` 在 [scheduler.py:3628-3656](d:\design\sglang\python\sglang\srt\managers\scheduler.py) 选择具体循环。
+`dispatch_event_loop` 完整分支：[scheduler.py:4861-4889](d:\design\sglang\python\sglang\srt\managers\scheduler.py)。
 
-### `event_loop_normal` （[scheduler.py:1384-1410](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）
+#### `event_loop_normal`（[L1692-1724](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）
 
-```python
-@DynamicGradMode()
-def event_loop_normal(self):
-    while True:
-        recv_reqs = self.recv_requests()
-        self.process_input_requests(recv_reqs)
-        if self._engine_paused:
-            self.cancel_bubble_timer()
-            continue
+每轮：`request_receiver.recv_requests()` → `process_input_requests` → `get_next_batch_to_run`（返回 `NextBatchPlan`）→ 有 batch 则 `run_batch` + `process_batch_result`，否则 `on_idle`。
 
-        batch = self.get_next_batch_to_run()
-        self.cur_batch = batch
+#### `event_loop_overlap`（[L1727-1799](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）
 
-        if batch:
-            result = self.run_batch(batch)
-            self.process_batch_result(batch, result)
-        else:
-            self.on_idle()
+`result_queue: Deque` 让上一 batch 的 `process_batch_result` 与本 batch `run_batch` overlap；`run_batch` 后 `_apply_war_barrier()`（[L1775-1776](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）；generation 路径再 `launch_batch_sample_if_needed`（[L1792-1793](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）。
 
-        self.last_batch = batch
-        if envs.SGLANG_ENABLE_STRICT_MEM_CHECK_DURING_BUSY.get():
-            self.self_check_during_busy()
-```
+`is_disable_overlap_for_batch`（[L1801-1837](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）：
 
-### `event_loop_overlap` （[scheduler.py:1412-1465](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）
-
-引入 `result_queue` deque，让上一 batch 的 `process_batch_result` 与本 batch 的 `run_batch` 在 CPU/GPU 上 overlap：
-
-```python
-def event_loop_overlap(self):
-    self.result_queue = deque()
-
-    def pop_and_process():
-        tmp_batch, tmp_result = self.result_queue.popleft()
-        self.process_batch_result(tmp_batch, tmp_result)
-
-    while True:
-        recv_reqs = self.recv_requests()
-        self.process_input_requests(recv_reqs)
-        if self._engine_paused: continue
-
-        batch = self.get_next_batch_to_run()
-        disable_overlap_for_batch = self.is_disable_overlap_for_batch(batch)
-
-        if disable_overlap_for_batch:
-            pop_and_process()  # 立即处理上一 batch
-
-        if batch:
-            batch_result = self.run_batch(batch)
-            self.result_queue.append((batch.copy(), batch_result))
-        else:
-            batch_result = None
-            self.cancel_bubble_timer()
-
-        if self.last_batch:
-            if not disable_overlap_for_batch:
-                pop_and_process()  # 处理上一 batch
-        elif batch is None:
-            self.on_idle()
-
-        if self.is_generation:
-            self.launch_batch_sample_if_needed(batch_result)
-
-        self.last_batch = batch
-```
-
-> synthesis: 这是 SGLang 的关键性能优化——把 GPU forward（`run_batch`）和 CPU 后处理（`process_batch_result`）流水起来。代价是必须显式列出 "不能 overlap" 的情况（[scheduler.py:1466-1497 is_disable_overlap_for_batch](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）。
-
-### overlap 禁用条件（[scheduler.py:1466-1497](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）
-
-| 条件 | 原因 |
+| 条件 | 说明 |
 |---|---|
-| `SGLANG_DISABLE_CONSECUTIVE_PREFILL_OVERLAP` env + 连续两个 prefill | 改善首 batch TTFT，可能略损吞吐 |
-| spec v2 + grammar + decode + 队列非空 | "我们还不支持 overlap + spec + grammar"（注释 [scheduler.py:1487-1488](d:\design\sglang\python\sglang\srt\managers\scheduler.py) 显式 TODO） |
+| `SGLANG_DISABLE_CONSECUTIVE_PREFILL_OVERLAP` + 连续 extend | 改善首 batch TTFT |
+| spec + `grammar_needs_sync()` + decode + `result_queue` 非空 | grammar FSM 需在下一 bitmask 前同步（host-draft 路径） |
 
-## 关键 step 函数
+> synthesis: overlap 的真并发来自 **CUDA `forward_stream` / `copy_stream` / `schedule_stream` + `result_queue` 延迟 CPU 后处理**，不是额外 Python worker 线程跑 forward。
 
-| 函数 | 行号 | 作用 |
+### 关键 step 函数
+
+| 函数 | 锚点 | 作用 |
 |---|---|---|
-| `recv_requests()` | [1504-1640](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | 从 ZMQ socket 取请求（含 PD broadcast） |
-| `process_input_requests(recv_reqs)` | [1670-1694](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | 派发到 `handle_*` |
-| `handle_generate_request(...)` | [1807-2001](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | 主请求处理 |
-| `handle_batch_generate_request(...)` | [2002-2012](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | batch 请求 |
-| `_add_request_to_queue(req)` | [2035-2058](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | 入队（priority 决定位置） |
-| `get_next_batch_to_run()` | [2278-2386](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | **核心调度决策** |
-| `get_new_batch_prefill()` | [2393-2410](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | 取新 prefill batch |
-| `update_running_batch(batch)` | [2643-2720](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | 更新 running batch |
-| `run_batch(batch)` | [2730-2887](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | 跑一个 batch（forward） |
-| `launch_batch_sample_if_needed(...)` | [2888-2912](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | overlap 模式的 sampling |
-| `process_batch_result(batch, result)` | [2913-2935](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | 处理结果，发给 detokenizer |
-| `abort_request(recv_req)` | [3294-3395](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | abort |
+| `SchedulerRequestReceiver.recv_requests` | [request_receiver.py:76-102](d:\design\sglang\python\sglang\srt\managers\scheduler_components\request_receiver.py) | ZMQ/Rust 取请求并 broadcast |
+| `process_input_requests` | [scheduler.py:1850-1882](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | `session_controller.maybe_reap` + `_request_dispatcher` |
+| `handle_generate_request` | [scheduler.py:2341](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | 主 generate 入队 |
+| `get_next_batch_to_run` | [scheduler.py:2988-3123](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | 返回 `NextBatchPlan(batch_to_run, running_batch)` |
+| `get_new_batch_prefill` | [scheduler.py:3130](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | 新 prefill |
+| `update_running_batch` | [scheduler.py:3454](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | decode 侧更新 |
+| `run_batch` | [scheduler.py:3599](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | `model_worker.forward_batch_generation` |
+| `launch_batch_sample_if_needed` | [scheduler.py:3857](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | overlap 延迟 sample |
+| `process_batch_result` | [scheduler.py:3887-3918](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | 委托 `batch_result_processor` / disagg / dllm |
+| `on_idle` | [scheduler.py:4003](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | leak check / metrics / kv events / `maybe_sleep_on_idle` |
+| `abort_request` | [scheduler.py:4404](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | abort |
+| `open_session` / `close_session` | [scheduler.py:4795-4810](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | 经 `SessionController` |
 
-## `TpModelWorker` （[tp_worker.py:217-558](d:\design\sglang\python\sglang\srt\managers\tp_worker.py)）
+`get_next_batch_to_run` 决策要点（[L2988-3123](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）：timeout abort → stash chunked/dllm →（非 hisparse）merge 上一 extend batch 进 `running_batch` → `get_new_batch_prefill`（或 dllm）→ **有新 prefill 优先**，否则 `update_running_batch` 走 decode → `dp_attn_adapter.maybe_prepare_mlp_sync_batch` → ngram prepare → `NextBatchPlan`。
 
-继承 `BaseTpWorker(ABC)`（[tp_worker.py:62-216](d:\design\sglang\python\sglang\srt\managers\tp_worker.py)）。
+`run_batch` overlap 路径在 `forward_stream_ctx` 内 `forward_stream.wait_stream(schedule_stream)`，再 `model_worker.forward_batch_generation`；结果 D2H 可走 `copy_stream`（[L3638-3713](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）。`forward_stream` 来自 `tp_worker.get_worker_info()`（[L1011-1024](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）。
 
-| 方法 | 行号 | 说明 |
+### `IdleSleeper` / `SenderWrapper` / `SessionController`
+
+- **IdleSleeper**（[idle_sleeper.py:15-42](d:\design\sglang\python\sglang\srt\managers\scheduler_components\idle_sleeper.py)）：`zmq.Poller.poll(1000)`；可选 `SGLANG_EMPTY_CACHE_INTERVAL` 触发 `empty_cache`。由 `on_idle` → `maybe_sleep_on_idle` 调用（[scheduler.py:4812-4814](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）。
+- **SenderWrapper**（[output_sender.py:8-28](d:\design\sglang\python\sglang\srt\managers\scheduler_components\output_sender.py)）：封装 `sock_send`；复制 `http_worker_ipc` 以支持 multi-http worker。
+- **SessionController**（[session_controller.py:353](d:\design\sglang\python\sglang\srt\session\session_controller.py)）：在 `init_running_status` 创建（[scheduler.py:1137](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）；`process_input_requests` 调 `maybe_reap`；open/close session RPC 委托之。
+
+## Key APIs / Entities
+
+| 名称 | 位置 | 作用 |
 |---|---|---|
-| `__init__(...)` | [220-321](d:\design\sglang\python\sglang\srt\managers\tp_worker.py) | 初始化 |
-| `_init_model_config()` | [322-339](d:\design\sglang\python\sglang\srt\managers\tp_worker.py) | 模型配置 |
-| `_init_model_runner()` | [340-362](d:\design\sglang\python\sglang\srt\managers\tp_worker.py) | **创建 `ModelRunner`**（来自 model_executor） |
-| `_init_multi_layer_eagle_model_runners()` | [363-389](d:\design\sglang\python\sglang\srt\managers\tp_worker.py) | Eagle spec decode 多层 runner |
-| `_init_dllm_algorithm()` | [390-398](d:\design\sglang\python\sglang\srt\managers\tp_worker.py) | Diffusion LLM |
-| `forward_batch_generation(batch, ...)` | [443-533](d:\design\sglang\python\sglang\srt\managers\tp_worker.py) | **主 forward 入口** |
-| `forward_batch_split_prefill(batch)` | [535-558](d:\design\sglang\python\sglang\srt\managers\tp_worker.py) | chunked prefill |
-| `is_dllm()` | [428-430](d:\design\sglang\python\sglang\srt\managers\tp_worker.py) | DLL 模式 |
+| `Scheduler` | [scheduler.py:375](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | 调度器主体 |
+| `run_scheduler_process` | [scheduler.py:4957](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | 子进程入口 |
+| `dispatch_event_loop` | [scheduler.py:4861](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | 选主循环 |
+| `configure_scheduler_process` | [scheduler.py:4892](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | 进程标题 / logger / affinity |
+| `SchedulerIpcChannels` | [ipc_channels.py:17](d:\design\sglang\python\sglang\srt\managers\scheduler_components\ipc_channels.py) | ZMQ 通道 dataclass |
+| `SenderWrapper` | [output_sender.py:8](d:\design\sglang\python\sglang\srt\managers\scheduler_components\output_sender.py) | 输出发送包装 |
+| `IdleSleeper` | [idle_sleeper.py:15](d:\design\sglang\python\sglang\srt\managers\scheduler_components\idle_sleeper.py) | idle CPU 节能 |
+| `SchedulerRequestReceiver` | [request_receiver.py:49](d:\design\sglang\python\sglang\srt\managers\scheduler_components\request_receiver.py) | 收包 + broadcast |
+| `SchedulerBatchResultProcessor` | [batch_result_processor.py:77](d:\design\sglang\python\sglang\srt\managers\scheduler_components\batch_result_processor.py) | 结果处理 |
+| `SessionController` | [session_controller.py:353](d:\design\sglang\python\sglang\srt\session\session_controller.py) | session 生命周期 |
+| `NextBatchPlan` | [schedule_batch.py:3376](d:\design\sglang\python\sglang\srt\managers\schedule_batch.py) | `(batch_to_run, running_batch)` |
+| `TpModelWorker` | [tp_worker.py](d:\design\sglang\python\sglang\srt\managers\tp_worker.py) | 见 [TpModelWorker.md](TpModelWorker.md) |
+| `TypeBasedDispatcher` | [scheduler.py:1501-1595](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | RPC/请求类型派发表 |
 
-`BaseTpWorker` 提供大量"权重更新 / LoRA / 远端实例 send 权重"等通用 API（[tp_worker.py:62-216](d:\design\sglang\python\sglang\srt\managers\tp_worker.py)），子类只需实现 `forward_batch_generation` + `model_runner` property + `__init__`。
+## Hidden state（threads / queues / streams / IPC）
 
-## `IdleSleeper` （[scheduler.py:3558-3586](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）
+| 类别 | 位置 | 说明 |
+|---|---|---|
+| 进程 | [engine.py:881](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) `mp.Process`；DP 控制器 [data_parallel_controller.py:703](d:\design\sglang\python\sglang\srt\managers\data_parallel_controller.py) | 每个 scheduler 一个 OS 进程（Ray 则 actor） |
+| Watchdog 线程 | `WatchdogRaw` [watchdog.py:121-122](d:\design\sglang\python\sglang\srt\utils\watchdog.py) via `create_scheduler_watchdog` | soft（[scheduler.py:1237](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）+ hard（[L1245](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）daemon `threading.Thread` |
+| FPM 发布线程 | `_FpmPublisherThread` [forward_pass_metrics.py:135-169](d:\design\sglang\python\sglang\srt\observability\forward_pass_metrics.py)；由 metrics_reporter 创建 | `queue.Queue` + ZMQ PUB 后台线程；`run_scheduler_process` finally 调 `_shutdown_fpm`（[scheduler.py:5040-5042](d:\design\sglang\python\sglang\srt\managers\scheduler.py)） |
+| overlap `result_queue` | [scheduler.py:1729-1731](d:\design\sglang\python\sglang\srt\managers\scheduler.py) `deque` | CPU 后处理与 GPU forward 解耦 |
+| CUDA/设备流 | `schedule_stream`（[L1653](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）；`forward_stream`（worker info [L1020](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）；`copy_stream`（[L1462](d:\design\sglang\python\sglang\srt\managers\scheduler.py)） | overlap / WAR barrier（[L1674-1689](d:\design\sglang\python\sglang\srt\managers\scheduler.py)） |
+| ZMQ IPC | [ipc_channels.py:36-80](d:\design\sglang\python\sglang\srt\managers\scheduler_components\ipc_channels.py) | PULL/DEALER/PUSH；非 leader 为空 |
+| 运行队列 | `waiting_queue` / `running_batch` / `last_batch`（[L1122-1129](d:\design\sglang\python\sglang\srt\managers\scheduler.py)） | 连续 batching 状态 |
+| PD 队列 | `disagg_*_queue`（[init_disaggregation L1266-1414](d:\design\sglang\python\sglang\srt\managers\scheduler.py)） | bootstrap / transfer / prealloc / inflight |
 
-省 CPU 的辅助类，当 sockets 都空时短暂 `time.sleep`：
+## 使用方调用清单 / 跨子系统引用
 
-```python
-class IdleSleeper:
-    def __init__(self, sockets):
-        self.sockets = sockets
-    def maybe_sleep(self):
-        # ... poll sockets, sleep if all empty
-```
+### 1) 跨语言绑定
 
-## `SenderWrapper` （[scheduler.py:3605-3626](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）
+- `Scheduler` / `IdleSleeper` / `SessionController` pybind|ctypes|cffi|Cython|capsule：在 [d:\design\sglang\python\sglang\srt\managers\scheduler.py](d:\design\sglang\python\sglang\srt\managers\scheduler.py) 全文件 grep 0 命中（纯 Python 调度进程；Rust 侧经 `RustServer` 嵌入，不是 pybind 暴露 Scheduler 类）。
+- C++ `src/` 树：本 upstream 检出无独立 C++ `src/` Scheduler 绑定树可扫；`Scheduler` 类名跨语言绑定在当前 tree 视为 N/A（verified 2026-08-10）。
 
-封装 `send_output`，处理 `socket is None` 的情况（非 leader rank 上 socket 是空的）。
+### 2) 协作伙伴跨子系统引用（全 `srt/` grep）
+
+| 伙伴 | 命中范围（除定义/本页自引用外） |
+|---|---|
+| `Scheduler` / `run_scheduler_process` | [entrypoints/engine.py](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)、[entrypoints/http_server.py](d:\design\sglang\python\sglang\srt\entrypoints\http_server.py)、[managers/data_parallel_controller.py](d:\design\sglang\python\sglang\srt\managers\data_parallel_controller.py)、[ray/engine.py](d:\design\sglang\python\sglang\srt\ray\engine.py) / [ray/scheduler_actor.py](d:\design\sglang\python\sglang\srt\ray\scheduler_actor.py) / [ray/http_server.py](d:\design\sglang\python\sglang\srt\ray\http_server.py)、[disaggregation/decode.py](d:\design\sglang\python\sglang\srt\disaggregation\decode.py)、[disaggregation/prefill.py](d:\design\sglang\python\sglang\srt\disaggregation\prefill.py)、[disaggregation/encode_receiver.py](d:\design\sglang\python\sglang\srt\disaggregation\encode_receiver.py)、[multiplex/multiplexing_mixin.py](d:\design\sglang\python\sglang\srt\multiplex\multiplexing_mixin.py)、[dllm/mixin/scheduler.py](d:\design\sglang\python\sglang\srt\dllm\mixin\scheduler.py)、[constrained/grammar_manager.py](d:\design\sglang\python\sglang\srt\constrained\grammar_manager.py)、[plugins/hook_registry.py](d:\design\sglang\python\sglang\srt\plugins\hook_registry.py)（可 hook 子类化）、[managers/rust_server.py](d:\design\sglang\python\sglang\srt\managers\rust_server.py) |
+| `IdleSleeper` | 定义 [idle_sleeper.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\idle_sleeper.py)；使用仅 [scheduler.py](d:\design\sglang\python\sglang\srt\managers\scheduler.py)。在 `srt/` 其余子树 grep：无额外生产调用方 |
+| `SessionController` | 定义 [session_controller.py](d:\design\sglang\python\sglang\srt\session\session_controller.py)；使用仅 [scheduler.py](d:\design\sglang\python\sglang\srt\managers\scheduler.py)（`init_running_status` / open/close / `maybe_reap` / MM offset）。在 `srt/` 其余子树 grep：无额外生产调用方 |
+| `TpModelWorker` / `SchedulePolicy` / `PrefillBootstrapQueue` / `DecodePreallocQueue` | 见各模块页；scheduler 在 `init_model_worker` / `init_schedule_policy` / `init_disaggregation` 组装 |
+
+### 3) 配置 / IPC 共享结构
+
+- `PortArgs.scheduler_input_ipc_name` / `tokenizer_ipc_name` / `detokenizer_ipc_name` / `rpc_ipc_name` / `metrics_ipc_name`：由 [SchedulerIpcChannels.create](d:\design\sglang\python\sglang\srt\managers\scheduler_components\ipc_channels.py) 与 Engine/Tokenizer/Detokenizer 共享（见 [manager-pipeline.md](../topics/manager-pipeline.md)）。
+- `ServerArgs` 字段（`disable_overlap_schedule`、`enable_pdmux`、`disaggregation_mode`、`sleep_on_idle` via device bag、`schedule_policy` 等）：在 `__init__` 与 `dispatch_event_loop` 读取（[scheduler.py:409-445](d:\design\sglang\python\sglang\srt\managers\scheduler.py)、[L4861-4889](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）。
+- env：`SGLANG_SCHEDULER_MAX_RECV_PER_POLL`、`SGLANG_DISABLE_CONSECUTIVE_PREFILL_OVERLAP`、`SGLANG_RUST_SERVER`、`SGLANG_SET_CPU_AFFINITY`、`SGLANG_ENABLE_WAR_BARRIER`、`SGLANG_KILLPG_ON_SCHEDULER_EXCEPTION` 等（分散于 init / event loop / process entry）。
+
+### 4) 测试覆盖反查
+
+- `IdleSleeper` / `SessionController`：在本 upstream 检出树（`/tmp/upstream/sglang`，无顶层 `test/` / `tests/` 套件目录）全树按文件名 `*test*.py` grep 0 命中。
+- `Scheduler(` / `run_scheduler_process`：生产调用见上；专用 unit test 文件在本检出中 N/A（verified 2026-08-10，grep 范围：检出树内 `*test*.py`，并排除损坏的 `mem_cache/cpp_radix_tree` 路径）。
+
+### 5) doc / config / yaml 反查
+
+- `IdleSleeper` / `SessionController`：在 [d:\design\sglang\docs\](d:\design\sglang\docs) 下 `*.md`/`*.rst`/`*.yml`/`*.yaml` grep 0 命中（verified 2026-08-10）。
+- 顶层 README 仅有产品级 “Batch Scheduler” 表述，无类级 API 文档锚点。
 
 ## Notes / Caveats
-> [!todo] VERIFY: ~~`run_scheduler_process` ([scheduler.py:3714](d:\design\sglang\python\sglang\srt\managers\scheduler.py)) 的完整子进程入口逻辑（设置 affinity / signal handler / 异常 dump）。~~
-> **RESOLVED 2026-04-19**: `run_scheduler_process` ([scheduler.py:3714-3771](d:\design\sglang\python\sglang\srt\managers\scheduler.py)) 委托 `configure_scheduler_process` ([scheduler.py:3657-3711](d:\design\sglang\python\sglang\srt\managers\scheduler.py)) 完成 `kill_itself_when_parent_died` + `setproctitle` + `faulthandler.enable()` + `configure_logger` + `set_gpu_proc_affinity`(env `SGLANG_SET_CPU_AFFINITY`) + `numa_bind_to_node`(非 `SGLANG_NUMA_BIND_V2`)；之后实例化 `Scheduler`、`pipe_writer.send(scheduler.get_init_info())`、`scheduler.run_event_loop()`，捕获异常时 `parent_process.send_signal(signal.SIGQUIT)`（[scheduler.py:3768-3771](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）。
-> [!todo] VERIFY: ~~`init_disaggregation` ([scheduler.py:1051-1182](d:\design\sglang\python\sglang\srt\managers\scheduler.py)) 的 7 backend 选择逻辑（NIXL / Mooncake / MORI / Ascend / fake / common / base）。~~
-> **RESOLVED 2026-04-19**: `init_disaggregation` 本身只做 `TransferBackend(server_args.disaggregation_transfer_backend)` 的解析与 PREFILL/DECODE 队列搭建（[scheduler.py:1051-1181](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）；真正的 backend 派发位于 `get_kv_class` ([disaggregation/utils.py:342-428](d:\design\sglang\python\sglang\srt\disaggregation\utils.py))，`TransferBackend` 枚举 ([disaggregation/utils.py:304-309](d:\design\sglang\python\sglang\srt\disaggregation\utils.py)) **实际只 5 个**：MOONCAKE / MORI / NIXL / ASCEND / FAKE（`common` 与 `base` 是抽象基类目录、非可选 backend）。
-> [!todo] VERIFY: ~~`get_next_batch_to_run` 的具体调度决策（chunked prefill 与 running batch 的优先级、回收策略）。~~
-> **RESOLVED 2026-04-19**: `get_next_batch_to_run` ([scheduler.py:2278-2385](d:\design\sglang\python\sglang\srt\managers\scheduler.py)) 顺序：(1) `_abort_on_waiting_timeout` + `_abort_on_running_timeout`；(2) 把 `chunked_req` 与 dllm staging 暂存出去（`stash_chunked_request`）；(3) 若 `last_batch.forward_mode.is_extend()` 则 `filter_batch(chunked_req_to_exclude=...)` 后 merge 进 `running_batch`；(4) 调 `get_new_batch_prefill` 取新 prefill batch；(5) **优先级 prefill > decode**——若有新 prefill 直接返回；否则 `update_running_batch(self.running_batch)` 走 decode（[scheduler.py:2362-2374](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）；(6) 末尾 `maybe_prepare_mlp_sync_batch` + `_maybe_prepare_ngram_embedding`。
+
+> [!warning] CONTRADICTION: 旧 wiki 多页仍写 “Scheduler = **11 mixin**”。HEAD `06f32bab` MRO 为 **6 mixin + `SchedulerMlxOverlapMixin`**（[scheduler.py:375-382](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）；OutputProcessor / UpdateWeights / Profiler / Metrics / RuntimeChecker / DPAttn 的源文件已删除，逻辑在 `scheduler_components/`。冲突页：[topics/scheduler-mixins.md](../topics/scheduler-mixins.md)、[modules/managers.md](../modules/managers.md)、[overview.md](../overview.md)、[topics/pd-disaggregation.md](../topics/pd-disaggregation.md)、[modules/disaggregation.md](../modules/disaggregation.md)、[modules/observability.md](../modules/observability.md)。本页以 HEAD 为准；上述页需单独 re-ingest / verify。
+
+> [!warning] CONTRADICTION: [modules/managers.md](../modules/managers.md) 仍把 `SchedulerRecvSkipper` 指向已删除的 `scheduler_recv_skipper.py`；HEAD 在 [scheduler_components/recv_skipper.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\recv_skipper.py)。
+
+> [!todo] VERIFY: `topics/scheduler-mixins.md` 应按 “5 残留 mixin + composition 目录” 重写；本 ingest 未改该 topic 正文（仅标 CONTRADICTION）。
+
+> [!todo] VERIFY: PD disagg event loop 方法体（`event_loop_*_disagg_*`）细节以 mixin 文件为准，未在本页逐行展开；见 [topics/pd-disaggregation.md](../topics/pd-disaggregation.md)（其中行号可能 stale）。
 
 ## See also
+
 - [modules/managers.md](../modules/managers.md)
 - [entities/TokenizerManager.md](TokenizerManager.md)
+- [entities/TpModelWorker.md](TpModelWorker.md)
+- [entities/Engine.md](Engine.md)
+- [entities/DataParallelController.md](DataParallelController.md)
 - [topics/manager-pipeline.md](../topics/manager-pipeline.md)
 - [topics/request-lifecycle.md](../topics/request-lifecycle.md)
-- [topics/scheduler-mixins.md](../topics/scheduler-mixins.md) — 11 mixin 详细拆解（关键方法 / 触发条件 / 跨 mixin 协作链）
+- [topics/scheduler-mixins.md](../topics/scheduler-mixins.md) — **STALE / CONTRADICTION**：仍描述 11-mixin；需 re-ingest
+- [topics/pd-disaggregation.md](../topics/pd-disaggregation.md)
+- [comparison/topics/scheduler-architecture.md](../../comparison/topics/scheduler-architecture.md)

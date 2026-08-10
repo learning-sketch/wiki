@@ -33,7 +33,8 @@ synthesis: SGLang 由两层组成 —— `sglang/` Python 前端 (frontend lang)
 - TP worker：[managers/tp_worker.py](d:\design\sglang\python\sglang\srt\managers\tp_worker.py)
 - 调度策略：[managers/schedule_policy.py](d:\design\sglang\python\sglang\srt\managers\schedule_policy.py), [managers/schedule_batch.py](d:\design\sglang\python\sglang\srt\managers\schedule_batch.py)
 - DP 控制：[managers/data_parallel_controller.py](d:\design\sglang\python\sglang\srt\managers\data_parallel_controller.py)
-- 调度器 mixin 体系：[managers/scheduler_*.py](d:\design\sglang\python\sglang\srt\managers)（11 个 mixin）
+- 调度器 mixin / composition：[managers/scheduler.py](d:\design\sglang\python\sglang\srt\managers\scheduler.py)（HEAD：6 mixin + MlxOverlap）+ [managers/scheduler_components/](d:\design\sglang\python\sglang\srt\managers\scheduler_components)
+  - > [!warning] CONTRADICTION: 旧文 “11 个 mixin” 过时；见 [entities/Scheduler.md](entities/Scheduler.md)（2026-08-10）。
 - PD 分离：[disaggregation/](d:\design\sglang\python\sglang\srt\disaggregation) 含 `base/common/nixl/mooncake/mori/ascend/fake` 等后端
 - 多 OpenAI / Anthropic / Ollama 兼容：[entrypoints/openai/](d:\design\sglang\python\sglang\srt\entrypoints\openai), [anthropic/](d:\design\sglang\python\sglang\srt\entrypoints\anthropic), [ollama/](d:\design\sglang\python\sglang\srt\entrypoints\ollama)
 - 新增横切包：[weight_cache/](d:\design\sglang\python\sglang\srt\weight_cache), [kv_canary/](d:\design\sglang\python\sglang\srt\kv_canary), [arg_groups/](d:\design\sglang\python\sglang\srt\arg_groups), [platforms/](d:\design\sglang\python\sglang\srt\platforms), [plugins/](d:\design\sglang\python\sglang\srt\plugins), [session/](d:\design\sglang\python\sglang\srt\session), [state_capturer/](d:\design\sglang\python\sglang\srt\state_capturer)
@@ -139,7 +140,7 @@ SGLang 的核心架构：**3 个独立进程 + ZMQ pipeline**：
 2. **Scheduler**（[scheduler.py](d:\design\sglang\python\sglang\srt\managers\scheduler.py) + mixin 体系）— 跑 continuous batching，调用 worker，输出发给 detokenizer；持有 [`SessionController`](modules/session.md)
 3. **DetokenizerManager**（[detokenizer_manager.py](d:\design\sglang\python\sglang\srt\managers\detokenizer_manager.py)）— 把 token id 转回字符串，回给 tokenizer manager
 
-> [!todo] VERIFY: 11 个 scheduler mixin 的职责切分需要专门一页（topic）梳理。~~部分已由 [topics/scheduler-mixins.md](topics/scheduler-mixins.md) 覆盖~~ — 仍以该 topic 为准做增量。
+> [!todo] VERIFY: scheduler mixin/composition 职责切分需更新 [topics/scheduler-mixins.md](topics/scheduler-mixins.md)（该页已标 STALE / CONTRADICTION；权威现状见 [entities/Scheduler.md](entities/Scheduler.md)）。
 
 ## PD 分离
 
@@ -175,7 +176,7 @@ CLI 归一化 / DCP 约束见 [`arg_groups/pd_disaggregation_hook.py`](modules/a
 - **weight_cache**：IPC 零拷贝权重缓存（与 speculative 互斥）。
 - **platforms / plugins**：OOT 硬件与 hook 扩展点。
 - **DLLM**：Diffusion LLM 实验。
-- **dp_attn / scheduler_dp_attn_mixin**：DP attention 并行优化。
+- **dp_attn / `SchedulerDPAttnAdapter`**（[scheduler_components/dp_attn.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\dp_attn.py)）：DP attention 并行优化（旧 `scheduler_dp_attn_mixin` 已删除）。
 
 ## See also
 - [sglang/index.md](index.md) — 项目内目录

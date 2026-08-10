@@ -55,6 +55,9 @@ synthesis: `srt/managers` 是 SGLang **进程级管理**的核心，定义了 `T
 详见 [topics/manager-pipeline.md](../topics/manager-pipeline.md)。
 
 ### Scheduler 的 11 个 mixin
+
+> [!warning] CONTRADICTION: 本节仍描述 **11 mixin** 与已删除的 `scheduler_*_mixin.py` / `scheduler_recv_skipper.py`。HEAD `06f32bab` 为 **6 mixin + MlxOverlap** + [scheduler_components/](d:\design\sglang\python\sglang\srt\managers\scheduler_components) composition（含迁出的 `IdleSleeper` / `SenderWrapper` / `SchedulerRecvSkipper`）。权威页：[entities/Scheduler.md](../entities/Scheduler.md)（2026-08-10）。
+
 精确 class 定义来自 [scheduler.py:317-329](d:\design\sglang\python\sglang\srt\managers\scheduler.py)：
 
 ```python
@@ -190,7 +193,7 @@ flowchart TB
     Engine["entrypoints/Engine"] -->|"主进程持有"| TokMgr["managers/TokenizerManager"]
     Engine -->|"fork (mp.Process)"| SchedProc["scheduler subprocess"]
     Engine -->|"fork"| DetokProc["detokenizer subprocess"]
-    SchedProc -->|"实例化"| Sched["managers/Scheduler<br/>(+ 11 mixins)"]
+    SchedProc -->|"实例化"| Sched["managers/Scheduler<br/>(6 mixins + components)"]
     Sched -->|"实例化"| TPW["managers/TpModelWorker"]
     TPW -->|"持有"| MR["model_executor/ModelRunner"]
     DetokProc -->|"实例化"| DetokMgr["managers/DetokenizerManager"]

@@ -71,7 +71,7 @@ flowchart TB
         FE["RequestMetricsExporter<br/>(JSON lines, optional)"]
     end
     subgraph sched["Scheduler processes"]
-        SCH["Scheduler<br/>(SchedulerMetricsMixin)"]
+        SCH["Scheduler<br/>(SchedulerMetricsReporter composition;<br/>旧 SchedulerMetricsMixin 已删除)"]
         MC["SchedulerMetricsCollector<br/>log_stats / observe_*"]
         KVpub["kv_event_publisher.publish<br/>(KVEventBatch)"]
     end

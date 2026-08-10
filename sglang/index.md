@@ -99,7 +99,7 @@ related:
 |---|---|---|---|
 | `Engine` | [entrypoints/engine.py](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | [entities/Engine.md](entities/Engine.md) | **DONE** (P0)（含 `HttpServerEngineAdapter`） |
 | `TokenizerManager` | [managers/tokenizer_manager.py](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) | [entities/TokenizerManager.md](entities/TokenizerManager.md) | **DONE**（含 `DetokenizerManager`） |
-| `Scheduler` | [managers/scheduler.py](d:\design\sglang\python\sglang\srt\managers\scheduler.py) | [entities/Scheduler.md](entities/Scheduler.md) | **DONE**（11 mixin；TpModelWorker 已拆出，见独立页） |
+| `Scheduler` | [managers/scheduler.py](d:\design\sglang\python\sglang\srt\managers\scheduler.py) (~5046 行) + [scheduler_components/](d:\design\sglang\python\sglang\srt\managers\scheduler_components) | [entities/Scheduler.md](entities/Scheduler.md) | **DONE**（re-ingest 2026-08-10 / HEAD `06f32bab`：MRO **6 mixin + MlxOverlap**；前 Output/Weights/Profiler/Metrics/RuntimeChecker/DPAttn mixin → composition；`IdleSleeper`/`SenderWrapper` 已迁出；TpModelWorker 见独立页）。**Caveat:** [topics/scheduler-mixins.md](topics/scheduler-mixins.md) 仍写 11 mixin → CONTRADICTION / stale |
 | `DetokenizerManager` | [managers/detokenizer_manager.py](d:\design\sglang\python\sglang\srt\managers\detokenizer_manager.py) | 见 [entities/TokenizerManager.md](entities/TokenizerManager.md) | DONE（合并） |
 | `TpModelWorker` | [managers/tp_worker.py](d:\design\sglang\python\sglang\srt\managers\tp_worker.py) | [entities/TpModelWorker.md](entities/TpModelWorker.md) | **DONE** (P0)（独立页，含 `BaseTpWorker`、`forward_batch_generation` 三分支、`get_memory_pool` spec 共享） |
 | `DataParallelController` | [managers/data_parallel_controller.py](d:\design\sglang\python\sglang\srt\managers\data_parallel_controller.py) | [entities/DataParallelController.md](entities/DataParallelController.md) | **DONE** (P0)（含 `LoadBalanceMethod` 4 策略 + `routed_dp_rank` 钉死） |
@@ -117,7 +117,7 @@ related:
 |---|---|---|
 | **Request lifecycle** | [topics/request-lifecycle.md](topics/request-lifecycle.md) | **DONE** |
 | **Manager 模式 + ZMQ pipeline** | [topics/manager-pipeline.md](topics/manager-pipeline.md) | **DONE** |
-| **Scheduler 11 mixin 拆解** | [topics/scheduler-mixins.md](topics/scheduler-mixins.md) | **DONE** (P1)（11 mixin × 11 行表 + 6 内置/5 外置分类 + 6 条跨 mixin 协作链 + 为什么 mixin 而非单类/strategy） |
+| **Scheduler mixin / composition 拆解** | [topics/scheduler-mixins.md](topics/scheduler-mixins.md) | **STALE** (P1) — 仍按 11 mixin 撰写；HEAD 已改为 6 mixin + `scheduler_components/` composition（见 [entities/Scheduler.md](entities/Scheduler.md) CONTRADICTION）。需 re-ingest |
 | **PD 分离 多后端**（NIXL/Mooncake/MORI/Ascend/Fake） | [topics/pd-disaggregation.md](topics/pd-disaggregation.md) | **DONE** (P1)（5 backend 3 层继承树 `Base*→Common*→具体` + 2 mixin（prefill 9 方法 / decode 6 方法 不对称）+ EPD encode 三段 + PD-Disagg vs PD-Mux 互斥本质 + 4 维度对偶矩阵） |
 | **KV cache**（unified / paged / radix / sparsity / hierarchical / mamba / SWA / LMC） | [topics/kv-cache.md](topics/kv-cache.md) | **DONE** (P1)（**10** RadixCache 变体（**纠正 mem_cache.md 8 → 10**）+ `BasePrefixCache` 子类树 + `UnifiedRadixCache` 4-component 重构进行中 + HiCache `init_load_back/ready_to_load_host_cache` 仅 `Hi*RadixCache` 实现 + multimodal embedding cache 3 子图正交 + 8 触发器→10 分支 不一一对应） |
 | Continuous batching / chunked prefill | `topics/continuous-batching.md` | TODO |
