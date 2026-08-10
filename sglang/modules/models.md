@@ -1,7 +1,7 @@
 ---
 type: module
 project: sglang
-status: verified
+status: stale
 confidence: high
 verified_against: 2026-04-19
 sources:

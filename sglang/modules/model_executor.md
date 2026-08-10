@@ -1,7 +1,7 @@
 ---
 type: module
 project: sglang
-status: verified
+status: stale
 confidence: high
 verified_against: 2026-04-19
 sources:
@@ -229,6 +229,8 @@ flowchart LR
 详细 11 子维度对比见 [`comparison/topics/executor-worker.md`](../../comparison/topics/executor-worker.md)；维度索引 [`comparison/dimensions.md §dim-executor`](../../comparison/dimensions.md)。
 
 ## Notes / Caveats
+
+> [!todo] VERIFY: pin 从 `34fef07a` → `06f32bab`（2026-08-10 increment）后本页未深 verify；文件数量/行号可能漂移。优先对照 [entities/Scheduler.md](../entities/Scheduler.md) / 新模块页。
 
 > [!warning] CONTRADICTION（命名陷阱）：本模块名为 `model_executor` 但 **不是** vLLM/MindIE 风格的 "Executor" 分布式抽象。**SGLang 没有 Executor 类层次**（详 [`comparison/topics/executor-worker.md`](../../comparison/topics/executor-worker.md)）；本目录是"per-worker model running infra"。三家 cross compare 时不可按目录名同义套等价。
 

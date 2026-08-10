@@ -1,7 +1,7 @@
 ---
 type: topic
 project: sglang
-status: draft
+status: stale
 confidence: high
 verified_against: 2026-04-19
 sources:
@@ -269,6 +269,8 @@ if self.enable_pdmux:
 | EPD 模型族白名单 | 11 个 Qwen / Kimi 架构（[L3592-3604](d:\design\sglang\python\sglang\srt\server_args.py)） |
 
 ## Notes / Caveats
+
+> [!todo] VERIFY: pin 从 `34fef07a` → `06f32bab`（2026-08-10 increment）后本页未深 verify；文件数量/行号可能漂移。优先对照 [entities/Scheduler.md](../entities/Scheduler.md) / 新模块页。
 
 > [!warning] CONTRADICTION（命名陷阱）：**SGLang `srt/disaggregation/` ≠ vLLM `kv_transfer/kv_connector/`**——前者把「PD 角色判定 + KV 传输 + bootstrap 服务 + scheduler mixin + EPD encoder 分离」**全打包**；后者仅「KV 传输 backend」，PD 角色靠 [`vllm/entrypoints/serve/disagg/`](d:\design\vllm\vllm\entrypoints\serve\disagg) 前端 + scheduler `_update_waiting_for_remote_kv` 分摊。MindIE 又是另一种切分：**独立 `connector/` 子进程仅做 KV transfer**（`mindie/topics/connector.md`（已删））。三家「PD 子模块」内容范围都不同，对比时不可只按目录名套等价（详见 [`comparison/topics/pd-disaggregation.md`](../../comparison/topics/pd-disaggregation.md)）。
 

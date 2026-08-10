@@ -1,7 +1,7 @@
 ---
 type: module
 project: sglang
-status: verified
+status: stale
 confidence: high
 verified_against: 2026-04-19
 sources:
@@ -158,3 +158,7 @@ flowchart TB
 - [entities/Scheduler.md](../entities/Scheduler.md)
 - [topics/manager-pipeline.md](../topics/manager-pipeline.md)
 - [topics/request-lifecycle.md](../topics/request-lifecycle.md)
+
+## Notes / Caveats
+
+> [!todo] VERIFY: pin 从 `34fef07a` → `06f32bab`（2026-08-10 increment）后本页未深 verify；文件数量/行号可能漂移。优先对照 [entities/Scheduler.md](../entities/Scheduler.md) / 新模块页。

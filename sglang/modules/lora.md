@@ -1,7 +1,7 @@
 ---
 type: module
 project: sglang
-status: verified
+status: stale
 confidence: high
 verified_against: 2026-04-19
 sources:
@@ -211,6 +211,8 @@ CLI 可选集合：[`LORA_BACKEND_CHOICES = ["triton", "csgmv", "ascend", "torch
 - 平台特性表含 LoRA 参数（例：[`docs/platforms/ascend/ascend_npu_support_features.md`](d:\design\sglang\docs\platforms\ascend\ascend_npu_support_features.md) §LoRA）。
 
 ## Notes / Caveats
+
+> [!todo] VERIFY: pin 从 `34fef07a` → `06f32bab`（2026-08-10 increment）后本页未深 verify；文件数量/行号可能漂移。优先对照 [entities/Scheduler.md](../entities/Scheduler.md) / 新模块页。
 
 > [!todo] VERIFY: **PD 分离 / overlap scheduler** 与 LoRA 的交互需结合 `scheduler` 全文件与 PD 专题页交叉阅读；本稿仅确认 `LoRAOverlapLoader` 在 [`scheduler.py`](d:\design\sglang\python\sglang\srt\managers\scheduler.py) 被引用。
 

@@ -1,7 +1,7 @@
 ---
 type: module
 project: sglang
-status: verified
+status: stale
 confidence: high
 verified_against: 2026-04-19
 sources:
@@ -228,6 +228,8 @@ flowchart LR
 详细 9 子维度对比（进程组抽象 / TP collectives / PP 完成度 / DP 双语义 / EP+EPLB+Elastic / scheduler rank 维度数 / CP-SP 链回 / 目录布局 / 与 PD 优化关联）见 [`comparison/topics/distributed.md`](../../comparison/topics/distributed.md)；维度索引见 [`comparison/dimensions.md §dim-distributed`](../../comparison/dimensions.md)。
 
 ## Notes / Caveats
+
+> [!todo] VERIFY: pin 从 `34fef07a` → `06f32bab`（2026-08-10 increment）后本页未深 verify；文件数量/行号可能漂移。优先对照 [entities/Scheduler.md](../entities/Scheduler.md) / 新模块页。
 
 > [!warning] CONTRADICTION（数字精度）：~~[`comparison/topics/distributed.md §3.4 PP/DP/EP 完成度对比`](../../comparison/topics/distributed.md) 写"SGLang 12+ 个 device_communicators"——本页确认 **17 .py 文件 / 13 逻辑后端**（`custom_all_reduce` 拆 4 文件 + `pynccl` 拆 3 文件）。两种统计口径都对，**精确措辞**应写"17 .py / 13 逻辑后端"双维度（同条 marker 已在 [`comparison/topics/distributed.md`](../../comparison/topics/distributed.md) 加 sync）。~~
 > **RESOLVED 2026-04-19**: 对比页 [comparison/topics/distributed.md:116](../../comparison/topics/distributed.md) 已采用同步措辞 "**17 .py / 13 逻辑后端**"，两侧描述一致；`comparison` 表 L82/255/264-268 也写为 "22 .py（含 device_communicators）"，无残留 "12+" 字样。

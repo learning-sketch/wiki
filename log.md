@@ -908,3 +908,28 @@
 - `log-archive/log-00N.md`（§11 不可重写；历史死链保留）
 - 对比表三列结构（MindIE | vLLM | SGLang）——仅去掉失效 wiki 页链接
 
+
+## [2026-08-10] increment | sglang | pin 34fef07a → 06f32bab | 7 new modules + core entity re-ingest
+
+**触发**：用户要求把 `sglang/` wiki 更新到最新，并按 [AGENTS.md §12](AGENTS.md) 增量工作流执行。
+
+**Diff 摸底**（源：GitHub `sgl-project/sglang`）
+- pin `34fef07a` → HEAD `06f32bab`（2026-08-09）：**4669** commits
+- `python/sglang/srt`：**1929** files changed（+347k / -131k）
+- 顶层包：34 → **41**（新增 `arg_groups` / `kv_canary` / `platforms` / `plugins` / `session` / `state_capturer` / `weight_cache`）
+
+**本轮产出**
+1. **新建模块页 7**：`weight_cache` / `kv_canary` / `arg_groups` / `platforms` / `plugins` / `session` / `state_capturer`
+2. **re-ingest**：[entities/Scheduler.md](sglang/entities/Scheduler.md)、[entities/TokenizerManager.md](sglang/entities/TokenizerManager.md)、[topics/scheduler-mixins.md](sglang/topics/scheduler-mixins.md)
+3. **re-anchor verify**：Engine / TpModelWorker / DataParallelController / modules/managers
+4. **overview + index** 同步到 41 包与新模块 DONE 行；高 churn 未深读页标 `status: stale` + VERIFY
+5. **[source-versions.md](source-versions.md)** SGLang pin → `06f32bab`；History append
+
+**显式未做（留 follow-up）**
+- 深 verify：`mem_cache` / `speculative` / `model_executor` / `layers` / `models` / `multimodal` 等（已标 stale）
+- comparison 页 SGLang 单元格行号未批量重锚
+- MindIE / vLLM pin 未动（本环境未检出源码）
+
+**Lessons**
+- 跨 ~4 个月 / 4k+ commits 时，§12 应先做**顶层包 inventory + 核心 entity re-ingest**，其余标 stale，避免假 verified。
+

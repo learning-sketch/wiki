@@ -1,7 +1,7 @@
 ---
 type: topic
 project: sglang
-status: draft
+status: stale
 confidence: high
 verified_against: 2026-04-19
 sources:
@@ -231,6 +231,8 @@ speculative MoE 的运行时切换由 [`speculative_moe_backend_context`](d:\des
 5. **doc**：[docs/advanced_features/expert_parallelism.md](d:\design\sglang\docs\advanced_features\expert_parallelism.md) / [server_arguments.md](d:\design\sglang\docs\advanced_features\server_arguments.md)；Ascend doc 列 `--elastic-ep-backend`（与代码矛盾，见上）。
 
 ## Notes / Caveats
+
+> [!todo] VERIFY: pin 从 `34fef07a` → `06f32bab`（2026-08-10 increment）后本页未深 verify；文件数量/行号可能漂移。优先对照 [entities/Scheduler.md](../entities/Scheduler.md) / 新模块页。
 
 > [!todo] VERIFY: [`is_deepep_class_backend()`](d:\design\sglang\python\sglang\srt\layers\moe\utils.py:260-263) 把 deepep / mooncake / mori 视为同族，**未含 nixl**；但 [`create_moe_dispatcher`](d:\design\sglang\python\sglang\srt\layers\moe\fused_moe_triton\layer.py:84-88) 把 nixl 与前三者一同包成 `MaybeTboDeepEPDispatcher`。两处分类不一致——是 `is_deepep_class_backend` 漏写 `is_nixl()`，还是 nixl 在某些 EP path（如 quant 配对）确实不应被视作 DeepEP 族？需对照运行时调用站确认。
 

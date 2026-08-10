@@ -25,7 +25,7 @@ related:
 ### 入口与服务化
 | 模块 | wiki 页 | 状态 |
 |---|---|---|
-| `entrypoints` | [modules/entrypoints.md](modules/entrypoints.md) | **DONE** ；**file count @06f32bab = 56.py**（待深 verify） |
+| `entrypoints` | [modules/entrypoints.md](modules/entrypoints.md) | **DONE** / **stale@06f32bab**（56 `.py`；待深 verify） |
 | `entrypoints/openai` | [modules/entrypoints_openai.md](modules/entrypoints_openai.md) | **DONE** (P4)（20 .py + `OpenAIServingBase` + 10 `OpenAIServing*` 子类 + `protocol.py` 77 BaseModel + 11 `/v1/*` 路由 + `MCPToolServer` / `DemoToolServer` + Reasoning + function_call + constrained 集成）|
 | `entrypoints/anthropic` | [modules/entrypoints_anthropic.md](modules/entrypoints_anthropic.md) | **DONE** (P6)（**2 .py**：`AnthropicServing` 转 `ChatCompletionRequest` 复用 `OpenAIServingChat`；Anthropic SSE 事件 `message_start` / `content_block_*` / `message_delta` / `message_stop`；`/v1/messages` + `/v1/messages/count_tokens`） |
 | `entrypoints/ollama` | [modules/entrypoints_ollama.md](modules/entrypoints_ollama.md) | **DONE** (P6)（4 .py + `OllamaServing` 直连 `TokenizerManager`（**不**依赖 OpenAI 包）+ NDJSON 流式 + `/api/chat` / `/api/generate` / `/api/tags` / `/api/show` 4 路由 + `SGLANG_OLLAMA_*` env 覆盖路径） |

@@ -1,7 +1,7 @@
 ---
 type: module
 project: sglang
-status: verified
+status: stale
 confidence: high
 verified_against: 2026-04-19
 sources:
@@ -295,6 +295,8 @@ classDiagram
 | 量化 | FP4 独立子类 | 通过 `KVQuantMode` enum |
 
 ## Notes / Caveats
+
+> [!todo] VERIFY: pin 从 `34fef07a` → `06f32bab`（2026-08-10 increment）后本页未深 verify；文件数量/行号可能漂移。优先对照 [entities/Scheduler.md](../entities/Scheduler.md) / 新模块页。
 > [!todo] VERIFY: ~~`unified_cache_components/` 与 `unified_radix_cache.py` 的关系（疑是新一代统一接口，旧 RadixCache 在迁移）。~~
 > **RESOLVED 2026-04-19**: `unified_cache_components/` 提供 `FullComponent` / `SWAComponent` / `MambaComponent` / `TreeComponent` 等组件（[unified_radix_cache.py L31-L41 import](d:\design\sglang\python\sglang\srt\mem_cache\unified_radix_cache.py)），由 `UnifiedRadixCache(BasePrefixCache)` 组合 `tree_components` 元组（FULL + 可选 SWA/MAMBA）。**触发**：env `SGLANG_ENABLE_UNIFIED_RADIX_TREE`（[scheduler.py L854-L868](d:\design\sglang\python\sglang\srt\managers\scheduler.py)），优先级位于 hierarchical/HiCache 之后、`SWARadixCache`/`MambaRadixCache` 之前——确认是新一代统一接口，旧多个 RadixCache 子类按 env 显式切换，**未默认启用**。
 > [!todo] VERIFY: ~~`multimodal_cache.py` 与各 entrypoint 的串联（多模态 encoder 输出 cache）。~~

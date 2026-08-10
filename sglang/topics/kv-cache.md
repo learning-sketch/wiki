@@ -1,7 +1,7 @@
 ---
 type: topic
 project: sglang
-status: draft
+status: stale
 confidence: high
 verified_against: 2026-04-19
 sources:
@@ -206,6 +206,8 @@ flowchart TD
 **eviction 策略**：`--radix-eviction-policy` 7 选 1（`lru/lfu/fifo/mru/filo/priority/slru`，[radix_cache.py:L313-L331](d:\design\sglang\python\sglang\srt\mem_cache\radix_cache.py)）—— **仅 `RadixCache` / `LMCRadixCache` 读取**；其它 prefix cache 有各自 LRU 实现。
 
 ## Notes / Caveats
+
+> [!todo] VERIFY: pin 从 `34fef07a` → `06f32bab`（2026-08-10 increment）后本页未深 verify；文件数量/行号可能漂移。优先对照 [entities/Scheduler.md](../entities/Scheduler.md) / 新模块页。
 
 > [!warning] CONTRADICTION: ~~[modules/mem_cache.md](../modules/mem_cache.md) §与 Scheduler 的关系（已 RESOLVED 2026-04-19）描述 `init_cache_with_memory_pool` 为 **8 个分支**（① ChunkCache/SWAChunkCache → ② RadixCacheCpp → ③ HiMamba/HiRadix → ④ Unified → ⑤ default RadixCache）。~~ 实测 [scheduler.py:L754-L915](d:\design\sglang\python\sglang\srt\managers\scheduler.py) 共 **10 个 `tree_cache` 实例化点**（`ChunkCache` / `SWAChunkCache` / `RadixCacheCpp` / `HiMambaRadixCache` / `HiRadixCache` / `UnifiedRadixCache` / `SWARadixCache` / `MambaRadixCache` / `LMCRadixCache` / `RadixCache`）。**8 → 10 已 stale**——mem_cache.md `Notes / Caveats` 中已 resolved 但内容遗漏 `SWARadixCache` / `MambaRadixCache` / `LMCRadixCache` 3 分支。
 > **本页（topics/kv-cache.md）的 10 分支矩阵为最新事实源**；mem_cache.md 应在下一轮 lint / verify 中追加 follow-up：把"⑤`is_hybrid_swa` → `SWARadixCache`、⑥`is_hybrid_ssm` → `MambaRadixCache`、⑦`enable_lmcache` → `LMCRadixCache`"补回 RESOLVED 块。

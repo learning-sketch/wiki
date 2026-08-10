@@ -1,7 +1,7 @@
 ---
 type: topic
 project: sglang
-status: verified
+status: stale
 confidence: medium
 verified_against: 2026-04-17
 sources:
@@ -162,6 +162,8 @@ TokenizerManager → DataParallelController → DP-rank scheduler → TpModelWor
 > [!todo] VERIFY: DataParallelController 的请求路由策略（round-robin / load-aware / sticky）。
 
 ## Notes / Caveats
+
+> [!todo] VERIFY: pin 从 `34fef07a` → `06f32bab`（2026-08-10 increment）后本页未深 verify；文件数量/行号可能漂移。优先对照 [entities/Scheduler.md](../entities/Scheduler.md) / 新模块页。
 > [!todo] VERIFY: `_should_dispatch_to_encoder` ([tokenizer_manager.py:2502-2537](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)) — EPD（encode-prefill-decode）分离场景下的额外路由。
 > [!todo] VERIFY: `_should_use_batch_tokenization` ([tokenizer_manager.py:1137-1152](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)) 触发条件，与吞吐影响。
 > [!todo] VERIFY: `auto_create_handle_loop` 与 FastAPI 协程的具体协作 (asyncio task 数量、并发上限)。
