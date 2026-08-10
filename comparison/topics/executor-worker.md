@@ -24,9 +24,6 @@ related:
   - comparison/topics/engine-architecture.md
   - comparison/topics/scheduler.md
   - comparison/topics/distributed.md
-  - mindie/entities/ModelRunner.md
-  - mindie/entities/PluginManager.md
-  - mindie/entities/Generator.md
   - vllm/entities/MultiprocExecutor.md
   - vllm/entities/GPUWorker.md
   - vllm/entities/GPUModelRunner.md
@@ -117,7 +114,7 @@ classDiagram
 ```
 
 - **无独立 Executor 抽象**：`Generator.generate / prefill / decode / generate_mix`（[generator.py:718-756](d:\design\MindIE-LLM\mindie_llm\text_generator\generator.py)）直接调 `PluginManager.generate_token` / `generate_token_async`（[generator.py:636-650](d:\design\MindIE-LLM\mindie_llm\text_generator\generator.py)）。
-- **PluginManager.forward_thread 等价于 worker 后台线程**：[plugin_manager.py:107-115](d:\design\MindIE-LLM\mindie_llm\text_generator\plugins\plugin_manager.py) 启动 `threading.Thread(target=forward_loop)` 消费 input_queue，调 `model_wrapper.forward` → `ModelRunner.forward`；这是 MindIE 端 "异步 worker" 的 hidden state（详 [PluginManager.md](../../mindie/entities/PluginManager.md) hidden state 表）。
+- **PluginManager.forward_thread 等价于 worker 后台线程**：[plugin_manager.py:107-115](d:\design\MindIE-LLM\mindie_llm\text_generator\plugins\plugin_manager.py) 启动 `threading.Thread(target=forward_loop)` 消费 input_queue，调 `model_wrapper.forward` → `ModelRunner.forward`；这是 MindIE 端 "异步 worker" 的 hidden state（详 `PluginManager.md`（已删） hidden state 表）。
 - **多 NPU 调度**：通过 Ascend HCCL 集合通信在同进程多线程内完成（无独立进程）。
 
 ### SGLang：无 Executor，`Scheduler` 直持 `TpModelWorker`
@@ -220,7 +217,7 @@ classDiagram
 | **多 ModelRunner 列表** | `MtpWorker.draft_model_runner`（spec decode） | 无（spec 通过 `drafter` 字段） | `TpModelWorker.model_runner_list: List[ModelRunner]`（[tp_worker.py:257](d:\design\sglang\python\sglang\srt\managers\tp_worker.py)，**MTP 时多个**） |
 | **是否含设备初始化逻辑** | `ModelRunner.__init__` 内（`set_device(rank, npu_id)`，[model_runner.py:76-77](d:\design\MindIE-LLM\mindie_llm\runtime\model_runner\model_runner.py)） | `Worker.init_device` 独立方法（[gpu_worker.py:220-314](d:\design\vllm\vllm\v1\worker\gpu_worker.py)） | `ModelRunner` 内（worker 不显式 `init_device`） |
 | **是否含 KV profile 逻辑** | `Generator.warm_up`（[generator.py:757+](d:\design\MindIE-LLM\mindie_llm\text_generator\generator.py)） | `Worker.determine_available_memory`（[gpu_worker.py:331-482](d:\design\vllm\vllm\v1\worker\gpu_worker.py)） | `ModelRunner.profile_max_num_token` |
-| **是否含 PP 处理** | ❌（[pipeline_parallel.py 草稿不可用](../../mindie/topics/aclgraph-pp.md)） | ✅ `_pp_send_work` + `irecv_tensor_dict` / `isend_tensor_dict`（[gpu_worker.py:154-155, 754-839](d:\design\vllm\vllm\v1\worker\gpu_worker.py)） | ✅ `pp_group.is_last_rank` 判定（[tp_worker.py:467](d:\design\sglang\python\sglang\srt\managers\tp_worker.py)） + Scheduler PP mixin |
+| **是否含 PP 处理** | ❌（`pipeline_parallel.py 草稿不可用`（已删）） | ✅ `_pp_send_work` + `irecv_tensor_dict` / `isend_tensor_dict`（[gpu_worker.py:154-155, 754-839](d:\design\vllm\vllm\v1\worker\gpu_worker.py)） | ✅ `pp_group.is_last_rank` 判定（[tp_worker.py:467](d:\design\sglang\python\sglang\srt\managers\tp_worker.py)） + Scheduler PP mixin |
 
 ---
 
@@ -362,12 +359,12 @@ vLLM 的拆分是**最复杂的设计**（需要约定 `execute_model_state` 等
 | 维度 | MindIE | vLLM | SGLang |
 |---|---|---|---|
 | **多 worker 进程模型** | 同进程多线程（HCCL）| 多进程（NCCL，或 Ray actor） | 多进程（每 scheduler 进程一 worker，NCCL）|
-| **TP 实现** | HCCL `all_reduce` / `all_gather`（[ParallelInfoManager.md](../../mindie/entities/ParallelInfoManager.md)）| NCCL `all_reduce` / `all_gather` + 18 device_communicators 后端（详 [comparison/topics/distributed.md](distributed.md)） | NCCL + 12+ device_communicators |
-| **PP 实现** | ❌ pipeline_parallel.py 草稿未接入（[topics/aclgraph-pp.md](../../mindie/topics/aclgraph-pp.md)） | ✅ `Worker._pp_send_work` + `isend_tensor_dict` / `irecv_tensor_dict`（[gpu_worker.py:154-155, 754-839](d:\design\vllm\vllm\v1\worker\gpu_worker.py)） | ✅ `SchedulerPPMixin` + `pp_group.is_last_rank` 分支（[scheduler.py:317-329](d:\design\sglang\python\sglang\srt\managers\scheduler.py)） |
-| **DP 实现** | `is_dp_and_server_centralized` 模式（[ModelRunnerExp](../../mindie/entities/AclGraphModelWrapper.md)） | `DPLBAsyncMPClient` 在 EngineCoreClient 层 LB（[EngineCoreClient.md](../../vllm/entities/EngineCoreClient.md)）；DP attention：v1/worker/dp_utils.py | `DataParallelController` 进程做 DP 路由（[entrypoints/engine.py:592-602](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)）；DP attention：layers/dp_attention.py |
-| **EP（Expert Parallel）** | `MOE_EP` / `MOE_EP_MC2` enum（[ParallelInfoManager.md](../../mindie/entities/ParallelInfoManager.md)） | `model_executor/layers/fused_moe/prepare_finalize/`（含 deepep/naive_dp_ep/nixl_ep）+ `vllm/distributed/eplb/` | `srt/layers/moe/token_dispatcher/` 7 后端 + `srt/eplb/` |
+| **TP 实现** | HCCL `all_reduce` / `all_gather`（`ParallelInfoManager.md`（已删））| NCCL `all_reduce` / `all_gather` + 18 device_communicators 后端（详 [comparison/topics/distributed.md](distributed.md)） | NCCL + 12+ device_communicators |
+| **PP 实现** | ❌ pipeline_parallel.py 草稿未接入（`topics/aclgraph-pp.md`（已删）） | ✅ `Worker._pp_send_work` + `isend_tensor_dict` / `irecv_tensor_dict`（[gpu_worker.py:154-155, 754-839](d:\design\vllm\vllm\v1\worker\gpu_worker.py)） | ✅ `SchedulerPPMixin` + `pp_group.is_last_rank` 分支（[scheduler.py:317-329](d:\design\sglang\python\sglang\srt\managers\scheduler.py)） |
+| **DP 实现** | `is_dp_and_server_centralized` 模式（`ModelRunnerExp`（已删）） | `DPLBAsyncMPClient` 在 EngineCoreClient 层 LB（[EngineCoreClient.md](../../vllm/entities/EngineCoreClient.md)）；DP attention：v1/worker/dp_utils.py | `DataParallelController` 进程做 DP 路由（[entrypoints/engine.py:592-602](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)）；DP attention：layers/dp_attention.py |
+| **EP（Expert Parallel）** | `MOE_EP` / `MOE_EP_MC2` enum（`ParallelInfoManager.md`（已删）） | `model_executor/layers/fused_moe/prepare_finalize/`（含 deepep/naive_dp_ep/nixl_ep）+ `vllm/distributed/eplb/` | `srt/layers/moe/token_dispatcher/` 7 后端 + `srt/eplb/` |
 | **rank 显式数量（scheduler 层）** | 6 维（`tp_rank` / `pp_rank` / `dp_rank` / `cp_rank` / `sp_rank` 等） | 3-5 维（[multiproc_executor.py:981-1015](d:\design\vllm\vllm\v1\executor\multiproc_executor.py) `setup_proc_title_and_log_prefix`） | 6 维（`gpu_id, tp_rank, moe_ep_rank, pp_rank, attn_cp_rank, moe_dp_rank, dp_rank`，[scheduler.py:332-343](d:\design\sglang\python\sglang\srt\managers\scheduler.py)） |
-| **EPLB / Elastic-EP** | ❌ 无（[topics/moe.md](../../mindie/topics/moe.md)） | ✅ `vllm/distributed/eplb/` + `v1/worker/gpu/eplb_utils.py` + `vllm/distributed/elastic_ep/` | ✅ `srt/eplb/`（含 simulator）+ `srt/elastic_ep/` |
+| **EPLB / Elastic-EP** | ❌ 无（`topics/moe.md`（已删）） | ✅ `vllm/distributed/eplb/` + `v1/worker/gpu/eplb_utils.py` + `vllm/distributed/elastic_ep/` | ✅ `srt/eplb/`（含 simulator）+ `srt/elastic_ep/` |
 
 **深度对比**：详 [comparison/topics/distributed.md](distributed.md)（9 个子维度涵盖 TP/PP/DP/EP）。
 
@@ -486,7 +483,7 @@ Worker 子进程内（`WorkerProc.worker_main`，[multiproc_executor.py:800-904]
 ### Anchor 3：SGLang `TpModelWorker.model_runner_list: List[ModelRunner]` MTP 多 ModelRunner
 
 - **SGLang**：[tp_worker.py:257](d:\design\sglang\python\sglang\srt\managers\tp_worker.py)
-- **MindIE**：等价物 `MtpWorker` 持 `main_model_runner` + `draft_model_runner` 两个 ModelRunner（[spec_worker.py](d:\design\MindIE-LLM\mindie_llm\runtime\model_runner\spec_worker.py)，详 [topics/speculative.md](../../mindie/topics/speculative.md)）。**同语义**。
+- **MindIE**：等价物 `MtpWorker` 持 `main_model_runner` + `draft_model_runner` 两个 ModelRunner（[spec_worker.py](d:\design\MindIE-LLM\mindie_llm\runtime\model_runner\spec_worker.py)，详 `topics/speculative.md`（已删））。**同语义**。
 - **vLLM**：等价物 `EagleProposer` / `EagleSpeculator` 不在 Worker 字段，而在 `GPUModelRunner.drafter` 字段（[gpu_model_runner.py:517-579](d:\design\vllm\vllm\v1\worker\gpu_model_runner.py)）。**结构差异**：SGLang/MindIE 在 worker 层持多 model runner；vLLM 在 model runner 层持 drafter。
 
 `synthesis:` 三家 spec decode 在 worker 抽象上的位置不同——**SGLang `TpModelWorker.model_runner_list`** vs **MindIE `MtpWorker.draft_model_runner`** vs **vLLM `GPUModelRunner.drafter`**。这反映"draft 与 target 是否共享 worker 抽象"的设计选择：SGLang/MindIE 选择**worker 层共享**（一个 worker 持多个 model runner），vLLM 选择 **model runner 层嵌套**（一个 model runner 持 drafter 子组件）。
@@ -531,13 +528,6 @@ Worker 子进程内（`WorkerProc.worker_main`，[multiproc_executor.py:800-904]
 - `comparison/topics/multiproc-ipc.md`（TODO；本页 §3 / §4 已铺好种子）
 
 ### MindIE 端
-- [mindie/entities/Generator.md](../../mindie/entities/Generator.md)（顶层装配 + worker 入口）
-- [mindie/entities/PluginManager.md](../../mindie/entities/PluginManager.md)（forward_thread 后台线程）
-- [mindie/entities/ModelRunner.md](../../mindie/entities/ModelRunner.md)（forward 单元）
-- [mindie/entities/LlmEngine.md](../../mindie/entities/LlmEngine.md)（C++ 调度循环）
-- [mindie/entities/AclGraphModelWrapper.md](../../mindie/entities/AclGraphModelWrapper.md)（H2D 集中点）
-- [mindie/entities/ParallelInfoManager.md](../../mindie/entities/ParallelInfoManager.md)（并行 mapping）
-- [mindie/topics/aclgraph-pp.md](../../mindie/topics/aclgraph-pp.md)（PP 草稿状态）
 
 ### vLLM 端
 - [vllm/entities/MultiprocExecutor.md](../../vllm/entities/MultiprocExecutor.md)（最详细）

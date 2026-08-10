@@ -28,7 +28,6 @@ sources:
 related:
   - comparison/index.md
   - comparison/dimensions.md
-  - mindie/topics/aclgraph-pp.md
   - vllm/entities/MultiprocExecutor.md
   - sglang/modules/managers.md
 ---
@@ -464,6 +463,5 @@ flowchart TB
 ## See also
 - [comparison/dimensions.md §dim-flashcomm](../dimensions.md)
 - [comparison/topics/cp-sp.md](cp-sp.md)（与 FlashComm 共享 sequence-parallel 思路）
-- [mindie/topics/aclgraph-pp.md](../../mindie/topics/aclgraph-pp.md)（aclgraph 与 FlashComm 都涉及 forward_context）
 - [vllm/entities/MultiprocExecutor.md](../../vllm/entities/MultiprocExecutor.md)
 - [sglang/modules/managers.md](../../sglang/modules/managers.md)

@@ -20,7 +20,6 @@ sources:
 related:
   - comparison/dimensions.md
   - comparison/topics/scheduler.md
-  - mindie/entities/BatchScheduler.md
   - vllm/entities/Scheduler.md
   - sglang/entities/Scheduler.md
 ---
@@ -128,7 +127,7 @@ related:
 
 ## 3. Sync 模式下的主循环代码
 
-### MindIE — `LlmEngine` C++ 主循环（[llm_engine.cpp:462-540](d:\design\MindIE-LLM\src\engine\llm_engine.cpp)，详细 entity 页见 [mindie/entities/LlmEngine.md](../../mindie/entities/LlmEngine.md)）
+### MindIE — `LlmEngine` C++ 主循环（[llm_engine.cpp:462-540](d:\design\MindIE-LLM\src\engine\llm_engine.cpp)，详细 entity 页见 `mindie/entities/LlmEngine.md`（已删））
 
 ```cpp
 bool needSync = isDistributedPNodeProcessCCReady_ || isCentralizedThreadCCReady_;  // L462
@@ -277,7 +276,7 @@ def dispatch_event_loop(scheduler: Scheduler):
 | **speculative decoding** | ✅，`maxScheduledBatch_*tokenNumPerIter` 预留（[scheduler.cpp:881-883](d:\design\MindIE-LLM\src\scheduler\scheduler.cpp)） | ✅，sync 模式下 `post_step` 走 `update_draft_token_ids` 同步路径（[core.py:439-443](d:\design\vllm\vllm\v1\engine\core.py)） | ✅，且**部分 spec 算法只能在 sync**（[server_args.py:3249-3293](d:\design\sglang\python\sglang\srt\server_args.py)） |
 | **structured output / grammar** | ✅ | ✅，sync `update_from_output` 直接处理 | ✅，**spec v2 + grammar + decode 强制 sync**（[scheduler.py:1486-1497](d:\design\sglang\python\sglang\srt\managers\scheduler.py)） |
 | **PD 分离** | ✅，同 `Schedule(needSync)` 路径 + `ScheduleTransfer()`（[scheduler.h:70-72](d:\design\MindIE-LLM\src\scheduler\scheduler.h)） | ✅，同 `step` 路径 + `KVConnector` 钩子（[scheduler.py:120, 2070-2102](d:\design\vllm\vllm\v1\core\sched\scheduler.py)） | ✅，**专门函数**：`event_loop_normal_disagg_{prefill,decode}`（[scheduler.py:3641-3654](d:\design\sglang\python\sglang\srt\managers\scheduler.py)） |
-| **PP（pipeline parallel）** | sync 是"非 PP"或 "PP=1" 的默认模型，PP 由 aclgraph_pp 设计文档另开（[mindie/topics/aclgraph-pp.md](../../mindie/topics/aclgraph-pp.md)） | PP=2+ 用 `step_with_batch_queue`（与 sync/async 正交，[core.py:191-214](d:\design\vllm\vllm\v1\engine\core.py)） | **PP=2+ 强制 sync** + 专门 `event_loop_pp` 函数（[server_args.py:3001-3005](d:\design\sglang\python\sglang\srt\server_args.py), [scheduler.py:3635-3636](d:\design\sglang\python\sglang\srt\managers\scheduler.py)） |
+| **PP（pipeline parallel）** | sync 是"非 PP"或 "PP=1" 的默认模型，PP 由 aclgraph_pp 设计文档另开（`mindie/topics/aclgraph-pp.md`（已删）） | PP=2+ 用 `step_with_batch_queue`（与 sync/async 正交，[core.py:191-214](d:\design\vllm\vllm\v1\engine\core.py)） | **PP=2+ 强制 sync** + 专门 `event_loop_pp` 函数（[server_args.py:3001-3005](d:\design\sglang\python\sglang\srt\server_args.py), [scheduler.py:3635-3636](d:\design\sglang\python\sglang\srt\managers\scheduler.py)） |
 | **DP attention** | DP 跨 rank 同步靠 `needSync` 参数（[scheduler.cpp:573-575](d:\design\MindIE-LLM\src\scheduler\scheduler.cpp)） | sync `Scheduler` 用 `has_finished_requests` (interface.py:169-182) | `event_loop_pp` / `event_loop_pdmux` 处理 |
 
 > [!todo] VERIFY: SGLang 的 `event_loop_normal_disagg_prefill` / `event_loop_normal_disagg_decode` 内部具体差异；本轮只确认了 dispatch 入口，未深入函数体。
@@ -367,7 +366,6 @@ if (needSync) {
 - [comparison/topics/scheduler.md](scheduler.md) — sync vs async 视角的姊妹页
 - [comparison/dimensions.md §dim-async-schedule](../dimensions.md) — 反向维度
 - [comparison/dimensions.md §dim-sync-schedule](../dimensions.md) — 本页对应维度
-- [mindie/entities/BatchScheduler.md](../../mindie/entities/BatchScheduler.md)
 - [vllm/entities/Scheduler.md](../../vllm/entities/Scheduler.md)
 - [vllm/entities/EngineCore.md](../../vllm/entities/EngineCore.md)
 - [sglang/entities/Scheduler.md](../../sglang/entities/Scheduler.md)

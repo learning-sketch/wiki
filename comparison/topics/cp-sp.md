@@ -18,7 +18,6 @@ sources:
 related:
   - comparison/index.md
   - comparison/dimensions.md
-  - mindie/topics/aclgraph-pp.md
   - vllm/entities/MultiprocExecutor.md
   - sglang/modules/managers.md
 ---
@@ -313,6 +312,5 @@ flowchart TB
 - [comparison/dimensions.md §dim-cp-sp](../dimensions.md)
 - [comparison/topics/flashcomm.md](flashcomm.md)（FlashComm 是 SP 的 sub-case）
 - [comparison/topics/kv-cache.md](kv-cache.md)（CP 切分直接影响 KV pool）
-- [mindie/topics/aclgraph-pp.md](../../mindie/topics/aclgraph-pp.md)（PP 与 CP 是正交并行轴）
 - [vllm/entities/MultiprocExecutor.md](../../vllm/entities/MultiprocExecutor.md)
 - [sglang/modules/managers.md](../../sglang/modules/managers.md)

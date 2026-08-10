@@ -32,7 +32,6 @@ sources:
 related:
   - vllm/entities/KVCacheManager.md
   - vllm/entities/Scheduler.md
-  - mindie/topics/prefix-cache.md
   - comparison/topics/prefix-cache.md
   - comparison/topics/kv-cache.md
   - comparison/dimensions.md
@@ -48,7 +47,7 @@ vLLM v1 的 **prefix cache 不是独立子系统**，而是 [`KVCacheManager`](.
 - **数据结构**：**`BlockHashToBlockMap` = `dict[BlockHashWithGroupId, KVCacheBlock | dict[block_id, KVCacheBlock]]`**（[block_pool.py:34-128](d:\design\vllm\vllm\v1\core\block_pool.py)），是 **hash table（不是 trie/radix tree）**——同 hash 多 block 不去重以保持 block table append-only。
 - **3 种 coordinator 拓扑**：`KVCacheCoordinatorNoPrefixCache` / `UnitaryKVCacheCoordinator` / `HybridKVCacheCoordinator`（[kv_cache_coordinator.py:256-545](d:\design\vllm\vllm\v1\core\kv_cache_coordinator.py)），由 `get_kv_cache_coordinator(...)` 工厂按 `enable_caching` + 是否多 KV 组路由。
 
-> synthesis：与 [MindIE 的 prefix cache](../../mindie/topics/prefix-cache.md)（C++ Allocator + Python Plugin 双段）不同，vLLM 是**全 Python 一段抽象**——`BlockPool` / `Coordinator` / `SingleTypeKVCacheManager` 都在 [v1/core/](d:\design\vllm\vllm\v1\core/) 下；csrc/ 树**对 prefix cache 0 命中**（见 §跨子系统引用 §1）。与 SGLang `RadixCache`（trie）也不同，vLLM 与 MindIE 同属 hash table 派。
+> synthesis：与 `MindIE 的 prefix cache`（已删）（C++ Allocator + Python Plugin 双段）不同，vLLM 是**全 Python 一段抽象**——`BlockPool` / `Coordinator` / `SingleTypeKVCacheManager` 都在 [v1/core/](d:\design\vllm\vllm\v1\core/) 下；csrc/ 树**对 prefix cache 0 命中**（见 §跨子系统引用 §1）。与 SGLang `RadixCache`（trie）也不同，vLLM 与 MindIE 同属 hash table 派。
 
 ## Sources
 
@@ -354,13 +353,13 @@ num_external_computed_tokens = ext_tokens
 
 返 `None` 表示"我还没准备好"，scheduler 把请求挂回 skipped 队列（[sched/scheduler.py:624-630](d:\design\vllm\vllm\v1\core\sched\scheduler.py)）。
 
-`SimpleCpuOffloadConnector.__init__` 强制 `enable_prefix_caching=True`（[simple_cpu_offload_connector.py:56, 82-86](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\simple_cpu_offload_connector.py)）——CPU offload 必须叠加 prefix cache（与 [MindIE KV pool 必须叠加 prefix cache](../../mindie/topics/prefix-cache.md#与-kv-cache-池化叠加) 同结构）。
+`SimpleCpuOffloadConnector.__init__` 强制 `enable_prefix_caching=True`（[simple_cpu_offload_connector.py:56, 82-86](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\simple_cpu_offload_connector.py)）——CPU offload 必须叠加 prefix cache（与 `MindIE KV pool 必须叠加 prefix cache`（已删） 同结构）。
 
 `SimpleKVOffloadManager` 的 `cpu_coordinator.find_longest_cache_hit` ([simple_kv_offload/manager.py:222, 264](d:\design\vllm\vllm\v1\simple_kv_offload\manager.py)) 和 `cpu_pool.cached_block_hash_to_block.get_one_block(bhash)` ([simple_kv_offload/manager.py:420, 527, 641](d:\design\vllm\vllm\v1\simple_kv_offload\manager.py)) 直接复用 `BlockHashToBlockMap` 在 CPU 端做 mirror —— **prefix cache hash 表是 KV offload 的共享数据结构**。
 
 `OffloadingScheduler` 在 `enable_prefix_caching=True` 时初始化 `set()` 跟踪 cached blocks（[offloading/scheduler.py:125](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\offloading\scheduler.py)）。
 
-> synthesis：vLLM 把 `BlockHashToBlockMap` **暴露给 connector** 作为复用基础——这是为什么 KV offload / KV transfer 都不需要重新算 hash。MindIE 的 KV pool 走 `MemPool.LookUp` Python pybind 反向调用，则要求 C++ `HashCombine` 与 Python `hash_combine` 逐位等价才能跨节点查到（[mindie prefix-cache.md `[!todo] VERIFY`](../../mindie/topics/prefix-cache.md#notes--caveats)）。vLLM 全 Python 单语言**没有这个约束**。
+> synthesis：vLLM 把 `BlockHashToBlockMap` **暴露给 connector** 作为复用基础——这是为什么 KV offload / KV transfer 都不需要重新算 hash。MindIE 的 KV pool 走 `MemPool.LookUp` Python pybind 反向调用，则要求 C++ `HashCombine` 与 Python `hash_combine` 逐位等价才能跨节点查到（原 `mindie/topics/prefix-cache.md` wiki 页已删除）。vLLM 全 Python 单语言**没有这个约束**。
 
 ## KV cache events
 
@@ -386,7 +385,7 @@ vLLM v1 prefix cache **完全是 Python**——核心代码全在 [vllm/v1/core/
 - **`d:\design\vllm\csrc\` 全 C++/CUDA 树 grep `BlockHash|hash_block_tokens` 0 命中**——所有 hash 计算与索引都在 Python 进程内。
 - **kernels（[csrc/](d:\design\vllm\csrc/)）只暴露 attention / quant / MoE / norm 等算子**，不持有任何 prefix cache 状态。
 
-> synthesis：与 [MindIE prefix cache 跨语言绑定](../../mindie/topics/prefix-cache.md#1-跨语言绑定c-python)（C++ `PrefixCacheBlockAllocator` + Python `PrefixCachePlugin` 双段 + `MemPool` pybind 反向调用）形成强对比。vLLM 的设计选择是**全 Python 一段**，性能上靠 `dataclass(slots=True)` + 自维护 doubly linked list 减 GC。
+> synthesis：与 `MindIE prefix cache 跨语言绑定`（已删）（C++ `PrefixCacheBlockAllocator` + Python `PrefixCachePlugin` 双段 + `MemPool` pybind 反向调用）形成强对比。vLLM 的设计选择是**全 Python 一段**，性能上靠 `dataclass(slots=True)` + 自维护 doubly linked list 减 GC。
 
 ### 2. 协作伙伴跨子系统引用
 
@@ -487,7 +486,6 @@ vLLM v1 prefix cache **完全是 Python**——核心代码全在 [vllm/v1/core/
 
 - [vllm/entities/KVCacheManager.md](../entities/KVCacheManager.md) — `KVCacheManager` / `BlockPool` / `KVCacheCoordinator` / `KVCacheSpec` 实体页（**本主题主源**）
 - [vllm/entities/Scheduler.md](../entities/Scheduler.md) — Scheduler 集成 / `reset_prefix_cache` / connector 命中协议
-- [mindie/topics/prefix-cache.md](../../mindie/topics/prefix-cache.md) — MindIE prefix cache（C++ + Python 双段，hash table 同派）
 - [comparison/topics/prefix-cache.md](../../comparison/topics/prefix-cache.md) — 三家 prefix cache 深度对比（11 子维度，本页是 vLLM 端深化）
 - [comparison/topics/kv-cache.md](../../comparison/topics/kv-cache.md) — 父级 KV cache 对比页（含 prefix-cache cell）
 - [comparison/dimensions.md §dim-prefix-cache](../../comparison/dimensions.md) — 跨项目维度

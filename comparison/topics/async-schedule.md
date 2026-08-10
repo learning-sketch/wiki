@@ -23,7 +23,6 @@ related:
   - comparison/dimensions.md
   - comparison/topics/sync-schedule.md
   - comparison/topics/scheduler.md
-  - mindie/entities/BatchScheduler.md
   - vllm/entities/Scheduler.md
   - vllm/entities/EngineCore.md
   - sglang/entities/Scheduler.md
@@ -219,7 +218,7 @@ sequenceDiagram
 
 > synthesis: **MindIE 的 async 其实是"两层背景执行"叠加**：(a) C++ executor 异步线程，(b) Python plugin_manager 内部 forward 线程。两层各自有自己的"流水深度"——C++ 层 1-step ahead（`maxScheduledBatch_=2`），Python 层 1-step ahead（output_queue 持有上一帧）。两者**叠加后**，从用户请求视角看，平均有 ~2-3 帧并发执行。
 
-> 详细 entity 页：[mindie/entities/PluginManager.md](../../mindie/entities/PluginManager.md)（Python 层 forward thread + 双队列）+ [mindie/entities/LlmEngine.md](../../mindie/entities/LlmEngine.md)（C++ executor 异步线程 + AsyncExecuteModel callback）。
+> 详细 entity 页：`mindie/entities/PluginManager.md`（已删）（Python 层 forward thread + 双队列）+ `mindie/entities/LlmEngine.md`（已删）（C++ executor 异步线程 + AsyncExecuteModel callback）。
 
 ### vLLM — `EngineCore.step()` + `AsyncScheduler`
 
@@ -587,7 +586,6 @@ sequenceDiagram
 - [comparison/topics/sync-schedule.md](sync-schedule.md) — 对偶页（sync 路径）
 - [comparison/topics/scheduler.md §5](scheduler.md) — CPU/GPU overlap 子节（本页深度展开）
 - [comparison/dimensions.md §dim-async-schedule](../dimensions.md)
-- [mindie/entities/BatchScheduler.md](../../mindie/entities/BatchScheduler.md)
 - [vllm/entities/Scheduler.md](../../vllm/entities/Scheduler.md)（含 `AsyncScheduler` 子类详解）
 - [vllm/entities/EngineCore.md](../../vllm/entities/EngineCore.md)（含 `step_fn` 切换）
 - [sglang/entities/Scheduler.md](../../sglang/entities/Scheduler.md)（含 6 个 event_loop 函数）

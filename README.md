@@ -1,7 +1,7 @@
 # d:\design Wiki
 
-> A persistent, source-anchored knowledge base for the three LLM inference engines under `d:\design\`:
-> **MindIE-LLM**, **vLLM**, **SGLang**.
+> A persistent, source-anchored knowledge base for the LLM inference engines under `d:\design\`:
+> **vLLM**, **SGLang**（对比页中仍保留 MindIE-LLM 源码锚点；`mindie/` 子 wiki 已于 2026-08-10 删除）。
 >
 > Pattern inspired by Karpathy's [llm-wiki gist](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f).
 
@@ -26,7 +26,6 @@ wiki\         LLM 派生物（可变，每条论断必须能溯源到上面两�
 | [index.md](index.md) | 全局总目录 |
 | [AGENTS.md](AGENTS.md) | LLM agent 工作手册（**任何 ingest 前必读**） |
 | [log.md](log.md) | 全部 ingest / query / lint 操作的时间序记录 |
-| [mindie/index.md](mindie/index.md) | MindIE-LLM 项目内目录 |
 | [vllm/index.md](vllm/index.md) | vLLM 项目内目录 |
 | [sglang/index.md](sglang/index.md) | SGLang 项目内目录 |
 | [comparison/index.md](comparison/index.md) | 跨项目对比 |
@@ -42,18 +41,19 @@ d:\design\wiki\
 ├── index.md                  全局总目录
 ├── log.md                    全局 append-only 日志
 ├── raw\                      外部资料副本
-├── mindie\                   MindIE-LLM 子 wiki
+├── vllm\                     vLLM 子 wiki
 │   ├── index.md / overview.md
 │   ├── modules\              模块概念页
 │   ├── entities\             类 / 函数实体页
 │   └── topics\               跨模块主题页
-├── vllm\                     vLLM 子 wiki（同上结构）
 ├── sglang\                   SGLang 子 wiki（同上结构）
 └── comparison\               跨项目对比
     ├── index.md
     ├── dimensions.md         对比维度清单
     └── topics\               按主题的三方对照页
 ```
+
+> `mindie/` 子 wiki 已删除（2026-08-10）。对比页 MindIE 列仍可指向 `d:\design\MindIE-LLM\` 源码锚点。
 
 ---
 
@@ -73,23 +73,14 @@ d:\design\wiki\
 
 ## 当前状态
 
-本 wiki 处于 **Bootstrap 阶段**。已就绪：
-
 - [x] 目录骨架与 schema (AGENTS.md)
-- [x] 三个项目的 `overview.md` + 空 `index.md`
-- [x] 跨项目对比维度清单（comparison/dimensions.md）
-- [x] vLLM 一条 demo 主线（Engine ↔ Executor ↔ Worker）
-
-**待用户驱动 ingest**：
-
-- [ ] MindIE / SGLang 的具体 modules / entities / topics
-- [ ] comparison/topics/ 下的主题对比页
-- [ ] vLLM 其他主题（PD分离 / KV cache / scheduler / spec_decode 等）
+- [x] vLLM / SGLang 的 `overview.md` + `index.md` + 若干 modules/entities/topics
+- [x] 跨项目对比维度清单与已建 comparison topics
+- [x] `mindie/` 子 wiki 已移除；相关死链已清理（见 [log.md](log.md)）
 
 后续触发示例：
 
 ```
-ingest mindie pd-disaggregation
 ingest sglang scheduler
 compare scheduler across all
 lint

@@ -219,7 +219,7 @@ related:
 **comparison\topics\<topic>.md** 必须满足：
 
 1. **三方对照表**：表头固定为 `维度 | MindIE | vLLM | SGLang`。
-2. **每个 cell 必须指向具体页面**：`[实现](mindie\topics\xxx.md)` 而不是泛泛而谈。
+2. **每个 cell 必须指向具体页面**：`[实现](vllm\topics\xxx.md)` 而不是泛泛而谈。若某项目 wiki 子树已删除，该 cell 写 `N/A (wiki removed <日期>)` 并尽量保留源码绝对路径锚点。
 3. **缺失项明示**：未实现 / 未验证写 `N/A (verified <日期>)`，禁止臆测"应该有"。
 4. **维度参考** `comparison\dimensions.md`，新增维度先去 dimensions.md 注册。
 5. **不做主观判断**：不写"X 比 Y 好"，只写"X 用 A 方案，Y 用 B 方案"，价值判断留给读者。
@@ -274,7 +274,7 @@ related:
 
 | 项目 | 主代码根 | 顶层模块清单（用作 index 分组） |
 |---|---|---|
-| MindIE-LLM | [d:\design\MindIE-LLM\mindie_llm\](d:\design\MindIE-LLM\mindie_llm) | connector / distributed / examples / modeling / model_wrapper / runtime / server / text_generator / tokenizer / utils |
+| MindIE-LLM | [d:\design\MindIE-LLM\mindie_llm\](d:\design\MindIE-LLM\mindie_llm) | connector / distributed / examples / modeling / model_wrapper / runtime / server / text_generator / tokenizer / utils（**注意**：`wiki/mindie/` 子树已于 2026-08-10 删除；ingest MindIE 前需先恢复目录骨架） |
 | vLLM | [d:\design\vllm\vllm\](d:\design\vllm\vllm) | 30 个，重点 v1 子树（attention/core/engine/executor/kv_offload/metrics/pool/sample/spec_decode/structured_output/worker） |
 | SGLang | [d:\design\sglang\python\sglang\srt\](d:\design\sglang\python\sglang\srt) | managers / disaggregation / mem_cache / model_executor / distributed / dllm / elastic_ep / eplb / multiplex / speculative 等 36 个 |
 
@@ -318,7 +318,7 @@ agent 在以下时机检查阈值并触发轮转：
 
 ### 链接修复
 
-归档文件的相对路径需从 `log-archive/` 出发（即 `../mindie/...` / `../comparison/...`）。绝对源码路径（`d:\design\<...>`）不变。
+归档文件的相对路径需从 `log-archive/` 出发（即 `../vllm/...` / `../comparison/...`）。绝对源码路径（`d:\design\<...>`）不变。历史归档中指向已删 `../mindie/...` 的链接保留不改（archive 不可重写）。
 
 ### 检索归档内容
 
@@ -416,7 +416,7 @@ wiki 是上游三仓代码的派生物。当上游 HEAD 移动后，**不要 fre
 
 ### 反向使用：用 wiki 帮上游 review
 
-**对 PD 优化等长期主题特别有用**：每次拉新代码后跑 step 1-2，看哪些 changed file 落在 `mindie/topics/aclgraph-pp.md` / `comparison/topics/pd-disaggregation.md` 等关键页的 sources 内 —— 这些 commit 就是要重点 review 的"对你的优化方向有影响"的上游变更。
+**对 PD 优化等长期主题特别有用**：每次拉新代码后跑 step 1-2，看哪些 changed file 落在 `comparison/topics/pd-disaggregation.md` 等关键页的 sources 内 —— 这些 commit 就是要重点 review 的"对你的优化方向有影响"的上游变更。
 
 ### 与其它工作流的关系
 

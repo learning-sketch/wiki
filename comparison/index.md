@@ -79,7 +79,7 @@ related:
 
 ## 项目入口快速跳转
 
-- [mindie/overview.md](../mindie/overview.md) | [mindie/index.md](../mindie/index.md)
+- MindIE：N/A（`mindie/` wiki 已删除 2026-08-10；对比页 MindIE 列仍保留源码锚点）
 - [vllm/overview.md](../vllm/overview.md) | [vllm/index.md](../vllm/index.md)
 - [sglang/overview.md](../sglang/overview.md) | [sglang/index.md](../sglang/index.md)
 

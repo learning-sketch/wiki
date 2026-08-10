@@ -6,8 +6,7 @@ confidence: high
 verified_against: 2026-04-19
 sources:
   - d:\design\wiki\sglang\topics\moe.md
-  - d:\design\wiki\mindie\topics\moe.md
-  - d:\design\sglang\python\sglang\srt\layers\moe
+    - d:\design\sglang\python\sglang\srt\layers\moe
   - d:\design\sglang\python\sglang\srt\eplb
   - d:\design\sglang\python\sglang\srt\elastic_ep
   - d:\design\sglang\python\sglang\srt\batch_overlap
@@ -23,7 +22,6 @@ sources:
   - d:\design\vllm\csrc\moe  # 13 .cu
 related:
   - sglang/topics/moe.md
-  - mindie/topics/moe.md
   - comparison/topics/distributed.md
   - comparison/topics/pd-disaggregation.md
   - comparison/topics/flashcomm.md
@@ -44,13 +42,13 @@ related:
 
 | 项目 | 主目录 / 文件 |
 |---|---|
-| **MindIE** | [`runtime/layers/fused_moe/`](d:\design\MindIE-LLM\mindie_llm\runtime\layers\fused_moe)（6 .py）+ [`runtime/models/{deepseek_v3,deepseek_v32,qwen3_moe}/`](d:\design\MindIE-LLM\mindie_llm\runtime\models) + [`src/kernels/mie_ops/csrc/mc2/dispatch_ffn_combine/`](d:\design\MindIE-LLM\src\kernels\mie_ops\csrc\mc2\dispatch_ffn_combine)（6 .cpp）。详 [mindie/topics/moe.md](../../mindie/topics/moe.md) |
+| **MindIE** | [`runtime/layers/fused_moe/`](d:\design\MindIE-LLM\mindie_llm\runtime\layers\fused_moe)（6 .py）+ [`runtime/models/{deepseek_v3,deepseek_v32,qwen3_moe}/`](d:\design\MindIE-LLM\mindie_llm\runtime\models) + [`src/kernels/mie_ops/csrc/mc2/dispatch_ffn_combine/`](d:\design\MindIE-LLM\src\kernels\mie_ops\csrc\mc2\dispatch_ffn_combine)（6 .cpp）。详 `mindie/topics/moe.md`（已删） |
 | **vLLM**（fresh grep） | [`model_executor/layers/fused_moe/`](d:\design\vllm\vllm\model_executor\layers\fused_moe) **68 .py**（含 `prepare_finalize/` 7 + `runner/` 6 + `router/` 13 + `experts/` 8 + `oracle/` 6 子包）+ [`distributed/eplb/`](d:\design\vllm\vllm\distributed\eplb) 9 .py + [`distributed/elastic_ep/`](d:\design\vllm\vllm\distributed\elastic_ep) 3 .py + [`csrc/moe/`](d:\design\vllm\csrc\moe) 13 .cu。配置入口 [config/parallel.py](d:\design\vllm\vllm\config\parallel.py) + [config/kernel.py](d:\design\vllm\vllm\config\kernel.py)；通信 [device_communicators/all2all.py](d:\design\vllm\vllm\distributed\device_communicators\all2all.py)；EPLB 触发 [v1/worker/gpu/eplb_utils.py](d:\design\vllm\vllm\v1\worker\gpu\eplb_utils.py) |
 | **SGLang** | [`srt/layers/moe/`](d:\design\sglang\python\sglang\srt\layers\moe) 42 .py + [`srt/eplb/`](d:\design\sglang\python\sglang\srt\eplb) 12 + [`srt/elastic_ep/`](d:\design\sglang\python\sglang\srt\elastic_ep) 3 + [`srt/batch_overlap/`](d:\design\sglang\python\sglang\srt\batch_overlap) 2 + [`sgl-kernel/csrc/moe/`](d:\design\sglang\sgl-kernel\csrc\moe)。详 [sglang/topics/moe.md](../../sglang/topics/moe.md)（30 KB seed） |
 
 ## 三方对照表（13 子维度）
 
-> 每 cell 的具体行号锚点，对 SGLang 见 [sglang/topics/moe.md](../../sglang/topics/moe.md)、对 MindIE 见 [mindie/topics/moe.md](../../mindie/topics/moe.md)；vLLM 锚点 inline 给出（无 vLLM seed 页）。
+> 每 cell 的具体行号锚点，对 SGLang 见 [sglang/topics/moe.md](../../sglang/topics/moe.md)、对 MindIE 见 `mindie/topics/moe.md`（已删）；vLLM 锚点 inline 给出（无 vLLM seed 页）。
 
 ### 1. MoE 实现 / 抽象层
 
@@ -90,7 +88,7 @@ related:
 
 | 维度 | MindIE | vLLM | SGLang |
 |---|---|---|---|
-| 是否实现 | **N/A (verified 2026-04-19)**——`mindie_llm/runtime/` grep `eplb` **0 命中**；ATB 侧另有 EPLB 不混用（详 [mindie/topics/moe.md §EPLB 缺失](../../mindie/topics/moe.md#eplb-缺失重要-caveat)） | ✅ [`distributed/eplb/`](d:\design\vllm\vllm\distributed\eplb) **9 .py** + [`v1/worker/gpu/eplb_utils.py`](d:\design\vllm\vllm\v1\worker\gpu\eplb_utils.py) `EPLBController` + `step_eplb_after` 装饰器 | ✅ [`srt/eplb/`](d:\design\sglang\python\sglang\srt\eplb) **12 .py** |
+| 是否实现 | **N/A (verified 2026-04-19)**——`mindie_llm/runtime/` grep `eplb` **0 命中**；ATB 侧另有 EPLB 不混用（详 `mindie/topics/moe.md#eplb-缺失重要-caveat`（已删）） | ✅ [`distributed/eplb/`](d:\design\vllm\vllm\distributed\eplb) **9 .py** + [`v1/worker/gpu/eplb_utils.py`](d:\design\vllm\vllm\v1\worker\gpu\eplb_utils.py) `EPLBController` + `step_eplb_after` 装饰器 | ✅ [`srt/eplb/`](d:\design\sglang\python\sglang\srt\eplb) **12 .py** |
 | 算法数 | N/A | **1**：`DefaultEplbPolicy.balanced_packing` ([policy/default.py:21-60](d:\design\vllm\vllm\distributed\eplb\policy\default.py)) | **3 + hierarchical = 6 enum**：`deepseek` / `deepseek_vec` / `elasticity_aware` |
 | 通信 backend | N/A | **3 子类**：`TorchDistNcclEplbCommunicator` / `TorchDistGlooStagedEplbCommunicator` / `PyNcclEplbCommunicator` ([eplb_communicator.py:51,96,170](d:\design\vllm\vllm\distributed\eplb\eplb_communicator.py)) | 复用 `MOE_EP` 通信组（无独立通信抽象） |
 | 触发机制 | N/A | `step_eplb_after` 装饰 `model_runner` 三处（[gpu/model_runner.py:405,1125,1244](d:\design\vllm\vllm\v1\worker\gpu\model_runner.py)）；`step_interval=3000` 默认 | `EPLBManager._entrypoint` 每 `eplb_rebalance_num_iterations` 次 `yield from rebalance()` |
@@ -168,7 +166,7 @@ related:
 | 维度 | MindIE | vLLM | SGLang |
 |---|---|---|---|
 | MoE 模型族数 | **3 族**：DeepSeek-V3 + DeepSeek-V3.2（复用 V3 主干）+ Qwen3-MoE | **20+ 族**：mixtral / phimoe / olmoe / qwen2_moe / qwen3_moe / qwen3_5_mtp / qwen3_next{,_mtp} / nemotron_h{,_mtp} / minimax_m2 / mllama4 / openpangu{,_mtp} / param2moe / sarvam / step3 等 | **8+ 族**：DeepSeek V2/V3/V3.2 + Qwen3-MoE + MiMo + GLM4-MoE + BailingMoE + Llama4 + MiniMax-M2 |
-| draft / MTP MoE 与 EPLB | MTP draft 不影响 expert 路由（详 [mindie/topics/speculative.md](../../mindie/topics/speculative.md)） | `EPLBController.maybe_register_speculator` 显式支持 draft MoE 加入 EPLB ([eplb_utils.py:51-81](d:\design\vllm\vllm\v1\worker\gpu\eplb_utils.py))；**`assert not enable_elastic_ep` —— elastic EP 与 draft MoE 互斥** | `speculative_moe_backend_context` / `speculative_moe_a2a_backend_context` 两 contextmanager 在 draft 路径切换 backend |
+| draft / MTP MoE 与 EPLB | MTP draft 不影响 expert 路由（详 `mindie/topics/speculative.md`（已删）） | `EPLBController.maybe_register_speculator` 显式支持 draft MoE 加入 EPLB ([eplb_utils.py:51-81](d:\design\vllm\vllm\v1\worker\gpu\eplb_utils.py))；**`assert not enable_elastic_ep` —— elastic EP 与 draft MoE 互斥** | `speculative_moe_backend_context` / `speculative_moe_a2a_backend_context` 两 contextmanager 在 draft 路径切换 backend |
 
 ---
 
@@ -193,7 +191,7 @@ related:
 | 项目 | 等价 pattern grep 结果 |
 |---|---|
 | **SGLang（已知锚）** | enum 8 成员，CLI Literal 7 字面值；`customized` 在 srt/ 内 grep `is_customized()` 仅本类自身定义命中（无消费方分支）—— **dead enum**。锚点 [utils.py:23-32, 64-65](d:\design\sglang\python\sglang\srt\layers\moe\utils.py) |
-| **MindIE 反扫** | `MoECommType` 5 enum，但生产 `MOE_COMM_STRATEGIES` 列表 [moe_comm_strategy.py:210-214](d:\design\MindIE-LLM\mindie_llm\runtime\layers\fused_moe\moe_comm_strategy.py) 仅含 3 Strategy 类；`FusedMC2Strategy` 类存在但未加入列表 → `FUSED_MC2`/`FUSED_ALLTOALL` 是 **dead branch**（架构文档 + 单测 + 生产代码 三方互不一致；详 [mindie/topics/moe.md §MoECommType 完整清单 RECONFIRMED](../../mindie/topics/moe.md#moecommtype-完整清单)）—— **SGLang 同型问题** |
+| **MindIE 反扫** | `MoECommType` 5 enum，但生产 `MOE_COMM_STRATEGIES` 列表 [moe_comm_strategy.py:210-214](d:\design\MindIE-LLM\mindie_llm\runtime\layers\fused_moe\moe_comm_strategy.py) 仅含 3 Strategy 类；`FusedMC2Strategy` 类存在但未加入列表 → `FUSED_MC2`/`FUSED_ALLTOALL` 是 **dead branch**（架构文档 + 单测 + 生产代码 三方互不一致；详 `mindie/topics/moe.md#moecommtype-完整清单`（已删））—— **SGLang 同型问题** |
 | **vLLM 反扫** | `All2AllBackend Literal` 10 字面值含 `naive`+`pplx`，但 `__post_init__` 显式 `if self.all2all_backend in ["pplx", "naive"]: ... self.all2all_backend = "allgather_reducescatter"` ([parallel.py:417-423](d:\design\vllm\vllm\config\parallel.py))——**显式处理 deprecation**；额外 grep `register_dispatcher`/`customized`/`register_runner` 在 fused_moe/ 全树 **0 命中**——**无 "customized 预留" 模式** |
 
 > **synthesis (anchor 1)**: 三家**都有 enum 与实际可达路径不一致的问题**，但严重度与处理方式不同：vLLM 显式 fallback（最优）→ SGLang enum/CLI 不同步（中等）→ MindIE 三方源互相矛盾（最差）。**vLLM 的 deprecation 模式应被另两家借鉴**。补充：vLLM 独有 `RoutingSimulatorRouter`（离线模拟）+ `ZeroExpertRouter`（消融实验）两类 router——是 SGLang/MindIE 完全没有的"研究/调试型 router"。
@@ -272,7 +270,6 @@ related:
 
 - 三家本地实现页：
   - [sglang/topics/moe.md](../../sglang/topics/moe.md)（30 KB seed，最完整；本页 SGLang 列均锚此页）
-  - [mindie/topics/moe.md](../../mindie/topics/moe.md)（含 V32 RESOLVED + FUSED_MC2 dead branch 详解 + 三方 anchor cross-check）
   - vLLM 暂无 `vllm/topics/moe.md`（**本页 vLLM 行的 fresh grep 是事实上首份合成**——未来可考虑独立 ingest）
 - 维度索引与姊妹对比：
   - [comparison/dimensions.md §dim-moe](../dimensions.md#dim-moe)（已 verified 2026-04-18，含 prepare_finalize 子包描述）
@@ -282,4 +279,3 @@ related:
   - [comparison/topics/cp-sp.md](cp-sp.md)（attention 内并行视角，与 MoE 内 EP 互补）
 - 模块页：
   - [sglang/modules/eplb.md](../../sglang/modules/eplb.md) / [elastic_ep.md](../../sglang/modules/elastic_ep.md) / [batch_overlap.md](../../sglang/modules/batch_overlap.md)
-  - [mindie/entities/ParallelInfoManager.md](../../mindie/entities/ParallelInfoManager.md)

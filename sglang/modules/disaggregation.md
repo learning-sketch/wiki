@@ -44,7 +44,7 @@ related:
 
 `srt/disaggregation/`（**28** `.py` 文件 / ~556 KB）实现 SGLang 的 **PD (Prefill/Decode) 分离** 子系统：[`base/conn.py`](d:\design\sglang\python\sglang\srt\disaggregation\base\conn.py) 定义抽象基类（`BaseKVManager` / `BaseKVSender` / `BaseKVReceiver` / `BaseKVBootstrapServer` + `KVArgs` dataclass + `KVPoll` 状态机），[`utils.py`](d:\design\sglang\python\sglang\srt\disaggregation\utils.py) 中 `TransferBackend` 5 项枚举 + `get_kv_class` 工厂装配 5 套后端实现（**Mooncake / NIXL / Mori / Ascend / Fake**）。顶层 [`prefill.py`](d:\design\sglang\python\sglang\srt\disaggregation\prefill.py) / [`decode.py`](d:\design\sglang\python\sglang\srt\disaggregation\decode.py) 提供两个 mixin（`SchedulerDisaggregationPrefillMixin` / `SchedulerDisaggregationDecodeMixin`）混入 `Scheduler`，[`managers/disagg_service.py`](d:\design\sglang\python\sglang\srt\managers\disagg_service.py) 仅在 prefill 节点拉起 bootstrap HTTP 服务。
 
-> synthesis: 与 **MindIE** 独立 `connector` 子进程（[`mindie/topics/connector.md`](../topics/../../mindie/topics/connector.md)）+ **vLLM** `kv_transfer/kv_connector/v1/` 14 backend 抽象（[`vllm/topics/kv-connector.md`](../../vllm/topics/kv-connector.md)）形成对比：SGLang 把 PD 传输与调度 **合并在同一 Python 运行时**，通过 `TransferBackend` 切换 5 套后端 + 共享 `CommonKVManager` 基类，并另设 `encode_*.py` 支持 **EPD（Encoder-Prefill-Decode 编码器分离）** —— 这是 vLLM/MindIE 当前都没有的设计点。深度对比详见 [`comparison/topics/pd-disaggregation.md`](../../comparison/topics/pd-disaggregation.md)（14 子维度）。
+> synthesis: 与 **MindIE** 独立 `connector` 子进程（`mindie/topics/connector.md`（已删））+ **vLLM** `kv_transfer/kv_connector/v1/` 14 backend 抽象（[`vllm/topics/kv-connector.md`](../../vllm/topics/kv-connector.md)）形成对比：SGLang 把 PD 传输与调度 **合并在同一 Python 运行时**，通过 `TransferBackend` 切换 5 套后端 + 共享 `CommonKVManager` 基类，并另设 `encode_*.py` 支持 **EPD（Encoder-Prefill-Decode 编码器分离）** —— 这是 vLLM/MindIE 当前都没有的设计点。深度对比详见 [`comparison/topics/pd-disaggregation.md`](../../comparison/topics/pd-disaggregation.md)（14 子维度）。
 
 ## Sources
 
@@ -123,7 +123,7 @@ flowchart TB
 | **ascend** | [ascend/conn.py](d:\design\sglang\python\sglang\srt\disaggregation\ascend\conn.py) + [transfer_engine.py](d:\design\sglang\python\sglang\srt\disaggregation\ascend\transfer_engine.py) | `AscendKVManager` **子类化** `MooncakeKVManager`；Sender/Receiver/Bootstrap 同理子类化 Mooncake | NPU 路径；MemFabric-Hybrid | [ascend/conn.py:21](d:\design\sglang\python\sglang\srt\disaggregation\ascend\conn.py) |
 | **fake** | [fake/conn.py](d:\design\sglang\python\sglang\srt\disaggregation\fake\conn.py) | `FakeKVManager` / `FakeKVSender` / `FakeKVReceiver`（直接继承 `Base*`） | 测试 / 占位；**`get_kv_class` 中 fake 未注册 `BOOTSTRAP_SERVER`** | [fake/conn.py:21](d:\design\sglang\python\sglang\srt\disaggregation\fake\conn.py)、[utils.py:415-428](d:\design\sglang\python\sglang\srt\disaggregation\utils.py) |
 
-> synthesis: **Ascend 是 Mooncake 的子类**——这是 SGLang 5 backend 中唯一的"backend 复用 backend"案例（其它 4 个直接继承 `Common*` 或 `Base*`）。意味着 NPU 路径走 Mooncake 协议但加了 NPU 特定 transfer_engine 适配，与 [mindie/topics/connector.md](../../mindie/topics/connector.md) Mooncake mempool 后端有对偶语义。
+> synthesis: **Ascend 是 Mooncake 的子类**——这是 SGLang 5 backend 中唯一的"backend 复用 backend"案例（其它 4 个直接继承 `Common*` 或 `Base*`）。意味着 NPU 路径走 Mooncake 协议但加了 NPU 特定 transfer_engine 适配，与 `mindie/topics/connector.md`（已删） Mooncake mempool 后端有对偶语义。
 
 ## Top-level orchestration
 
@@ -203,7 +203,7 @@ flowchart TB
 
 | 维度 | MindIE | vLLM | SGLang（本模块） |
 |---|---|---|---|
-| **PD 实现位置** | 独立 `connector` **子进程**（[mindie/topics/connector.md](../../mindie/topics/connector.md)） | `kv_transfer/kv_connector/v1/` **14 backend**（[vllm/topics/kv-connector.md](../../vllm/topics/kv-connector.md)） | **5 backend in-process**（mooncake/nixl/mori/ascend/fake）via `TransferBackend` enum + `get_kv_class` 工厂 |
+| **PD 实现位置** | 独立 `connector` **子进程**（`mindie/topics/connector.md`（已删）） | `kv_transfer/kv_connector/v1/` **14 backend**（[vllm/topics/kv-connector.md](../../vllm/topics/kv-connector.md)） | **5 backend in-process**（mooncake/nixl/mori/ascend/fake）via `TransferBackend` enum + `get_kv_class` 工厂 |
 | **传输与调度耦合** | C++ scheduler ↔ connector 子进程 ZMQ + protobuf | scheduler ↔ KVConnector hooks + 14 backend | scheduler 直接持 `BaseKVSender` 引用（[`Req.disagg_kv_sender`](d:\design\sglang\python\sglang\srt\managers\schedule_batch.py:855)） |
 | **Bootstrap server** | N/A | 各 backend 自管 | 显式 `KVBootstrapServer` 抽象 + Common HTTP 实现，**仅 prefill 拉起** |
 | **EPD（编码器分离）** | ❌ | ❌ | ✅ **唯一**：`encode_*.py` 多模态 encoder 独立服务（grpc/HTTP） |
@@ -234,4 +234,3 @@ flowchart TB
 - [comparison/topics/pd-disaggregation.md](../../comparison/topics/pd-disaggregation.md) — 三家 PD 14 子维度深度对比（**主对照页**）
 - [comparison/dimensions.md §dim-pd / §dim-kv-transfer](../../comparison/dimensions.md)
 - [vllm/topics/kv-connector.md](../../vllm/topics/kv-connector.md) — vLLM 14 backend 对照
-- [mindie/topics/connector.md](../../mindie/topics/connector.md) — MindIE 独立 connector 子进程对照

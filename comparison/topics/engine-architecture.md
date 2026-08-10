@@ -27,10 +27,6 @@ related:
   - comparison/topics/sync-schedule.md
   - comparison/topics/async-schedule.md
   - comparison/topics/pd-disaggregation.md
-  - mindie/entities/Generator.md
-  - mindie/entities/PluginManager.md
-  - mindie/entities/LlmEngine.md
-  - mindie/entities/SeparateDeploymentEngine.md
   - vllm/entities/LLMEngine.md
   - vllm/entities/AsyncLLM.md
   - vllm/entities/EngineCore.md
@@ -84,7 +80,7 @@ flowchart TB
 - **进程数**：1（主推路径）。`server/main.py` HTTP 服务、`Generator` 装配、C++ `LlmEngine` 调度循环、Python `PluginManager.forward_thread`、`ModelRunner` 全在同一进程。
 - **PD 场景额外**：[`SeparateDeploymentWorker`](d:\design\MindIE-LLM\mindie_llm\text_generator\utils\separate_deployment_engine.py) 仍在同进程，但通过 `LLMDataDist` SDK 跨节点拉/推 KV；**connector 是独立子进程**（[connector/main.py](d:\design\MindIE-LLM\mindie_llm\connector\main.py)，由 `Executor::BuildConnectorCommand` C++ fork [executor.cpp:794-809](d:\design\MindIE-LLM\src\executor\executor.cpp)），与 generator 通过共享内存 + protobuf 通信。
 - **跨语言边界**：C++ ↔ Python 通过 pybind 紧耦合（`LlmEngine` 的 `responseHandler` 是 Python callback，`PluginManager.generate_token` 由 C++ 反向调用）。
-- **锚点**：[Generator.__init__](d:\design\MindIE-LLM\mindie_llm\text_generator\generator.py)（[212-540](d:\design\MindIE-LLM\mindie_llm\text_generator\generator.py)）；C++ 引擎 [LlmEngine::StartEngineThread](d:\design\MindIE-LLM\src\engine\llm_engine.cpp)（[251-273](d:\design\MindIE-LLM\src\engine\llm_engine.cpp)）+ [SchedulerThreadEntry](d:\design\MindIE-LLM\src\engine\llm_engine.cpp)（[457+](d:\design\MindIE-LLM\src\engine\llm_engine.cpp)）；详 [mindie/entities/Generator.md](../../mindie/entities/Generator.md)、[LlmEngine.md](../../mindie/entities/LlmEngine.md)、[PluginManager.md](../../mindie/entities/PluginManager.md)。
+- **锚点**：[Generator.__init__](d:\design\MindIE-LLM\mindie_llm\text_generator\generator.py)（[212-540](d:\design\MindIE-LLM\mindie_llm\text_generator\generator.py)）；C++ 引擎 [LlmEngine::StartEngineThread](d:\design\MindIE-LLM\src\engine\llm_engine.cpp)（[251-273](d:\design\MindIE-LLM\src\engine\llm_engine.cpp)）+ [SchedulerThreadEntry](d:\design\MindIE-LLM\src\engine\llm_engine.cpp)（[457+](d:\design\MindIE-LLM\src\engine\llm_engine.cpp)）；详 `mindie/entities/Generator.md`（已删）、`LlmEngine.md`（已删）、`PluginManager.md`（已删）。
 
 ### vLLM：可插拔进程模型（inproc / multiproc / Ray）
 
@@ -223,7 +219,7 @@ flowchart LR
 | **Worker 职责** | [`ModelRunner`](d:\design\MindIE-LLM\mindie_llm\runtime\model_runner\model_runner.py)：load_model + forward + sample（无设备/进程级管理） | [`Worker`](d:\design\vllm\vllm\v1\worker\gpu_worker.py)：进程级 + 设备级 + 协议级（init_device / KV profile / RPC）；持有 [`GPUModelRunner`](d:\design\vllm\vllm\v1\worker\gpu_model_runner.py) 负责 forward | [`TpModelWorker`](d:\design\sglang\python\sglang\srt\managers\tp_worker.py)：load_model + forward + sample，与 scheduler 同进程 |
 | **Worker 调用机制** | Python 函数调用（同进程） | RPC：[`MultiprocExecutor`](d:\design\vllm\vllm\v1\executor\multiproc_executor.py) 用 `MessageQueue.enqueue(("execute_model", args, kwargs, output_rank))` → worker `getattr(self.worker, method)`（[multiproc_executor.py:953-979](d:\design\vllm\vllm\v1\executor\multiproc_executor.py)） | Python 函数调用（同进程） |
 | **多 worker 并行机制** | 多 NPU 在同进程多线程 + Ascend HCCL 集合通信 | 多进程 + `MessageQueue` shm 广播 + NCCL 集合通信 | 多 scheduler 进程（每进程一个 worker）+ NCCL 集合通信 |
-| **PP 实现** | 草稿（[topics/aclgraph-pp.md](../../mindie/topics/aclgraph-pp.md)） | `Worker` 内 `_pp_send_work: list[Handle]` + `irecv_tensor_dict` / `isend_tensor_dict`（[gpu_worker.py:154-155, 754-758, 825-839](d:\design\vllm\vllm\v1\worker\gpu_worker.py)） | 完整支持，scheduler 显式 `pp_rank`（[scheduler.py:332+](d:\design\sglang\python\sglang\srt\managers\scheduler.py)） |
+| **PP 实现** | 草稿（`topics/aclgraph-pp.md`（已删）） | `Worker` 内 `_pp_send_work: list[Handle]` + `irecv_tensor_dict` / `isend_tensor_dict`（[gpu_worker.py:154-155, 754-758, 825-839](d:\design\vllm\vllm\v1\worker\gpu_worker.py)） | 完整支持，scheduler 显式 `pp_rank`（[scheduler.py:332+](d:\design\sglang\python\sglang\srt\managers\scheduler.py)） |
 
 **深度对比**：见后续 `compare executor-worker across all`（[comparison/index.md:52](../index.md) 仍 TODO）。
 
@@ -262,7 +258,7 @@ flowchart LR
 
 ### MindIE Generator.\_\_init\_\_ 11 步
 
-详 [Generator.md](../../mindie/entities/Generator.md) §`Generator.__init__` 装配序列；关键步骤：
+详 `Generator.md`（已删） §`Generator.__init__` 装配序列；关键步骤：
 1. 配置解析（[generator.py:212-274](d:\design\MindIE-LLM\mindie_llm\text_generator\generator.py)）
 2. PD 子配置 + `super().__init__(pd_config)`（[275-281](d:\design\MindIE-LLM\mindie_llm\text_generator\generator.py)）
 3. NPU 监控 + input_metadata_queue（[282-283](d:\design\MindIE-LLM\mindie_llm\text_generator\generator.py)）
@@ -389,7 +385,7 @@ C++ `LlmEngine` 由外部（server 层）单独构造与 `StartEngineThread`（[
 
 ## Notes / Caveats
 
-> [!todo] VERIFY: MindIE `Generator` 与 server/main.py 的边界——本页假设 `Generator` 是顶层，但实际上可能 server 层（[d:\design\MindIE-LLM\mindie_llm\server\main.py](d:\design\MindIE-LLM\mindie_llm\server\main.py)）才是真正 user-facing 入口；`Generator` 的 `BatchScheduler` 引用未直接出现在 generator.py 的 import 中（[Generator.md `[!todo] VERIFY`](../../mindie/entities/Generator.md)）。
+> [!todo] VERIFY: MindIE `Generator` 与 server/main.py 的边界——本页假设 `Generator` 是顶层，但实际上可能 server 层（[d:\design\MindIE-LLM\mindie_llm\server\main.py](d:\design\MindIE-LLM\mindie_llm\server\main.py)）才是真正 user-facing 入口；`Generator` 的 `BatchScheduler` 引用未直接出现在 generator.py 的 import 中（原 `mindie/entities/Generator.md` wiki 页已删除）。
 
 > [!todo] VERIFY: SGLang `Engine` vs `HttpServerEngineAdapter` 的真实区别——本页只读了 `Engine`，[`http_server_engine.py`](d:\design\sglang\python\sglang\srt\entrypoints\http_server_engine.py) 是否独立 launcher 还是 wrapper 待 verify。
 
@@ -414,13 +410,6 @@ C++ `LlmEngine` 由外部（server 层）单独构造与 `StartEngineThread`（[
 - `comparison/topics/multiproc-ipc.md`（TODO；本页 §1 已铺好种子）
 
 ### MindIE 端
-- [mindie/entities/Generator.md](../../mindie/entities/Generator.md)
-- [mindie/entities/PluginManager.md](../../mindie/entities/PluginManager.md)
-- [mindie/entities/LlmEngine.md](../../mindie/entities/LlmEngine.md)（C++）
-- [mindie/entities/SeparateDeploymentEngine.md](../../mindie/entities/SeparateDeploymentEngine.md)
-- [mindie/entities/ModelRunner.md](../../mindie/entities/ModelRunner.md)
-- [mindie/topics/request-lifecycle.md](../../mindie/topics/request-lifecycle.md)
-- [mindie/topics/connector.md](../../mindie/topics/connector.md)
 
 ### vLLM 端
 - [vllm/entities/LLMEngine.md](../../vllm/entities/LLMEngine.md)

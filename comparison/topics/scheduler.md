@@ -26,7 +26,6 @@ sources:
 related:
   - comparison/index.md
   - comparison/dimensions.md
-  - mindie/entities/BatchScheduler.md
   - vllm/entities/Scheduler.md
   - sglang/entities/Scheduler.md
 ---
@@ -258,7 +257,6 @@ vLLM 与 SGLang 的 overlap 都需要小心 **spec decoding + structured output*
 
 ## See also
 - [comparison/dimensions.md](../dimensions.md) §dim-scheduler
-- [mindie/entities/BatchScheduler.md](../../mindie/entities/BatchScheduler.md)
 - [vllm/entities/Scheduler.md](../../vllm/entities/Scheduler.md)
 - [sglang/entities/Scheduler.md](../../sglang/entities/Scheduler.md)
 - [comparison/index.md](../index.md)

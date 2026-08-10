@@ -16,7 +16,6 @@ sources:
 related:
   - comparison/index.md
   - comparison/dimensions.md
-  - mindie/topics/request-lifecycle.md
   - vllm/entities/Scheduler.md
   - sglang/entities/Scheduler.md
 ---
@@ -202,4 +201,3 @@ flowchart TB
 - [comparison/topics/kv-cache.md](kv-cache.md)
 - [vllm/entities/Scheduler.md](../../vllm/entities/Scheduler.md)
 - [sglang/entities/Scheduler.md](../../sglang/entities/Scheduler.md)
-- [mindie/entities/Generator.md](../../mindie/entities/Generator.md)

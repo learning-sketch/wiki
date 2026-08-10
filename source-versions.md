@@ -31,7 +31,7 @@ related:
 
 | 项目 | working tree status |
 |---|---|
-| MindIE-LLM | **2 untracked**：`docs/mindie_generator_aclgraph_pp_design.md` + `mindie_llm/runtime/utils/distributed/pipeline_parallel.py` —— 用户本地补丁，不在 master 历史。**这两个文件已被本批次 wiki 引用**（[mindie/topics/aclgraph-pp.md](mindie/topics/aclgraph-pp.md) / [mindie/entities/ParallelInfoManager.md](mindie/entities/ParallelInfoManager.md)），增量更新时要单独 diff |
+| MindIE-LLM | **2 untracked**：`docs/mindie_generator_aclgraph_pp_design.md` + `mindie_llm/runtime/utils/distributed/pipeline_parallel.py` —— 用户本地补丁，不在 master 历史。曾被已删除的 `mindie/` wiki 页引用；增量更新时要单独 diff |
 | vLLM | clean |
 | SGLang | clean |
 

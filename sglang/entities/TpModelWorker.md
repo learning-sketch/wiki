@@ -18,7 +18,6 @@ related:
   - sglang/modules/dllm.md
   - sglang/modules/batch_overlap.md
   - vllm/entities/GPUWorker.md
-  - mindie/entities/ModelRunner.md
   - comparison/topics/executor-worker.md
 ---
 
@@ -162,7 +161,7 @@ sequenceDiagram
 
 | 维度 | `TpModelWorker` | vLLM `Worker` | MindIE `ModelRunner` |
 |------|-----------------|---------------|----------------------|
-| 文档入口 | 本页 | [GPUWorker.md](../../vllm/entities/GPUWorker.md) | [ModelRunner.md](../../mindie/entities/ModelRunner.md) |
+| 文档入口 | 本页 | [GPUWorker.md](../../vllm/entities/GPUWorker.md) | N/A（mindie wiki removed） |
 | 多 `ModelRunner` | `model_runner_list: List[ModelRunner]`（MTP / multi-layer EAGLE），[tp_worker.py:257](d:\design\sglang\python\sglang\srt\managers\tp_worker.py) | 对比页：spec 多在 `GPUModelRunner.drafter` 一层，[executor-worker.md §10 Anchor 3](../../comparison/topics/executor-worker.md) | 典型单 runner；spec 有独立 `MtpWorker` 等 |
 | forward + sample | 同方法内；可选 `delay_sample_func`，[tp_worker.py:484-497](d:\design\sglang\python\sglang\srt\managers\tp_worker.py) | 常拆为 `execute_model` / `sample_tokens`，[executor-worker.md §5](../../comparison/topics/executor-worker.md) | `PluginManager` 路径下同 method 串行 |
 | KV / pool 共享给 draft | `get_memory_pool()` 二元组 + 构造参数注入 | 嵌套 `drafter` 模式为主（见对比页） | `MtpWorker` 双 runner 等（见对比页） |
@@ -195,4 +194,3 @@ sequenceDiagram
 - [DataParallelController.md](DataParallelController.md)
 - [executor-worker.md](../../comparison/topics/executor-worker.md)（三家 executor/worker 对比）
 - [GPUWorker.md](../../vllm/entities/GPUWorker.md)
-- [ModelRunner.md](../../mindie/entities/ModelRunner.md)

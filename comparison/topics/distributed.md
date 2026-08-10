@@ -42,11 +42,6 @@ related:
   - comparison/dimensions.md
   - comparison/topics/cp-sp.md
   - comparison/topics/flashcomm.md
-  - mindie/topics/aclgraph-pp.md
-  - mindie/entities/ModelRunner.md
-  - mindie/entities/ParallelInfoManager.md
-  - mindie/entities/BlockSpaceManager.md
-  - mindie/entities/AclGraphModelWrapper.md
   - vllm/entities/MultiprocExecutor.md
   - sglang/entities/Scheduler.md
   - sglang/modules/distributed.md
@@ -137,7 +132,7 @@ related:
 > - 代码层：`pipeline_parallel.py` 存在但与 `ParallelType` enum 不一致（API 残缺）
 > - 设计层：`docs/mindie_generator_aclgraph_pp_design.md` 1733 行设计文档详细描述 PP 改造方案
 >
-> 详见 [mindie/topics/aclgraph-pp.md](../../mindie/topics/aclgraph-pp.md)（已建专题页，覆盖：当前主线为何不能用 PP、推荐 7 层架构、可复用资产）。
+> 详见 `mindie/topics/aclgraph-pp.md`（已删）（已建专题页，覆盖：当前主线为何不能用 PP、推荐 7 层架构、可复用资产）。
 
 > synthesis: **PP 实现完成度排序：SGLang > vLLM >> MindIE（仅设计文档）**。三家都没有声明用 1F1B / interleaved schedule，SGLang 的 microbatch + async-send/sync-recv 是常规非 1F1B 流水。
 
@@ -203,7 +198,7 @@ related:
 > synthesis: **EP 完成度排序**：
 > - **基础 EP**：三家都有
 > - **EPLB**：vLLM 与 SGLang 有，**MindIE 完全没有**——这是 MindIE 跑大 MoE 模型（DeepSeek-V3 等）的潜在短板
-> - **Elastic EP**：vLLM 与 SGLang 有，MindIE 没有——但 MindIE 的 `SwitchRole()`（[mindie/entities/BatchScheduler.md](../../mindie/entities/BatchScheduler.md)）覆盖了 PD 角色弹性切换的场景，与 elastic EP **不正交**
+> - **Elastic EP**：vLLM 与 SGLang 有，MindIE 没有——但 MindIE 的 `SwitchRole()`（`mindie/entities/BatchScheduler.md`（已删））覆盖了 PD 角色弹性切换的场景，与 elastic EP **不正交**
 > - **EPLB 算法多样性**：SGLang 有多个 algorithm（deepseek / deepseek_vec / elasticity_aware）+ 离线 simulator，vLLM 只有 `DefaultEplbPolicy.balanced_packing`
 
 ---
@@ -288,7 +283,7 @@ SGLang
    - 长期：参考 [vLLM `DefaultEplbPolicy.balanced_packing`](d:\design\vllm\vllm\distributed\eplb\policy\default.py)（更简单）或 [SGLang `eplb_algorithms/deepseek_vec.py`](d:\design\sglang\python\sglang\srt\eplb\eplb_algorithms\deepseek_vec.py)（更完整）。
 
 2. **MindIE PP 现状对 PD 的影响**：
-   - PP **未接入 aclgraph 主线**（详 [aclgraph-pp.md](../../mindie/topics/aclgraph-pp.md)）。意味着大模型只能靠 TP 切，TP 切到 16/32 时 attention 通信开销爆炸。
+   - PP **未接入 aclgraph 主线**（详 `aclgraph-pp.md`（已删））。意味着大模型只能靠 TP 切，TP 切到 16/32 时 attention 通信开销爆炸。
    - 你看到的 PD 分离能"绕开 TP 通信瓶颈"——P 节点只 prefill 一次（TP 通信开销摊薄），D 节点逐 token 解码（TP 通信占比小）。**这对 MindIE 是 PP 缺失的补偿，不是 PP 的替代**。
 
 3. **DP-attention 是 MoE 模型 PD 分离的关键**：
@@ -307,7 +302,7 @@ SGLang
 > [!todo] VERIFY: vLLM 是否有等价于 SGLang `dp_attention` 的 attention DP 实现（grep 范围已穷尽 `enable_dp_attention` / `dp_attention`，未命中，但可能在 attention backend 内有自己的轮子）。
 > [!todo] VERIFY: SGLang `event_loop_pp` 的 `pp_async_batch_depth` 参数对 P50/P99 latency 的实际影响（仅看到代码注释，未见 benchmark）。
 > [!todo] VERIFY: MindIE C++ 端 `distributedEnable` flag（[llm_engine.cpp:44-343](d:\design\MindIE-LLM\src\engine\llm_engine.cpp)）与 Python `parallel_info_manager` 的协作链。
-> [!warning] CONTRADICTION: MindIE PP 状态——代码层（草稿、API 残缺）与设计层（1733 行设计文档）双重描述，需以 [aclgraph-pp.md](../../mindie/topics/aclgraph-pp.md) 为准。
+> [!warning] CONTRADICTION: MindIE PP 状态——代码层（草稿、API 残缺）与设计层（1733 行设计文档）双重描述，需以 `aclgraph-pp.md`（已删） 为准。
 > [!warning] CONTRADICTION: 三家 "DP" 命名分裂——同名两种语义（DP-batch vs DP-attention），跨项目讨论时务必先澄清。
 
 ## See also
@@ -316,6 +311,5 @@ SGLang
 - [comparison/topics/flashcomm.md](flashcomm.md) — TP 通信优化
 - [comparison/topics/scheduler.md](scheduler.md) — scheduler 与 distributed rank 维度的关联
 - [comparison/topics/pd-disaggregation.md](pd-disaggregation.md) — PD 分离（影响 TP/EP/DP 配比决策）
-- [mindie/topics/aclgraph-pp.md](../../mindie/topics/aclgraph-pp.md) — MindIE PP 改造方案
 - [vllm/entities/MultiprocExecutor.md](../../vllm/entities/MultiprocExecutor.md) — vLLM executor 的 worker 拓扑
 - [sglang/entities/Scheduler.md](../../sglang/entities/Scheduler.md) — SGLang Scheduler 6 rank 维度
