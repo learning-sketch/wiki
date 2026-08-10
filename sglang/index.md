@@ -3,7 +3,7 @@ type: index
 project: sglang
 status: verified
 confidence: high
-verified_against: 2026-04-18
+verified_against: 2026-08-10
 sources:
   - d:\design\sglang\python\sglang\srt
 related:
@@ -37,6 +37,7 @@ related:
 | `managers` | [modules/managers.md](modules/managers.md) | **DONE** |
 | **`disaggregation`** | [modules/disaggregation.md](modules/disaggregation.md) | **DONE** (P0)（5 backend + EPD encode_*.py + 2 Scheduler mixin） |
 | `multiplex` | [modules/multiplex.md](modules/multiplex.md) | **DONE** (P5)（2 .py + PD-Multiplexing：同一 GPU 上 Prefill/Decode SM 分区 + green context streams + `SchedulerMultiplexMixin.event_loop_pdmux` + `--enable-pdmux` / `--pdmux-config-path` / `--sm-group-num`；与 disaggregation **互斥**） |
+| `session` | [modules/session.md](modules/session.md) | **DONE** (P2)（3 .py + `SessionController` open/close/reap + `StreamingSession` KV/Mamba slot 保活；Scheduler 持有 controller） |
 | `function_call` | [modules/function_call.md](modules/function_call.md) | **DONE** (P3)（26 .py + `FunctionCallParser` 注册表 24 字符串键 / 21 detector + `BaseFormatDetector` 流式状态机 + `structural_tag` / `json_schema` 约束分支；产出**约束元组**交 `constrained/` 编译） |
 | `constrained` | [modules/constrained.md](modules/constrained.md) | **DONE** (P3)（9 .py + 4 backend xgrammar/outlines/llguidance/none + Reasoner wrap + outlines jump-forward FSM + sgl-kernel `apply_token_bitmask_inplace_cuda` + Triton fallback） |
 
@@ -50,13 +51,16 @@ related:
 | `lora` | [modules/lora.md](modules/lora.md) | **DONE** (P4)（33 .py + `LoRAManager` + 4 backend triton/csgmv/ascend/torch_native + `LoRAMemoryPool` 槽位池 + 13 Triton kernel + S-LoRA/Punica 谱系；CUDA adapter LoRA = 0） |
 | `sampling` | [modules/sampling.md](modules/sampling.md) | **DONE** (P3)（9 .py + `SamplingParams` 25 字段 + `SamplingBatchInfo` 批张量 / merge / filter + `BatchedPenalizerOrchestrator` 4 子类 + custom logits dill 序列化 + sgl-kernel `top_k_renorm_probs` / `top_p_renorm_probs` / `apply_token_bitmask_inplace_cuda` 3 算子 + FlashInfer 采样核 delegate） |
 | `speculative` | [modules/speculative.md](modules/speculative.md) | **DONE** (P1)（27 .py + 6 算法 enum + EAGLE/MultiLayer/Standalone/DFlash/NGRAM 多家族 + sgl-kernel `verify_tree_greedy` CUDA 绑定） |
+| `state_capturer` | [modules/state_capturer.md](modules/state_capturer.md) | **DONE** (P2)（4 .py + `RoutedExpertsCapturer` / `IndexerTopkCapturer` + host pin_memory + `meta_info` base64；门控 `enable_return_*`） |
 
 ### 内存与缓存
 | 模块 | wiki 页 | 状态 |
 |---|---|---|
 | `mem_cache` | [modules/mem_cache.md](modules/mem_cache.md) | **DONE** |
+| `kv_canary` | [modules/kv_canary.md](modules/kv_canary.md) | **DONE** (P0)（~50 .py + `install_canary` patch `model.forward` + pool_patcher MHA/SWA/DSV4 + runner/perturb/token_oracle；`--kv-canary {none,log,raise}`） |
 | `checkpoint_engine` | [modules/checkpoint_engine.md](modules/checkpoint_engine.md) | **DONE** (P3)（3 .py + Moonshot **checkpoint-engine==0.1.2** ParameterServer + ZMQ IPC + `/update_weights_from_ipc` HTTP；与 `weight_sync` 并列正交通道） |
 | `weight_sync` | [modules/weight_sync.md](modules/weight_sync.md) | **DONE** (P3)（2 .py 无 `__init__` + `FlattenedTensorBucket` `uint8` flatten + `update_weights` 训练 SPMD 桥接；NCCL broadcast 主体在 `model_runner`；与 `connector`/`checkpoint_engine` 形成**3 条正交权重通道**） |
+| `weight_cache` | [modules/weight_cache.md](modules/weight_cache.md) | **DONE** (P0)（4 .py + `WeightCacheDaemon` Unix sock + `IpcModelLoader` CUDA IPC 零拷贝；`--weight-cache-mode {off,daemon,client}`；与 sync/connector/checkpoint_engine 正交的**第四条权重通道**） |
 
 ### 分布式与硬件
 | 模块 | wiki 页 | 状态 |
@@ -65,9 +69,11 @@ related:
 | `eplb` | [modules/eplb.md](modules/eplb.md) | **DONE** (P1)（12 .py + `EPLBManager` 周期重平衡 + 3 套算法 DeepSeek/DeepSeek-vec/Elasticity-aware + simulator 离线 reader） |
 | `elastic_ep` | [modules/elastic_ep.md](modules/elastic_ep.md) | **DONE** (P1)（3 .py + `ElasticEPStateManager` rank 活性 + `ExpertBackup{Manager,Client}` 子进程 Mooncake TE RDMA；**vLLM 有但实现不同**） |
 | `ray` | [modules/ray.md](modules/ray.md) | **DONE** (P5)（5 .py + `RayEngine(Engine)` 子类化 + `SchedulerActor` Ray actor + `RayDataParallelController` 子类化 + Placement Group + `--use-ray`；**比 vLLM `RayDistributedExecutor` 更轻**：仅替换 scheduler 进程） |
+| `platforms` | [modules/platforms.md](modules/platforms.md) | **DONE** (P1)（7 .py + 惰性 `current_platform` + `SRTPlatform` 工厂/能力；CUDA/ROCm/CPU/XPU + OOT entry_points `sglang.srt.platforms`） |
 | `hardware_backend` | [modules/hardware_backend.md](modules/hardware_backend.md) | **DONE** (P4)（22 .py + 3 设备子包 npu/musa/mlx + `NPUGraphRunner` 子类化 `CudaGraphRunner` + 4 个 `*GraphRunner` 子类 + `sgl_kernel_npu` import + `_handle_npu_backends` 默认参数注入） |
 | `compilation` | [modules/compilation.md](modules/compilation.md) | **DONE** (P1)（13 .py + `SGLangBackend` torch.compile + Inductor 适配 + PCG 子图 CUDAGraph；唯一 sgl-kernel 算子 `weak_ref_tensor`） |
 | `connector` | [modules/connector.md](modules/connector.md) | **DONE** (P2)（**命名陷阱**：≠ KV connector，是远程**权重**加载；9 .py + Redis/S3/RemoteInstance + serde） |
+| `plugins` | [modules/plugins.md](modules/plugins.md) | **DONE** (P2)（2 .py + `load_plugins` / `HookRegistry` BEFORE/AFTER/AROUND/REPLACE；groups `sglang.srt.plugins` + platforms） |
 
 ### 其他
 | 模块 | wiki 页 | 状态 |
@@ -82,6 +88,8 @@ related:
 | `observability` | [modules/observability.md](modules/observability.md) | **DONE** (Turn 3)（10 .py 无 `__init__.py` + `SchedulerMetricsCollector` 70+ 指标 + `TokenizerMetricsCollector` + OTel `process_tracing_init` + KV events 发布 + multiprocess Prometheus + Grafana JSON dashboard） |
 | `metrics` | — | **(N/A)** 路径不存在；指标系统在 `observability/` |
 | `configs` | [modules/configs.md](modules/configs.md) | **DONE** (Turn 3)（44 .py + `ModelConfig` 主类（25 字段）+ `LoadConfig` 正交 + `update_config.py` TP 对齐补丁 + ~95 个 srt 文件消费 + 多文件 Adapted from vLLM/HF transformers） |
+| `arg_groups` | [modules/arg_groups.md](modules/arg_groups.md) | **DONE** (P1)（9 .py + `A`/`Arg`/`NS` CLI 派生 + `overrides.py` 声明式 arch override + speculative/PD/DeepSeekV4/HiSparse/KimiK3 hooks） |
+| `utils` | — | 未 ingest（横切工具包；非本批） |
 
 ---
 
