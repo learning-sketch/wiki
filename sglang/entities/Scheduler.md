@@ -328,11 +328,14 @@ flowchart TB
 
 ## Notes / Caveats
 
-> [!warning] CONTRADICTION: 旧 wiki 多页仍写 “Scheduler = **11 mixin**”。HEAD `06f32bab` MRO 为 **6 mixin + `SchedulerMlxOverlapMixin`**（[scheduler.py:375-382](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）；OutputProcessor / UpdateWeights / Profiler / Metrics / RuntimeChecker / DPAttn 的源文件已删除，逻辑在 `scheduler_components/`。冲突页：[topics/scheduler-mixins.md](../topics/scheduler-mixins.md)、[modules/managers.md](../modules/managers.md)、[overview.md](../overview.md)、[topics/pd-disaggregation.md](../topics/pd-disaggregation.md)、[modules/disaggregation.md](../modules/disaggregation.md)、[modules/observability.md](../modules/observability.md)。本页以 HEAD 为准；上述页需单独 re-ingest / verify。
+> ~~[!warning] CONTRADICTION: 旧 wiki 多页仍写 “Scheduler = **11 mixin**”。HEAD `06f32bab` MRO 为 **6 mixin + `SchedulerMlxOverlapMixin`**；冲突页含 [topics/scheduler-mixins.md](../topics/scheduler-mixins.md)、[modules/managers.md](../modules/managers.md) 等。~~
+> **RESOLVED 2026-08-10**: [topics/scheduler-mixins.md](../topics/scheduler-mixins.md) 与 [modules/managers.md](../modules/managers.md) 已与本页对齐（6 mixin + `scheduler_components/`）。[overview.md](../overview.md) / [topics/pd-disaggregation.md](../topics/pd-disaggregation.md) / [modules/disaggregation.md](../modules/disaggregation.md) / [modules/observability.md](../modules/observability.md) / comparison 页仍可能残留旧 11-mixin 表述，需各自 verify。
 
-> [!warning] CONTRADICTION: [modules/managers.md](../modules/managers.md) 仍把 `SchedulerRecvSkipper` 指向已删除的 `scheduler_recv_skipper.py`；HEAD 在 [scheduler_components/recv_skipper.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\recv_skipper.py)。
+> ~~[!warning] CONTRADICTION: [modules/managers.md](../modules/managers.md) 仍把 `SchedulerRecvSkipper` 指向已删除的 `scheduler_recv_skipper.py`。~~
+> **RESOLVED 2026-08-10**: [modules/managers.md](../modules/managers.md) 已指向 [scheduler_components/recv_skipper.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\recv_skipper.py)。
 
-> [!todo] VERIFY: `topics/scheduler-mixins.md` 应按 “5 残留 mixin + composition 目录” 重写；本 ingest 未改该 topic 正文（仅标 CONTRADICTION）。
+> ~~[!todo] VERIFY: `topics/scheduler-mixins.md` 应按 “5 残留 mixin + composition 目录” 重写。~~
+> **RESOLVED 2026-08-10**: [topics/scheduler-mixins.md](../topics/scheduler-mixins.md) 已 re-ingest（6 mixin + composition 全表）。
 
 > [!todo] VERIFY: PD disagg event loop 方法体（`event_loop_*_disagg_*`）细节以 mixin 文件为准，未在本页逐行展开；见 [topics/pd-disaggregation.md](../topics/pd-disaggregation.md)（其中行号可能 stale）。
 
@@ -345,6 +348,6 @@ flowchart TB
 - [entities/DataParallelController.md](DataParallelController.md)
 - [topics/manager-pipeline.md](../topics/manager-pipeline.md)
 - [topics/request-lifecycle.md](../topics/request-lifecycle.md)
-- [topics/scheduler-mixins.md](../topics/scheduler-mixins.md) — **STALE / CONTRADICTION**：仍描述 11-mixin；需 re-ingest
+- [topics/scheduler-mixins.md](../topics/scheduler-mixins.md) — **DONE**（re-ingest 2026-08-10：6 mixin + `scheduler_components/`）
 - [topics/pd-disaggregation.md](../topics/pd-disaggregation.md)
 - [comparison/topics/scheduler-architecture.md](../../comparison/topics/scheduler-architecture.md)

@@ -58,7 +58,7 @@ synthesis: `srt/managers` 是 SGLang **进程级管理**的核心，定义了 `T
 ### Scheduler：6 mixin + `scheduler_components/` composition
 
 > ~~[!warning] CONTRADICTION: 本节仍描述 **11 mixin** 与已删除的 `scheduler_*_mixin.py` / `scheduler_recv_skipper.py`。~~
-> **RESOLVED 2026-08-10**: 与 [entities/Scheduler.md](../entities/Scheduler.md) 对齐——MRO 为 6 mixin + 条件性 `SchedulerMlxOverlapMixin`；`IdleSleeper` / `SchedulerRecvSkipper` / 原 Output/Weights/Profiler/Metrics/RuntimeChecker/DPAttn 职责迁入 [scheduler_components/](d:\design\sglang\python\sglang\srt\managers\scheduler_components)。**Caveat:** [topics/scheduler-mixins.md](../topics/scheduler-mixins.md) 仍可能写 11 mixin → 该 topic 页仍 stale。
+> **RESOLVED 2026-08-10**: 与 [entities/Scheduler.md](../entities/Scheduler.md) / [topics/scheduler-mixins.md](../topics/scheduler-mixins.md) 对齐——MRO 为 6 mixin + 条件性 `SchedulerMlxOverlapMixin`；`IdleSleeper` / `SchedulerRecvSkipper` / 原 Output/Weights/Profiler/Metrics/RuntimeChecker/DPAttn 职责迁入 [scheduler_components/](d:\design\sglang\python\sglang\srt\managers\scheduler_components)。topic 页已 re-ingest（不再 stale）。
 
 精确 class 定义来自 [scheduler.py:375-382](d:\design\sglang\python\sglang\srt\managers\scheduler.py)：
 
