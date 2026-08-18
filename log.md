@@ -158,3 +158,18 @@
 - **定点修复（9 页）**：docs 站点 mdx 化（object_storage / server_arguments / ollama_api / post_training_integration / openai_api_completions / ascend support_features）+ test 树重组（anthropic test_serving、specv2 unit/ 前缀）+ comparison/moe 两处文件迁移（routed_experts→state_capturer、fuseep→hardware_backend/npu）+ grpc.md 已删文件 de-link。
 - **标 stale（13 页 + index 同步）**：compilation(23 死锚)/observability(15)/checkpoint_engine(8)/model_loader(8)/weight_sync(8)/constrained(7)/dllm(7)/batch_invariant_ops(5)/batch_overlap(5)/debug_utils(5)/eplb(4)/multiplex(4)/sampling(4)——4 月正文快照 vs f7101b0a 的真实漂移，按 §7 语义降级，各页加 `[!todo] VERIFY` lint 标记。
 - **终态**：剩余 242 处死锚**全部**位于 `status: stale` 页面内 + vllm/overview.md（draft，待 vLLM 增量处理）；2 处 `](set)`/`](self)` 为代码片段误匹配（非链接，false positive 不处理）。
+
+## [2026-08-18] increment | vllm | pin 5f7fab88 → d29dc3ab：19 页全处理（4 subagent 并行）
+
+**Diff 摸底**：4 个月增量 **4273 commits**，wiki 相关子树 ~200 文件 / ±6 万行。旧 pin worktree（/tmp/vllm-pin）用于对照与 comparison cross-check。
+
+**结构性大变化（已落页）**：
+- **V2 model runner 转正**：`worker/gpu/` 包（30b44a1598 引入，旧 pin 已有——任务简报"本期新增"被子代理 git 考古纠正）从 env opt-in 变为 `VllmConfig.use_v2_model_runner`（[config/vllm.py:614-660]）四级判定下**白名单架构默认**；PCP/DSpark/DFlash/diffusion 强制 V2；V1（gpu_model_runner.py 8018 行）仍是全功能 fallback，两套长期共存（[GPUModelRunner.md](vllm/entities/GPUModelRunner.md)）。
+- **spec 架构重写**：eagle.py 被 cde8d24710 抽空（`SpecDecodeBaseProposer` → llm_base_proposer.py 1892 行）；`worker/gpu/spec_decode/` 扩成 `BaseSpeculator` 家族（AutoRegressive/Eagle/MTP/Gemma4/DFlash→DSpark/MultiModuleMTP）+ `AdaptiveVerificationManager`；RejectionSampler 三模式换血 strict/probabilistic/synthetic → **standard/synthetic/block**（[spec-decode-eagle.md](vllm/topics/spec-decode-eagle.md) 标 stale 待 verify pass）。
+- **v0 物理删除**：顶层 `executor/`/`worker/`/`attention/` 目录已删（[overview.md](vllm/overview.md) 划线 RESOLVED）；KV connector 14→**16** backend（P2P 删、NIXL pull/push 拆、+MooncakeStore）。
+- **engine 层新框架**：`EngineShutdownState` 优雅停机、`EngineCoreSentinel`/`WorkerSentinel` 容错、EEP 两阶段（prepare/commit + `ElasticScalingCache`）、内部 LB 重写（inflight 计数 + KV 压力惩罚）、`"ray"` 默认翻转 `RayExecutorV2`。
+- **KV 管理**：`get_computed_blocks` 2→3 元组（`shared_prefix_boundary` Marconi 式保留）、hybrid partial prefix hit、KV watermark、spec 家族 +4 类；`can_fit_full_sequence`/`TQFullAttentionSpec` 删除（RESOLVED）。
+
+**页面清单**：19/19 处理。**verified 13**（EngineCore/AsyncLLM/LLMEngine/EngineCoreClient/OutputProcessor/Scheduler/KVCacheManager/GPUWorker/MultiprocExecutor + engine/executor 模块页 + multiproc-ipc + index）；**stale 4（诚实降级 + VERIFY 注明未校范围）**（GPUModelRunner 细粒度区间 / prefix-cache grep 统计 / request-lifecycle 跨子系统次级细节 / spec-decode-eagle 旧锚点）+ kv-connector（backend 内部行号）+ overview 已 verified。~400+ 锚点修正。
+
+**Lessons learned**：① "新增大目录"要先 `git log --diff-filter=A` 查引入 commit 再定性——`worker/gpu/` 实为旧 pin 已有，本期变化是**默认值翻转**，两者叙事完全不同；② 4k+ commits 的增量下 entity 页仍可保住 verified（类层次稳定），topic 页（跨子系统统计）最易积累不可校债务，stale 降级 + VERIFY 范围声明是正确姿势。
