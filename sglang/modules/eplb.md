@@ -202,6 +202,11 @@ flowchart LR
 
 详细 9 子维度对比见 [comparison/topics/distributed.md](../../comparison/topics/distributed.md)；维度索引 [comparison/dimensions.md §dim-distributed](../../comparison/dimensions.md)。
 
+## Increment 2026-08-18 (06f32bab → f7101b0a)
+
+- 本期 `eplb/` 仅 1 文件变更：[expert_distribution.py](d:\design\sglang\python\sglang\srt\eplb\expert_distribution.py) +43/-28（上游 f61f584347 #34998 "Add explicit EPLB balancedness reporting modes"——balancedness 上报模式显式化）。其余 11 文件 0 变更。
+- > [!todo] VERIFY: 本页正文锚点为 2026-04-19 快照，未随 2026-08-10 / 2026-08-18 两轮增量逐点复核；本期改动面小，但 4→8 月间该目录是否有其它漂移未确认。
+
 ## Notes / Caveats
 
 > [!todo] VERIFY: ~~`--eplb-rebalance-layers-per-chunk` 的 argparse 文案写"per forward pass"（[server_args.py:5360-5364](d:\design\sglang\python\sglang\srt\server_args.py)），而 [`EPLBManager._compute_update_layer_ids_chunks`](d:\design\sglang\python\sglang\srt\eplb\eplb_manager.py) 是在**单次 rebalance** 内按层分块并在块间 `yield`（可能跨多个 forward）。文案与实现是否一致需人工对照。~~

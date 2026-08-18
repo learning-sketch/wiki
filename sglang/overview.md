@@ -3,7 +3,7 @@ type: overview
 project: sglang
 status: draft
 confidence: medium
-verified_against: 2026-08-10
+verified_against: 2026-08-18 (verify pass, increment from 06f32bab)
 sources:
   - d:\design\sglang\python\sglang\srt
   - d:\design\sglang\python\sglang\srt\entrypoints
@@ -24,7 +24,7 @@ related:
 # SGLang Overview
 
 ## Summary
-synthesis: SGLang 由两层组成 —— `sglang/` Python 前端 (frontend lang) 和 `sglang/srt/` 服务运行时 (SGLang Runtime)，本 wiki 主要围绕 **srt** 做。srt 用 **Manager 中心化** 模式：`TokenizerManager` 接收请求，`Scheduler` 跑批，`DetokenizerManager` 输出，三个 manager 之间用 ZMQ 通信，多进程拓扑显式。SGLang 在 PD 分离上有专门的 `disaggregation/` 顶层模块，实现路径覆盖 nixl / mooncake / mori / ascend 多个后端。HEAD `06f32bab` 下 srt 共 **41** 个顶层包（见下表）。
+synthesis: SGLang 由两层组成 —— `sglang/` Python 前端 (frontend lang) 和 `sglang/srt/` 服务运行时 (SGLang Runtime)，本 wiki 主要围绕 **srt** 做。srt 用 **Manager 中心化** 模式：`TokenizerManager` 接收请求，`Scheduler` 跑批，`DetokenizerManager` 输出，三个 manager 之间用 ZMQ 通信，多进程拓扑显式。SGLang 在 PD 分离上有专门的 `disaggregation/` 顶层模块，实现路径覆盖 nixl / mooncake / mori / ascend 多个后端。HEAD `f7101b0a`（2026-08-18）下 srt 仍为 **41** 个顶层包：本期 `grpc/` 占位包被删、新增 `rust_extensions/`（见下表）。
 
 ## Sources
 - 主代码根：[d:\design\sglang\python\sglang\srt\](d:\design\sglang\python\sglang\srt)
@@ -47,7 +47,8 @@ synthesis: SGLang 由两层组成 —— `sglang/` Python 前端 (frontend lang)
 | 模块 | 路径 | 角色 |
 |---|---|---|
 | `entrypoints` | [srt/entrypoints/](d:\design\sglang\python\sglang\srt\entrypoints) | HTTP / gRPC / OpenAI / Anthropic / Ollama 兼容 |
-| `grpc` | [srt/grpc/](d:\design\sglang\python\sglang\srt\grpc) | gRPC 协议占位（实现见外部包 / `entrypoints/grpc_server.py`） |
+| ~~`grpc`~~ | ~~srt/grpc/~~ | **已删除**（2026-08-18 增量核实：上游 67e12131df #34994 移除占位包；gRPC 入口仍在 [entrypoints/grpc_server.py](d:\design\sglang\python\sglang\srt\entrypoints\grpc_server.py) + [grpc_bridge.py](d:\design\sglang\python\sglang\srt\entrypoints\grpc_bridge.py)，见 [modules/grpc.md](modules/grpc.md)） |
+| `rust_extensions` | [srt/rust_extensions/](d:\design\sglang\python\sglang\srt\rust_extensions) | **新增**（同一 commit 67e12131df）：源码 checkout 中按需构建 Rust 扩展的 loader，见 [modules/rust_extensions.md](modules/rust_extensions.md) |
 
 ### 调度与请求生命周期
 | 模块 | 路径 | 角色 |

@@ -1,17 +1,20 @@
 ---
 type: module
 project: sglang
-status: verified
-confidence: high
-verified_against: 2026-04-19
+status: stale
+confidence: medium
+verified_against: 2026-08-18 (仅 Increment 小节与「数字核对」表；正文细粒度锚点仍为 2026-04-19 快照，见 Increment 说明)
 sources:
   - d:\design\sglang\python\sglang\srt\parser\reasoning_parser.py
   - d:\design\sglang\python\sglang\srt\parser\harmony_parser.py
   - d:\design\sglang\python\sglang\srt\parser\conversation.py
   - d:\design\sglang\python\sglang\srt\parser\jinja_template_utils.py
   - d:\design\sglang\python\sglang\srt\parser\code_completion_parser.py
+  - d:\design\sglang\python\sglang\srt\parser\template_manager.py
+  - d:\design\sglang\python\sglang\srt\parser\template_detection.py
+  - d:\design\sglang\python\sglang\srt\parser\inkling_renderer.py
+  - d:\design\sglang\python\sglang\srt\parser\inkling_tokenizer.py
   - d:\design\sglang\python\sglang\srt\server_args.py
-  - d:\design\sglang\python\sglang\srt\managers\template_manager.py
 related:
   - sglang/modules/managers.md
   - sglang/modules/connector.md
@@ -239,6 +242,21 @@ flowchart TB
 
 **边界归纳**：`parser/` 同时承担 **解码输出侧**（reasoning、harmony）与 **编码请求侧**（conversation、FIM、Jinja 预处理）。若需单一主题名，可称 *「OpenAI 兼容 API 的文本与模板适配层」*；否则可如实标为 **能力聚合目录**。
 
+## Increment 2026-08-18 (06f32bab → f7101b0a)
+
+> [!warning] CONTRADICTION（**重大补漏**：本页 2026-04-19 后从未随增量复核，正文多处计数在 pin `06f32bab` 时就已失效）：
+> - 「5 个 `.py`」→ pin 时已是 **9 个**（`git ls-tree 06f32bab` 核实）：新增 [inkling_renderer.py](d:\design\sglang\python\sglang\srt\parser\inkling_renderer.py)（332 行）、[inkling_tokenizer.py](d:\design\sglang\python\sglang\srt\parser\inkling_tokenizer.py)（105 行）、[template_detection.py](d:\design\sglang\python\sglang\srt\parser\template_detection.py)（781 行），且 `managers/template_manager.py` 已**迁入本目录**为 [parser/template_manager.py](d:\design\sglang\python\sglang\srt\parser\template_manager.py)（上游 #26052 "Move template manager files under parser"）——本页正文所有指向 `managers\template_manager.py` 的链接均已死链。
+> - detector 子类「10 个」→ pin 时已 21 个、HEAD 现为 **22 个**；`DetectorMap`「17 键」→ pin 时已 25 键、HEAD 现为 **26 键**（[reasoning_parser.py:L1875-1902](d:\design\sglang\python\sglang\srt\parser\reasoning_parser.py)）。
+> - 正文 `reasoning_parser.py` 小节的全部细粒度行号锚点（基于 ~586 行的 4 月版文件；HEAD 已 1993 行）**全部失效**，整节需按 ingest 流程重做；本次增量仅修正计数并锚定新版类表首行：`BaseReasoningFormatDetector` [L62](d:\design\sglang\python\sglang\srt\parser\reasoning_parser.py)、`DeepSeekR1Detector` [L313](d:\design\sglang\python\sglang\srt\parser\reasoning_parser.py)、`MuseGlimmerDetector` [L1653](d:\design\sglang\python\sglang\srt\parser\reasoning_parser.py)、`DetectorMap` [L1875](d:\design\sglang\python\sglang\srt\parser\reasoning_parser.py)。
+
+本期（`06f32bab..f7101b0a`）parser/ 自身的真实增量（`git log 06f32bab..HEAD -- python/sglang/srt/parser/` 共 3 commits）：
+
+- **Muse Glimmer 模型族接入**（上游 fde9ad2531 #34262）：新增 `MuseGlimmerDetector`（[reasoning_parser.py:L1653](d:\design\sglang\python\sglang\srt\parser\reasoning_parser.py)），`DetectorMap` 新增键 `"muse"`（[L1887](d:\design\sglang\python\sglang\srt\parser\reasoning_parser.py)）；配套 detector/format 文件落在 `function_call/`（见 [function_call.md](function_call.md)）。
+- **DeepSeek-V4 流式解析 chunk-invariant 修复**（上游 5899674504 #34458）：`DeepSeekV4Detector`（[reasoning_parser.py:L1147](d:\design\sglang\python\sglang\srt\parser\reasoning_parser.py)）的 reasoning/tool-call 流式解析改为分块不变；`reasoning_parser.py` 本期 +271/-17 行。
+- [jinja_template_utils.py](d:\design\sglang\python\sglang\srt\parser\jinja_template_utils.py) 仅 +1 行（随 VLM 预处理缓存 e8c7dddfa0 #34398 的边缘改动）。
+
+synthesis: 本模块目录本身在本期是低 churn（3 commits），但页面欠账来自 4 月至 8 月 pin 之间的漂移；已标 `status: stale`，待对 `reasoning_parser.py` / `template_detection.py` / `inkling_*` 重跑 ingest。
+
 ## Notes / Caveats
 
 > [!warning] CONTRADICTION（同名类型）：[`sglang.srt.parser.reasoning_parser.StreamingParseResult`](d:\design\sglang\python\sglang\srt\parser\reasoning_parser.py) 与 [`sglang.srt.function_call.core_types.StreamingParseResult`](d:\design\sglang\python\sglang\srt\function_call\core_types.py) 同名异类；阅读调用链时需按模块区分。
@@ -252,12 +270,13 @@ flowchart TB
 
 ## 数字核对
 
-| 项 | 值 |
-|---|---|
-| `parser/` 下 `.py` 文件数 | **5**（glob 已确认） |
-| `BaseReasoningFormatDetector` 的直接子类数 | **10** |
-| `--reasoning-parser` 的 `choices` 个数（=`DetectorMap` 键） | **17** |
-| `conversation.py` 中 `register_conv_template(` 调用次数 | **28** |
+| 项 | 值（2026-04-19） | 值（2026-08-18 @ f7101b0a） |
+|---|---|---|
+| `parser/` 下 `.py` 文件数 | ~~5~~ | **9**（+inkling_renderer / inkling_tokenizer / template_detection / template_manager） |
+| detector 子类数（`class *Detector`） | ~~10~~ | **22**（[reasoning_parser.py](d:\design\sglang\python\sglang\srt\parser\reasoning_parser.py) grep 核实） |
+| `--reasoning-parser` 的 `choices` 个数（=`DetectorMap` 键） | ~~17~~ | **26**（[L1875-1902](d:\design\sglang\python\sglang\srt\parser\reasoning_parser.py)） |
+| `conversation.py` 中 `register_conv_template(` 调用次数 | 28 | **28**（未变；文件现 1237 行） |
+| `reasoning_parser.py` 行数 | ~586 | **1993** |
 
 ## See also
 
