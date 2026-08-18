@@ -151,50 +151,51 @@ sequenceDiagram
 
 ## _launch_scheduler_processes
 
-入口：`_launch_scheduler_processes` [832-947](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)。
+入口：`_launch_scheduler_processes` [856-972](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)。
 
-- **DP / elastic scale 关闭**（`dp_size == 1` 且非 `ep_join_mode == "scale"`）：对当前节点 `_calculate_rank_ranges` 得到的每个 `(pp_rank, tp_rank)` 起一个 `mp.Process(target=run_scheduler_process_func, ...)`，`mp.Pipe(duplex=False)` 的 reader 侧收集 ready — [852-903](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)。子进程包装：`TorchMemorySaverAdapter.configure_subprocess`、`numa_utils.configure_subprocess` — [896-900](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)。
-- **DP / elastic scale 开启**（`use_dp_controller`）：单进程 `run_data_parallel_controller_process`，kwargs 含 `run_scheduler_process_func` — [904-918](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)。详见 [`DataParallelController.md`](DataParallelController.md)。
-- **Ready 等待**：`wait_for_ready` 调用 `_wait_for_scheduler_ready` — [923-929](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)；`_wait_for_scheduler_ready` 实现见 [1743-...](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)。
+- **DP / elastic scale 关闭**（`dp_size == 1` 且非 `ep_join_mode == "scale"`；条件现读 `get_parallel().dp_size` / `get_exec().moe.ep_join_mode`，[872-874](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)）：对当前节点 `_calculate_rank_ranges` 得到的每个 `(pp_rank, tp_rank)` 起一个 `mp.Process(target=run_scheduler_process_func, ...)`，`mp.Pipe(duplex=False)` 的 reader 侧收集 ready — [876-927](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)。子进程包装：`TorchMemorySaverAdapter.configure_subprocess`、`numa_utils.configure_subprocess` — [920-924](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)。
+- **DP / elastic scale 开启**（`use_dp_controller`）：单进程 `run_data_parallel_controller_process`，kwargs 含 `run_scheduler_process_func` — [928-946](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)。详见 [`DataParallelController.md`](DataParallelController.md)。
+- **Ready 等待**：`wait_for_ready` 调用 `_wait_for_scheduler_ready` — [947-953](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)；`_wait_for_scheduler_ready` 实现见 [1793-...](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)。
 
 ## 用户面 API（generate / encode / …）
 
 | API | 行号 | async？ | 作用 |
 |-----|------|---------|------|
-| `generate` | [352-...](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | 同步包装（内部 `run_until_complete` / 流式 generator） | 构造 `GenerateReqInput` → `tokenizer_manager.generate_request` |
-| `async_generate` | [453-...](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | 是 | 同上，async 原生 |
-| `encode` | [549-...](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | 否 | `EmbeddingReqInput` |
-| `rerank` | [616-...](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | 否 | cross-encoder 请求 |
-| `shutdown` | [1230-...](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | 否 | 停 watchdog + `kill_process_tree` |
-| `flush_cache` | [1266-...](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | 经 loop 同步 | 委托 TM |
-| `open_session` / `close_session` | [1269](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) / [1299](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | `close_session` 同步 await | 会话 API |
-| `start_profile` / `stop_profile` | [1308](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) / [1312](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | 否 | Profiling |
-| `start_expert_distribution_record` / `stop_*` / `dump_*` | [1315-1328](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | 否 | Expert 统计 |
-| `get_server_info` | [1330-...](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | 否 | 合并 server_args、scheduler info、internal state |
-| `init_weights_update_group` / `destroy_weights_update_group` | [1346](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) / [1368](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | 否 | 分布式更新组 |
-| `update_weights_from_distributed` | [1380-...](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | 否 | |
-| `update_weights_from_tensor` | [1402-...](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | 否 | |
-| `update_weights_from_disk` | [1425-...](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | 否 | |
-| `update_weights_from_ipc` | [1445-...](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | 否 | checkpoint-engine 集成 |
-| `get_weights_by_name` | [1459-...](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | 否 | |
-| `load_lora_adapter_from_tensors` / `load_lora_adapter` / `unload_lora_adapter` | [1484](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) / [1504](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) / [1517](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | 同步 | LoRA |
-| `release_memory_occupation` / `resume_memory_occupation` | [1554](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) / [1560](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | 否 | GPU 内存占用的释放/恢复 |
-| `freeze_gc` | [1566-...](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | 否 | 降低 GC 停顿 |
-| `collective_rpc` / `save_remote_model` / `save_sharded_model` | [1585](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) / [1592](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) / [1595](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | `collective_rpc` 同步阻塞 recv | 经 `send_to_rpc` ZMQ |
+| `generate` | [360-...](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | 同步包装（内部 `run_until_complete` / 流式 generator） | 构造 `GenerateReqInput` → `tokenizer_manager.generate_request` |
+| `async_generate` | [470-...](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | 是 | 同上，async 原生 |
+| `encode` | [573-...](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | 否 | `EmbeddingReqInput` |
+| `rerank` | [640-...](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | 否 | cross-encoder 请求 |
+| `shutdown` | [1258-...](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | 否 | 停 watchdog + `kill_process_tree` |
+| `flush_cache` | [1297-...](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | 经 loop 同步 | 委托 TM |
+| `open_session` / `close_session` | [1300](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) / [1330](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | `close_session` 同步 await | 会话 API |
+| `start_profile` / `stop_profile` | [1339](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) / [1343](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | 否 | Profiling |
+| `start_expert_distribution_record` / `stop_*` / `dump_*` | [1346-1359](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | 否 | Expert 统计 |
+| `get_server_info` | [1361-...](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | 否 | 合并 server_args、scheduler info、internal state |
+| `get_model_info`（本期新增） | [1372-1392](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | 否 | 当前服务的 model/weight_version/parser 等（含 control-plane 变更后的值） |
+| `init_weights_update_group` / `destroy_weights_update_group` | [1396](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) / [1418](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | 否 | 分布式更新组 |
+| `update_weights_from_distributed` | [1430-...](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | 否 | |
+| `update_weights_from_tensor` | [1452-...](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | 否 | |
+| `update_weights_from_disk` | [1475-...](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | 否 | |
+| `update_weights_from_ipc` | [1495-...](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | 否 | checkpoint-engine 集成 |
+| `get_weights_by_name` | [1509-...](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | 否 | |
+| `load_lora_adapter_from_tensors` / `load_lora_adapter` / `unload_lora_adapter` | [1534](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) / [1554](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) / [1567](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | 同步 | LoRA |
+| `release_memory_occupation` / `resume_memory_occupation` | [1604](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) / [1610](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | 否 | GPU 内存占用的释放/恢复 |
+| `freeze_gc` | [1616-...](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | 否 | 降低 GC 停顿 |
+| `collective_rpc` / `save_remote_model` / `save_sharded_model` | [1635](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) / [1642](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) / [1645](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | `collective_rpc` 同步阻塞 recv | 经 `send_to_rpc` ZMQ |
 | `score` / `async_score`（mixin） | [engine_score_mixin.py](d:\design\sglang\python\sglang\srt\entrypoints\engine_score_mixin.py) | `async_score` 是 | 委托 `tokenizer_manager.score_request` |
-| `__enter__` / `__exit__` | [1259](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) / [1262](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | 否 | 上下文管理器 → `shutdown` |
+| `__enter__` / `__exit__` | [1290](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) / [1293](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) | 否 | 上下文管理器 → `shutdown` |
 
 ## hidden state（§9）
 
 | 类别 | 内容 | 锚点 |
 |------|------|------|
-| 主进程对象 | `tokenizer_manager`、`template_manager`、`port_args`、`_scheduler_init_result`、`send_to_rpc`、`loop` | [277-295](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)、[311-315](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
-| 子进程 | `scheduler_procs`（list of `mp.Process`）、`detoken_procs`；DP 时 controller 一个进程 | [847-918](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)、[1176-1182](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
-| IPC 同步 | `mp.Pipe` + `_wait_for_scheduler_ready`（poll + 子进程存活检测） | [870](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)、[1743-...](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
-| 监控 | `SubprocessWatchdog` 赋给 `tokenizer_manager._subprocess_watchdog` | [1206-1215, 284-285](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
-| 退出 | `atexit.register(self.shutdown)`；`shutdown` 内停 watchdog + `kill_process_tree` | [259-260, 1230-...](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
-| 信号 | `_set_envs_and_config` 主线程注册 `SIGQUIT` → `kill_process_tree` | [1669-1688](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
-| 多进程启动方式 | `mp.set_start_method("spawn", force=True)` | [1696-1697](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
+| 主进程对象 | `tokenizer_manager`、`template_manager`、`port_args`、`_scheduler_init_result`、`send_to_rpc`、`loop` | [285-303](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)、[319-323](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
+| 子进程 | `scheduler_procs`（list of `mp.Process`）、`detoken_procs`；DP 时 controller 一个进程 | [871-946](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)、[1202-1210](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
+| IPC 同步 | `mp.Pipe` + `_wait_for_scheduler_ready`（poll + 子进程存活检测） | [894](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)、[1793-...](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
+| 监控 | `SubprocessWatchdog` 赋给 `tokenizer_manager._subprocess_watchdog` | [1234-1243, 292-293](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
+| 退出 | `atexit.register(self.shutdown)`；`shutdown` 内停 watchdog + `kill_process_tree` | [267-268, 1258-...](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
+| 信号 | `_set_envs_and_config` 主线程注册 `SIGQUIT` → `kill_process_tree` | [1719-1738](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
+| 多进程启动方式 | `mp.set_start_method("spawn", force=True)` | [1747](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
 
 ## HttpServerEngineAdapter
 
@@ -206,10 +207,10 @@ sequenceDiagram
 
 ## 与 Scheduler / TokenizerManager 的边界
 
-- **本类（launcher）**：分配 `PortArgs`、fork scheduler/detokenizer、等待 ready、装配 TM 与 watchdog — [1036-1228](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)。
+- **本类（launcher）**：分配 `PortArgs`、fork scheduler/detokenizer、等待 ready、装配 TM 与 watchdog — [1060-1256](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)。
 - **TokenizerManager**：主进程内 tokenize / 发 ZMQ / 收 detokenizer 回包（详见 [`TokenizerManager.md`](TokenizerManager.md)）；`Engine.generate` 仅构造高层 `GenerateReqInput` 并调 `generate_request`。
 - **Scheduler**：子进程 `run_scheduler_process`（[`Scheduler.md`](Scheduler.md) / [`TpModelWorker.md`](TpModelWorker.md)）；本页不展开调度循环。
-- **类注释**：说明三组件及"IPC 各进程不同端口"— [199-211](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)（其中"HTTP server … 主进程"指 **典型在线部署** 形态；离线 `Engine` 无独立 HTTP 进程）。
+- **类注释**：说明三组件及"IPC 各进程不同端口"— [207-219](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)（其中"HTTP server … 主进程"指 **典型在线部署** 形态；离线 `Engine` 无独立 HTTP 进程）。
 
 ## §5 step 3 hidden cross-reference grep 结果
 
@@ -221,13 +222,24 @@ sequenceDiagram
 | 4 | 测试反查 | 代表性：`test/registered/core/test_srt_engine.py` 等；大量 `sgl.Engine(...)` 集成测试。 |
 | 5 | doc / benchmark | `docs/` 下多处 `sgl.Engine` / Offline Engine 文档。 |
 
+## Increment 2026-08-18 (06f32bab → f7101b0a)
+
+本期 engine.py +80/-30。装配流程骨架不变。实质变化：
+
+- **Config bags 重构（#35022/#35023/#35025/#35026/#35027）**：`_launch_subprocesses` 在 parser 解析完成后、fork 任何子进程前新增 `publish(server_args, role="tokenizer")`（[engine.py:1120-1123](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)）；`_launch_scheduler_processes` 的 DP 分支条件、`init_tokenizer_manager` 的 template 参数等改读 bags（`get_parallel().dp_size` / `get_exec().moe.ep_join_mode` [L872-874](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)；`get_model().model_path` / `get_serving().chat_template` [L165-173](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)）。`get_server_info` 不再经 TM 的 per-instance `resolved_config_dict` 叠加（该机制随 #35022 移除，直接 `dataclasses.asdict(server_args)`，[L1364-1370](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)）。
+- **新增 `get_model_info` API（#35027）**：返回当前生效的 `model_path` / `weight_version` / `load_format` / `reasoning_parser` / `tool_call_parser`（经 `tm.config_value` 读 config bags，含 control-plane 变更后的值）— [engine.py:1372-1392](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)。
+- **`generate` / `async_generate` 新参数**：`mm_content_hashes`（VLM content-addressed 预处理缓存 #34398，[L377-381](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)）与 keyword-only `cache_salt`（#30827，[L407-408](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)），两者透传进 `GenerateReqInput`（[L426-427](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)）。
+- **shutdown 补充**：`shutdown` 现同时关闭 `tokenizer_manager.mm_processor`（若存在，[L1282-1285](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)）；`_launch_subprocesses` 尾部新增 `startup_complete` try/finally，启动失败时回收 `cuda_vmm_feature_transport`（[L1222-1247](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)）。
+
+> [!todo] VERIFY: 用户线索提到 #32017（checkpoint staging 与 CUDA graph capture 重叠）落在 engine.py；实际 `git log 06f32bab..HEAD -- entrypoints/engine.py` **无该 commit**——它改的是 tp_worker.py / scheduler.py（`is_startup_weight_load_overlap` 路径），详见 [TpModelWorker.md](TpModelWorker.md) / [Scheduler.md](Scheduler.md) 的 §Increment。
+
 ## Notes / Caveats
 
 > [!todo] VERIFY: ~~多节点非 0 rank：`_launch_subprocesses` 可能 **不创建** TM/detokenizer 并长时间阻塞或提前返回。~~
-> **RESOLVED 2026-04-19**（锚点 **2026-08-10** 复核）：非 0 rank 路径 (`node_rank >= 1`) **完全不创建** detokenizer / TM / `SubprocessWatchdog`：先 `wait_for_ready()` ([1124](d:\design\sglang\python\sglang\srt\entrypoints\engine.py))，若 `SGLANG_BLOCK_NONZERO_RANK_CHILDREN==0` 直接 `return (None, None, port_args, scheduler_init_result, None, weight_cache_daemon_procs)` ([1126-1135](d:\design\sglang\python\sglang\srt\entrypoints\engine.py))；否则起 dummy health server + `block_until_scheduler_exits()` 后同样返回 ([1137-1149](d:\design\sglang\python\sglang\srt\entrypoints\engine.py))。
+> **RESOLVED 2026-04-19**（锚点 **2026-08-18** 复核）：非 0 rank 路径 (`node_rank >= 1`) **完全不创建** detokenizer / TM / `SubprocessWatchdog`：先 `wait_for_ready()` ([1152](d:\design\sglang\python\sglang\srt\entrypoints\engine.py))，若 `SGLANG_BLOCK_NONZERO_RANK_CHILDREN==0` 直接 `return (None, None, port_args, scheduler_init_result, None, weight_cache_daemon_procs)` ([1154-1163](d:\design\sglang\python\sglang\srt\entrypoints\engine.py))；否则起 dummy health server + `block_until_scheduler_exits()` 后同样返回 ([1165-1177](d:\design\sglang\python\sglang\srt\entrypoints\engine.py))。
 
 > [!todo] VERIFY: ~~`RayEngine` 覆盖 `_launch_scheduler_processes` 时 `scheduler_procs` 可为 `None`。~~
-> **RESOLVED 2026-04-19**（锚点 **2026-08-10** 复核）：`_launch_subprocesses` 用 `processes = list(scheduler_procs or [])` 兜底 None ([1207-1208](d:\design\sglang\python\sglang\srt\entrypoints\engine.py))，watchdog 此时仅监控 detokenizer。
+> **RESOLVED 2026-04-19**（锚点 **2026-08-18** 复核）：`_launch_subprocesses` 用 `processes = list(scheduler_procs or [])` 兜底 None ([1236-1237](d:\design\sglang\python\sglang\srt\entrypoints\engine.py))，watchdog 此时仅监控 detokenizer。
 
 > [!warning] CONTRADICTION: ~~`HttpServerEngineAdapter` 的 API 面窄于 `Engine`；wiki 中 dimensions.md §dim-engine 写 "Engine, HttpServerEngine" 暗示并列入口。~~
 > **RESOLVED 2026-04-19**: 已确认确为非对等关系。`HttpServerEngineAdapter` 公共方法仅 6 个（[http_server_engine.py:78-145](d:\design\sglang\python\sglang\srt\entrypoints\http_server_engine.py)）；属**用例受限的 HTTP 适配器**，非 `Engine` 的全功能镜像。
