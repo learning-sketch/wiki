@@ -174,7 +174,7 @@ sequenceDiagram
 
 | # | 类别 | 强论断 |
 |---|------|--------|
-| 1 | 跨语言绑定 | `DataParallelController`：在 [d:\design\sglang\sgl-kernel](d:\design\sglang\sgl-kernel) 全树 grep **0 命中**。 |
+| 1 | 跨语言绑定 | `DataParallelController`：在 [d:\design\sglang\sgl-kernel](d:\design\sglang\python\sglang\kernels\aot) 全树 grep **0 命中**。 |
 | 2 | 协作伙伴跨子系统 | `DataParallelController` / `run_data_parallel_controller_process`：在 `python/sglang` 命中 `data_parallel_controller.py`、`entrypoints/engine.py`、`server_args.py`、`ray/engine.py`、`ray/data_parallel_controller.py` 等。 |
 | 3 | 配置 / IPC 共享 | `dp_size` / `dp_rank`：在 `srt` 内广泛用于并行度。ZMQ 端口名：**`scheduler_input_ipc_name`**（TM→DPC 与 per-rank worker 输入）。负载经 `load_snapshot` 共享内存/文件 IPC。 |
 | 4 | 测试覆盖 | `test/registered/distributed/test_data_parallelism.py` 等；**无**文件名 `test_data_parallel_controller*.py`。 |

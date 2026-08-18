@@ -1,7 +1,7 @@
 ---
 type: module
 project: sglang
-status: verified
+status: stale
 confidence: high
 verified_against: 2026-04-19
 sources:
@@ -29,11 +29,13 @@ related:
   - comparison/dimensions.md
 ---
 
+> [!todo] VERIFY: **lint 2026-08-18** — 本页正文存在 **23** 处源码死锚（多为 sglang 上游 test 树重组 / docs 站点 mdx 化 / 文件迁移所致，锚点写于 2026-04 快照），已按 §7 标 `status: stale`，待重校对。死锚清单见 log.md lint entry。
+
 # `srt/compilation` — torch.compile / Inductor / Piecewise 图基础设施
 
 ## Summary
 
-`srt/compilation/`（**13** `.py` 文件 / ~77 KB；**无子目录、无 `__init__.py`**）实现 SGLang 的 **PyTorch 2.x `torch.compile` 自定义后端**、**TorchInductor 适配与缓存补丁**、**FX 图按算子拆分（piecewise）**，并在 **Piecewise CUDA Graph (PCG)** 路径下与 `torch.cuda.CUDAGraph` / `torch.npu.NPUGraph` 捕获协作。入口由 [`PiecewiseCudaGraphRunner`](d:\design\sglang\python\sglang\srt\model_executor\piecewise_cuda_graph_runner.py) 调用 [`install_torch_compiled`](d:\design\sglang\python\sglang\srt\compilation\compile.py:111-201) 把 `forward` 换成 trampoline，在 [`is_in_piecewise_cuda_graph()`](d:\design\sglang\python\sglang\srt\compilation\piecewise_context_manager.py:21-22) 为真时走编译路径。
+`srt/compilation/`（**13** `.py` 文件 / ~77 KB；**无子目录、无 `__init__.py`**）实现 SGLang 的 **PyTorch 2.x `torch.compile` 自定义后端**、**TorchInductor 适配与缓存补丁**、**FX 图按算子拆分（piecewise）**，并在 **Piecewise CUDA Graph (PCG)** 路径下与 `torch.cuda.CUDAGraph` / `torch.npu.NPUGraph` 捕获协作。入口由 [`PiecewiseCudaGraphRunner`](d:\design\sglang\python\sglang\srt\model_executor\piecewise_cuda_graph_runner.py) 调用 [`install_torch_compiled`](d:\design\sglang\python\sglang\srt\compilation\compile.py) 把 `forward` 换成 trampoline，在 [`is_in_piecewise_cuda_graph()`](d:\design\sglang\python\sglang\srt\compilation\piecewise_context_manager.py) 为真时走编译路径。
 
 > synthesis: 与 [`model_executor/cuda_graph_runner.py`](model_executor.md)（**整段 decode CUDA 图**）不同，本模块侧重 **Dynamo / Inductor 图级编译 + PCG 子图上的设备图捕获**；二者在 **PCG** 场景通过 [`piecewise_cuda_graph_runner.py`](d:\design\sglang\python\sglang\srt\model_executor\piecewise_cuda_graph_runner.py) **串联**，但 `CudaGraphRunner` 主路径仍属另一套 runner。
 
@@ -74,9 +76,9 @@ flowchart TB
     SB --> LAYERS
 ```
 
-[`install_torch_compiled`](d:\design\sglang\python\sglang\srt\compilation\compile.py:111-201) 将默认后端设为 [`SGLangBackend(compile_config, graph_pool)`](d:\design\sglang\python\sglang\srt\compilation\compile.py:127-132)；[`SGLangBackend.__call__`](d:\design\sglang\python\sglang\srt\compilation\backend.py:396-467) 对 FX 图 [`split_graph`](d:\design\sglang\python\sglang\srt\compilation\backend.py:214-257)，再用 [`PiecewiseCompileInterpreter.run`](d:\design\sglang\python\sglang\srt\compilation\backend.py:288-337) 为各子模块调用 `CompilerManager.compile` 并 [`make_backend`](d:\design\sglang\python\sglang\srt\compilation\backend.py:39-62) 安装 `CUDAPiecewiseBackend` / `NPUPiecewiseBackend`。
+[`install_torch_compiled`](d:\design\sglang\python\sglang\srt\compilation\compile.py) 将默认后端设为 [`SGLangBackend(compile_config, graph_pool)`](d:\design\sglang\python\sglang\srt\compilation\compile.py)；[`SGLangBackend.__call__`](d:\design\sglang\python\sglang\srt\compilation\backend.py) 对 FX 图 [`split_graph`](d:\design\sglang\python\sglang\srt\compilation\backend.py)，再用 [`PiecewiseCompileInterpreter.run`](d:\design\sglang\python\sglang\srt\compilation\backend.py) 为各子模块调用 `CompilerManager.compile` 并 [`make_backend`](d:\design\sglang\python\sglang\srt\compilation\backend.py) 安装 `CUDAPiecewiseBackend` / `NPUPiecewiseBackend`。
 
-[`CUDAPiecewiseBackend.__call__`](d:\design\sglang\python\sglang\srt\compilation\cuda_piecewise_backend.py:107-206) 在非 compile-only 路径上对 `entry.runnable` 做 `torch.cuda.graph` 捕获（[L156-187](d:\design\sglang\python\sglang\srt\compilation\cuda_piecewise_backend.py)），输出经 [`weak_ref_tensors`](d:\design\sglang\python\sglang\srt\compilation\weak_ref_tensor.py:15-28) 减压。
+[`CUDAPiecewiseBackend.__call__`](d:\design\sglang\python\sglang\srt\compilation\cuda_piecewise_backend.py) 在非 compile-only 路径上对 `entry.runnable` 做 `torch.cuda.graph` 捕获（[L156-187](d:\design\sglang\python\sglang\srt\compilation\cuda_piecewise_backend.py)），输出经 [`weak_ref_tensors`](d:\design\sglang\python\sglang\srt\compilation\weak_ref_tensor.py) 减压。
 
 ## File inventory（13 文件）
 
@@ -102,17 +104,17 @@ flowchart TB
 |---|---|---|
 | `CompilationConfig` | [compilation_config.py:18-59](d:\design\sglang\python\sglang\srt\compilation\compilation_config.py) | 持有 `capture_sizes`（PCG token 列表）、`compiler`（`eager`/`inductor`）、`split_ops`、`traced_files`；`inductor` 时开 `combo_kernels`（若存在） |
 | `install_torch_compiled` | [compile.py:111-201](d:\design\sglang\python\sglang\srt\compilation\compile.py) | 注册 bytecode hook、`torch.compile(..., backend=SGLangBackend)`，trampoline 按 `is_in_piecewise_cuda_graph()` 选编译或原始 forward |
-| `SGLangBackend` | [backend.py:358-467](d:\design\sglang\python\sglang\srt\compilation\backend.py) | 配置 `PostGradPassManager` ([L382-394](d:\design\sglang\python\sglang\srt\compilation\backend.py))、`split_graph`、缓存目录 [`envs.SGLANG_CACHE_DIR`](d:\design\sglang\python\sglang\srt\compilation\backend.py:397-404) 下 `torch_compile_cache` |
+| `SGLangBackend` | [backend.py:358-467](d:\design\sglang\python\sglang\srt\compilation\backend.py) | 配置 `PostGradPassManager` ([L382-394](d:\design\sglang\python\sglang\srt\compilation\backend.py))、`split_graph`、缓存目录 [`envs.SGLANG_CACHE_DIR`](d:\design\sglang\python\sglang\srt\compilation\backend.py) 下 `torch_compile_cache` |
 | `PostGradPassManager` | [pass_manager.py:18-66](d:\design\sglang\python\sglang\srt\compilation\pass_manager.py) | Inductor `post_grad_custom_post_pass`：先跑注册的 `passes`，再 `fix_functionalization` ([L42-43](d:\design\sglang\python\sglang\srt\compilation\pass_manager.py)) |
 | `InductorAdaptor` | [compiler_interface.py:164-471](d:\design\sglang\python\sglang\srt\compilation\compiler_interface.py) | `compile_fx` + 多处 `unittest.mock.patch` 支持 Inductor 缓存 / 形状环境 在 SGLang 用法下的行为 |
 | `CUDAPiecewiseBackend` | [cuda_piecewise_backend.py:40-206](d:\design\sglang\python\sglang\srt\compilation\cuda_piecewise_backend.py) | 子图 runnable 上 CUDA Graph 捕获/回放；与 `is_in_pcg_torch_compile()` 分支协作（[L143-144](d:\design\sglang\python\sglang\srt\compilation\cuda_piecewise_backend.py)） |
 
 ## torch.compile integration
 
-- **自定义 backend**：[`install_torch_compiled`](d:\design\sglang\python\sglang\srt\compilation\compile.py:178-180) 用 `torch.compile(bound, fullgraph=True, backend=backend_factory)`，默认 `backend_factory` 构造 [`SGLangBackend`](d:\design\sglang\python\sglang\srt\compilation\compile.py:127-132)。
-- **Inductor 配置注入**：[`SGLangBackend.configure_post_pass`](d:\design\sglang\python\sglang\srt\compilation\backend.py:392-394) 将 `PostGradPassManager` 挂到 `inductor_config["post_grad_custom_post_pass"]`。
-- **缓存与 Triton**：[`InductorAdaptor.initialize_cache`](d:\design\sglang\python\sglang\srt\compilation\compiler_interface.py:178-195) 设置 `TORCHINDUCTOR_CACHE_DIR` 与 `TRITON_CACHE_DIR`；[`set_inductor_config`](d:\design\sglang\python\sglang\srt\compilation\compiler_interface.py:473-478) 在 `runtime_shape` 为 `int` 时开启 `max_autotune` / `coordinate_descent_tuning`。
-- **Dynamo 侧**：[`set_torch_compile_config`](d:\design\sglang\python\sglang\srt\model_executor\piecewise_cuda_graph_runner.py:136-141) 提高 `accumulated_cache_size_limit` / `cache_size_limit`，缓解 `FailOnRecompileLimitHit`。
+- **自定义 backend**：[`install_torch_compiled`](d:\design\sglang\python\sglang\srt\compilation\compile.py) 用 `torch.compile(bound, fullgraph=True, backend=backend_factory)`，默认 `backend_factory` 构造 [`SGLangBackend`](d:\design\sglang\python\sglang\srt\compilation\compile.py)。
+- **Inductor 配置注入**：[`SGLangBackend.configure_post_pass`](d:\design\sglang\python\sglang\srt\compilation\backend.py) 将 `PostGradPassManager` 挂到 `inductor_config["post_grad_custom_post_pass"]`。
+- **缓存与 Triton**：[`InductorAdaptor.initialize_cache`](d:\design\sglang\python\sglang\srt\compilation\compiler_interface.py) 设置 `TORCHINDUCTOR_CACHE_DIR` 与 `TRITON_CACHE_DIR`；[`set_inductor_config`](d:\design\sglang\python\sglang\srt\compilation\compiler_interface.py) 在 `runtime_shape` 为 `int` 时开启 `max_autotune` / `coordinate_descent_tuning`。
+- **Dynamo 侧**：[`set_torch_compile_config`](d:\design\sglang\python\sglang\srt\model_executor\piecewise_cuda_graph_runner.py) 提高 `accumulated_cache_size_limit` / `cache_size_limit`，缓解 `FailOnRecompileLimitHit`。
 
 ## Relationship to `model_executor/cuda_graph_runner.py`
 
@@ -141,8 +143,8 @@ flowchart TB
 
 ### 1. 跨语言绑定（C++ / sgl-kernel）
 
-- [`weak_ref_tensor.py`](d:\design\sglang\python\sglang\srt\compilation\weak_ref_tensor.py)：CUDA / HIP / MUSA 路径 `from sgl_kernel import weak_ref_tensor`（[L7-12](d:\design\sglang\python\sglang\srt\compilation\weak_ref_tensor.py)）；[`sgl_kernel/memory.py`](d:\design\sglang\sgl-kernel\python\sgl_kernel\memory.py) 暴露 `torch.ops.sgl_kernel.weak_ref_tensor`。
-- **`SGLangBackend` / `install_torch_compiled` / `PostGradPassManager`**：在 [`d:\design\sglang\sgl-kernel\`](d:\design\sglang\sgl-kernel) 全树 grep **0 命中**（与 Python 包 `sglang.srt.compilation` 无直接符号绑定）
+- [`weak_ref_tensor.py`](d:\design\sglang\python\sglang\srt\compilation\weak_ref_tensor.py)：CUDA / HIP / MUSA 路径 `from sgl_kernel import weak_ref_tensor`（[L7-12](d:\design\sglang\python\sglang\srt\compilation\weak_ref_tensor.py)）；[`sgl_kernel/memory.py`](d:\design\sglang\python\sglang\kernels\aot\python\sgl_kernel\memory.py) 暴露 `torch.ops.sgl_kernel.weak_ref_tensor`。
+- **`SGLangBackend` / `install_torch_compiled` / `PostGradPassManager`**：在 [`d:\design\sglang\sgl-kernel\`](d:\design\sglang\python\sglang\kernels\aot) 全树 grep **0 命中**（与 Python 包 `sglang.srt.compilation` 无直接符号绑定）
 
 > synthesis: **`weak_ref_tensor` 是 SGLang `compilation/` 唯一的 sgl-kernel C++ 算子绑定** —— 与 [`distributed/` 的 `shm_allreduce`](distributed.md) 和 [`speculative/` 的 `verify_tree_greedy`](speculative.md) 形成"小数量但精准"的跨语言模式。
 
@@ -157,8 +159,8 @@ flowchart TB
 
 ### 3. 配置 / 环境变量
 
-- [`envs.SGLANG_CACHE_DIR`](d:\design\sglang\python\sglang\srt\compilation\backend.py:397) → `torch_compile_cache` 子路径
-- [`SGLANG_ENABLE_TORCH_COMPILE`](d:\design\sglang\python\sglang\srt\server_args.py:3689-3690) 由 `enable_torch_compile` 设置
+- [`envs.SGLANG_CACHE_DIR`](d:\design\sglang\python\sglang\srt\compilation\backend.py) → `torch_compile_cache` 子路径
+- [`SGLANG_ENABLE_TORCH_COMPILE`](d:\design\sglang\python\sglang\srt\server_args.py) 由 `enable_torch_compile` 设置
 - piecewise 专用字段以 `ServerArgs.piecewise_cuda_graph_*` 为主（见上表）
 
 ### 4. 测试覆盖反查
@@ -182,19 +184,19 @@ flowchart TB
 
 ## Notes / Caveats
 
-> [!todo] VERIFY: ~~[`CUDAPiecewiseBackend`](d:\design\sglang\python\sglang\srt\compilation\cuda_piecewise_backend.py) 文档写 `compilation_config.compile_sizes`（[L60](d:\design\sglang\python\sglang\srt\compilation\cuda_piecewise_backend.py)），但 [`CompilationConfig`](d:\design\sglang\python\sglang\srt\compilation\compilation_config.py) **无** `compile_sizes` 字段，且 [`self.compile_sizes = set([])`](d:\design\sglang\python\sglang\srt\compilation\cuda_piecewise_backend.py:77) 恒为空——按形状二次 Inductor 编译分支是否可达需再核对。~~
+> [!todo] VERIFY: ~~[`CUDAPiecewiseBackend`](d:\design\sglang\python\sglang\srt\compilation\cuda_piecewise_backend.py) 文档写 `compilation_config.compile_sizes`（[L60](d:\design\sglang\python\sglang\srt\compilation\cuda_piecewise_backend.py)），但 [`CompilationConfig`](d:\design\sglang\python\sglang\srt\compilation\compilation_config.py) **无** `compile_sizes` 字段，且 [`self.compile_sizes = set([])`](d:\design\sglang\python\sglang\srt\compilation\cuda_piecewise_backend.py) 恒为空——按形状二次 Inductor 编译分支是否可达需再核对。~~
 > **RESOLVED 2026-04-19**: **当前不可达**——[`cuda_piecewise_backend.py:77`](d:\design\sglang\python\sglang\srt\compilation\cuda_piecewise_backend.py) `self.compile_sizes: set[int] = set([])` 写死为空集，L93-97 中 `to_be_compiled_sizes = self.compile_sizes.copy()` 与 `for shape in self.compile_sizes.union(self.cudagraph_capture_sizes)` 仅会处理 `cudagraph_capture_sizes`；`need_to_compile=shape in self.compile_sizes` 永远为 False。文档字符串提到 `compilation_config.compile_sizes` 是 vLLM 上游残留（参考 backend.py 头注 "Adapted from vllm v0.10.0"），SGLang `CompilationConfig` 未实现该字段，按形状二次 Inductor 编译分支为 **死代码**。
 
-> [!todo] VERIFY: ~~[`FixFunctionalizationPass.__call__`](d:\design\sglang\python\sglang\srt\compilation\fix_functionalization.py:26-48) 未调用 `defunctionalize`，与类文档"向 if-elif 链添加"一致；**当前是否仅为占位**待与 vLLM 同源实现对照（vLLM [`fix_functionalization.py`](d:\design\vllm\vllm\compilation\passes\utility\fix_functionalization.py)）。~~
+> [!todo] VERIFY: ~~[`FixFunctionalizationPass.__call__`](d:\design\sglang\python\sglang\srt\compilation\fix_functionalization.py) 未调用 `defunctionalize`，与类文档"向 if-elif 链添加"一致；**当前是否仅为占位**待与 vLLM 同源实现对照（vLLM [`fix_functionalization.py`](d:\design\vllm\vllm\compilation\passes\utility\fix_functionalization.py)）。~~
 > **RESOLVED 2026-04-19**: 当前为**占位**——[`fix_functionalization.py:32-35`](d:\design\sglang\python\sglang\srt\compilation\fix_functionalization.py) `__call__` 仅遍历 `auto_functionalized` 节点并 `count += 1`（无任何 if-elif 真正分派到 `defunctionalize`），`nodes_to_remove` 始终为空；helper 方法 `defunctionalize` / `_remove` / `replace_users_with_mutated_args` / `insert_defunctionalized` 均已实现（L50-134），但**未在 `__call__` 中被调用**。文件头明示 "Adapted from https://github.com/vllm-project/vllm/blob/v0.10.0/vllm/compilation/fix_functionalization.py" — 待按需向 if-elif 链添加业务节点。
 
-> [!warning] CONTRADICTION（注释陈旧）：~~[`CompilerInterface`](d:\design\sglang\python\sglang\srt\compilation\compiler_interface.py:20-23) 文档仍写 *"used by vLLM"*，与 SGLang 仓库身份不符——属**注释陈旧**，非运行时逻辑错误。~~
+> [!warning] CONTRADICTION（注释陈旧）：~~[`CompilerInterface`](d:\design\sglang\python\sglang\srt\compilation\compiler_interface.py) 文档仍写 *"used by vLLM"*，与 SGLang 仓库身份不符——属**注释陈旧**，非运行时逻辑错误。~~
 > **RESOLVED 2026-04-19**: 已源码确认为注释陈旧——多个 `compilation/` 文件头部明示 "Adapted from https://github.com/vllm-project/vllm/blob/v0.10.0/..."（`backend.py:1`、`fix_functionalization.py:1` 等），`CompilerInterface` 类 docstring 中残留 "used by vLLM" 字样为复制时未替换，无运行时影响（不需要源码修改即可使用，作为已知遗留物保留）。
 
 ## See also
 
 - [sglang/modules/model_executor.md](model_executor.md) — `CudaGraphRunner` / `PiecewiseCudaGraphRunner` 总览
-- [sglang/modules/distributed.md](distributed.md) — `graph_capture` / 并行 rank 与 PCG 协作（runner import [`graph_capture`](d:\design\sglang\python\sglang\srt\model_executor\piecewise_cuda_graph_runner.py:42)）
+- [sglang/modules/distributed.md](distributed.md) — `graph_capture` / 并行 rank 与 PCG 协作（runner import [`graph_capture`](d:\design\sglang\python\sglang\srt\model_executor\piecewise_cuda_graph_runner.py)）
 - [sglang/modules/speculative.md](speculative.md) — sgl-kernel 跨语言绑定模式参照（含 `verify_tree_greedy` / `tree_speculative_sampling_target_only`）
 - [comparison/dimensions.md §dim-compile](../../comparison/dimensions.md) — 三项目索引行
 - [docs/advanced_features/piecewise_cuda_graph.md](d:\design\sglang\docs\advanced_features\piecewise_cuda_graph.md) — 产品级流程说明

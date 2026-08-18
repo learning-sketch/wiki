@@ -216,7 +216,7 @@ sequenceDiagram
 
 | # | 类别 | 强论断 |
 |---|------|--------|
-| 1 | 跨语言绑定 | `_launch_subprocesses`：在 [d:\design\sglang\sgl-kernel\](d:\design\sglang\sgl-kernel) 全树 grep **0 命中**。子串 `Engine`：C++/CUDA 树中命中为 **CUTLASS/cute 模板名**，**非** SGLang Python `Engine` 类绑定。 |
+| 1 | 跨语言绑定 | `_launch_subprocesses`：在 [d:\design\sglang\sgl-kernel\](d:\design\sglang\python\sglang\kernels\aot) 全树 grep **0 命中**。子串 `Engine`：C++/CUDA 树中命中为 **CUTLASS/cute 模板名**，**非** SGLang Python `Engine` 类绑定。 |
 | 2 | 协作伙伴跨子系统 | 精确模式 `from sglang.srt.entrypoints.engine import Engine`：在 `python/sglang/` 多处命中（`runners.py`、`weight_sync/utils.py`、`lang/api.py`、`bench_offline_throughput.py`、`http_server.py`、`ray/engine.py` 等）。`http_server.py` 亦直接 import `Engine` 并调用 `Engine._launch_subprocesses`。 |
 | 3 | 配置 / IPC 共享结构 | `ServerArgs` / `PortArgs` 贯穿 launcher 与各进程入口；`SchedulerInitResult` 在 `ray/engine.py` 扩展。`TokenizedGenerateReqInput` **未在** `engine.py` 出现；由 TM/Scheduler/DP 在 tokenize 之后使用。 |
 | 4 | 测试反查 | 代表性：`test/registered/core/test_srt_engine.py` 等；大量 `sgl.Engine(...)` 集成测试。 |

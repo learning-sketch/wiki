@@ -82,7 +82,7 @@ flowchart TB
     SA --> EPD
 ```
 
-**初始化链**：[`Scheduler.init_disaggregation` L1286](d:\design\sglang\python\sglang\srt\managers\scheduler.py) 按 `disaggregation_mode` 分支创建 manager / sender / receiver / bootstrap（配置改经 config-bag `get_disagg()` 读取）。**类组合**：[`Scheduler` 多重继承](d:\design\sglang\python\sglang\srt\managers\scheduler.py) [L383-390] 含 `SchedulerDisaggregationDecodeMixin` + `SchedulerDisaggregationPrefillMixin`，import 见 [scheduler.py:80, 88](d:\design\sglang\python\sglang\srt\managers\scheduler.py)。**请求级**：[`Req.disagg_kv_sender: Optional[BaseKVSender]`](d:\design\sglang\python\sglang\srt\managers\schedule_batch.py:1157) 是「调度层 ↔ PD 包」的显式类型接口（TYPE_CHECKING import 在 [schedule_batch.py:141](d:\design\sglang\python\sglang\srt\managers\schedule_batch.py)）。
+**初始化链**：[`Scheduler.init_disaggregation` L1286](d:\design\sglang\python\sglang\srt\managers\scheduler.py) 按 `disaggregation_mode` 分支创建 manager / sender / receiver / bootstrap（配置改经 config-bag `get_disagg()` 读取）。**类组合**：[`Scheduler` 多重继承](d:\design\sglang\python\sglang\srt\managers\scheduler.py) [L383-390] 含 `SchedulerDisaggregationDecodeMixin` + `SchedulerDisaggregationPrefillMixin`，import 见 [scheduler.py:80, 88](d:\design\sglang\python\sglang\srt\managers\scheduler.py)。**请求级**：[`Req.disagg_kv_sender: Optional[BaseKVSender]`](d:\design\sglang\python\sglang\srt\managers\schedule_batch.py) 是「调度层 ↔ PD 包」的显式类型接口（TYPE_CHECKING import 在 [schedule_batch.py:141](d:\design\sglang\python\sglang\srt\managers\schedule_batch.py)）。
 
 ## File inventory（29 文件）
 
@@ -172,7 +172,7 @@ flowchart TB
 
 ### 1. 跨语言绑定（C++ / sgl-kernel）
 
-- `disaggregation` / `BaseKVManager` / `BaseKVSender` / `BaseKVReceiver` / `BaseKVBootstrapServer`：**在 [`d:\design\sglang\sgl-kernel\`](d:\design\sglang\sgl-kernel) 全 C++ 树 grep 0 命中**
+- `disaggregation` / `BaseKVManager` / `BaseKVSender` / `BaseKVReceiver` / `BaseKVBootstrapServer`：**在 [`d:\design\sglang\sgl-kernel\`](d:\design\sglang\python\sglang\kernels\aot) 全 C++ 树 grep 0 命中**
 - 传输实现依赖 **外部 Python 库**（mooncake-transfer-engine / nixl-bind / aiohttp / ZMQ），**不通过** sgl-kernel 自研 C++ 算子
 
 ### 2. 协作伙伴跨子系统引用
@@ -181,7 +181,7 @@ flowchart TB
 |---|---|---|
 | `BaseKVSender` 全仓库（除 `disaggregation/` 自身） | `d:\design\sglang\python\` | [`schedule_batch.py:141, 1157`](d:\design\sglang\python\sglang\srt\managers\schedule_batch.py)（`Req.disagg_kv_sender` 类型注解 + 字段） |
 | `start_disagg_service` 全仓库 | 同上 | [`tokenizer_manager.py:664`](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)、[`multi_tokenizer_mixin.py:476`](d:\design\sglang\python\sglang\srt\managers\multi_tokenizer_mixin.py) |
-| `DecodeKVCacheOffloadManager` 全仓库 | 同上 | [`scheduler.py:571`](d:\design\sglang\python\sglang\srt\managers\scheduler.py)、test [`test_specv2_kvcache_offloading.py`](d:\design\sglang\test\registered\disaggregation\test_specv2_kvcache_offloading.py) |
+| `DecodeKVCacheOffloadManager` 全仓库 | 同上 | [`scheduler.py:571`](d:\design\sglang\python\sglang\srt\managers\scheduler.py)、test [`test_specv2_kvcache_offloading.py`](d:\design\sglang\test\registered\unit\disaggregation\test_specv2_kvcache_offloading.py) |
 | `BaseKVBootstrapServer` 全仓库 | 同上 | **仅在 `disaggregation/` 包内**（定义 [base/conn.py:243](d:\design\sglang\python\sglang\srt\disaggregation\base\conn.py)，实现 [common/conn.py:1535](d:\design\sglang\python\sglang\srt\disaggregation\common\conn.py)） |
 | `SchedulerDisaggregationPrefillMixin` / `SchedulerDisaggregationDecodeMixin` | 同上 | 仅 [scheduler.py:80, 88, 383-390](d:\design\sglang\python\sglang\srt\managers\scheduler.py)（多重继承 + import） |
 
@@ -194,7 +194,7 @@ flowchart TB
 
 | 路径 | 范围 |
 |---|---|
-| [`d:\design\sglang\test\registered\distributed\`](d:\design\sglang\test\registered\distributed) | `test_disaggregation_basic.py` 等多个文件 |
+| [`d:\design\sglang\test\registered\unit\disaggregation\`](d:\design\sglang\test\registered\unit\disaggregation) | `test_disaggregation_basic.py` 等多个文件 |
 | [`d:\design\sglang\test\registered\disaggregation\`](d:\design\sglang\test\registered\disaggregation) | `test_specv2_kvcache_offloading.py` 等 |
 | [`d:\design\sglang\test\registered\observability\test_tracing_disaggregation.py`](d:\design\sglang\test\registered\observability\test_tracing_disaggregation.py) | 含 `disaggregation_fixture` |
 | AMD / manual / 多模态 | 跨多目录命中 |
@@ -202,14 +202,14 @@ flowchart TB
 ### 5. doc / config / yaml 反查
 
 - [`docs/`](d:\design\sglang\docs) **大量命中**：`advanced_features/server_arguments.md`、`platforms/ascend/*.md`、`references/multi_node_deployment/...`
-- yaml 部署样例：[`docs/references/multi_node_deployment/lws_pd/lws-examples/d.yaml`](d:\design\sglang\docs\references\multi_node_deployment\lws_pd\lws-examples\d.yaml) 等含 `--disaggregation-mode` / `--disaggregation-ib-device`
+- yaml 部署样例：[`docs/references/multi_node_deployment/lws_pd/lws-examples/d.yaml`](d:\design\sglang\docs\docs\references\multi_node_deployment\lws_pd\lws_pd_deploy.mdx) 等含 `--disaggregation-mode` / `--disaggregation-ib-device`
 
 ## 跨项目对照（synthesis）
 
 | 维度 | MindIE | vLLM | SGLang（本模块） |
 |---|---|---|---|
 | **PD 实现位置** | 独立 `connector` **子进程**（`mindie/topics/connector.md`（已删）） | `kv_transfer/kv_connector/v1/` **14 backend**（[vllm/topics/kv-connector.md](../../vllm/topics/kv-connector.md)） | **5 backend in-process**（mooncake/nixl/mori/ascend/fake）via `TransferBackend` enum + `get_kv_class` 工厂 |
-| **传输与调度耦合** | C++ scheduler ↔ connector 子进程 ZMQ + protobuf | scheduler ↔ KVConnector hooks + 14 backend | scheduler 直接持 `BaseKVSender` 引用（[`Req.disagg_kv_sender`](d:\design\sglang\python\sglang\srt\managers\schedule_batch.py:855)） |
+| **传输与调度耦合** | C++ scheduler ↔ connector 子进程 ZMQ + protobuf | scheduler ↔ KVConnector hooks + 14 backend | scheduler 直接持 `BaseKVSender` 引用（[`Req.disagg_kv_sender`](d:\design\sglang\python\sglang\srt\managers\schedule_batch.py)） |
 | **Bootstrap server** | N/A | 各 backend 自管 | 显式 `KVBootstrapServer` 抽象 + Common HTTP 实现，**仅 prefill 拉起** |
 | **EPD（编码器分离）** | ❌ | ❌ | ✅ **唯一**：`encode_*.py` 多模态 encoder 独立服务（grpc/HTTP） |
 | **协议复用** | LLMDataDist / Mooncake | NIXL / Mooncake / LMCache×3 / HF3FS / P2pNccl 等 14 路 | **Ascend 子类化 Mooncake**（特殊：backend 之间复用） |
@@ -232,11 +232,11 @@ flowchart TB
 
 ## Notes / Caveats
 
-> [!todo] VERIFY: ~~[comparison/topics/pd-disaggregation.md](../../comparison/topics/pd-disaggregation.md) §1 SGLang 行写"7 个后端（base/common/nixl/mooncake/mori/ascend/fake）"——本页确认 [`TransferBackend`](d:\design\sglang\python\sglang\srt\disaggregation\utils.py:304-309) 枚举 **5 项**（不含 base/common，后两者是公共抽象/共享实现而非可选 backend）。统计口径不同；建议 cross page 用"5 backend + 2 共享层"措辞。~~
-> **RESOLVED 2026-04-19**: 上游 `comparison/topics/pd-disaggregation.md` 已更新为「**5 个 backend**」（[L202, L287](d:\design\wiki\comparison\topics\pd-disaggregation.md)），不再使用「7 个后端」措辞；与本页 [`TransferBackend`](d:\design\sglang\python\sglang\srt\disaggregation\utils.py:304-309) 5 项枚举一致。L95 残留「6 个 backend」属代码量描述（含 fake/ 目录），与枚举值差异属次要文档口径。
+> [!todo] VERIFY: ~~[comparison/topics/pd-disaggregation.md](../../comparison/topics/pd-disaggregation.md) §1 SGLang 行写"7 个后端（base/common/nixl/mooncake/mori/ascend/fake）"——本页确认 [`TransferBackend`](d:\design\sglang\python\sglang\srt\disaggregation\utils.py) 枚举 **5 项**（不含 base/common，后两者是公共抽象/共享实现而非可选 backend）。统计口径不同；建议 cross page 用"5 backend + 2 共享层"措辞。~~
+> **RESOLVED 2026-04-19**: 上游 `comparison/topics/pd-disaggregation.md` 已更新为「**5 个 backend**」（[L202, L287](d:\design\wiki\comparison\topics\pd-disaggregation.md)），不再使用「7 个后端」措辞；与本页 [`TransferBackend`](d:\design\sglang\python\sglang\srt\disaggregation\utils.py) 5 项枚举一致。L95 残留「6 个 backend」属代码量描述（含 fake/ 目录），与枚举值差异属次要文档口径。
 
-> [!todo] VERIFY: ~~[`get_kv_class`](d:\design\sglang\python\sglang\srt\disaggregation\utils.py:415-428) 对 `TransferBackend.FAKE` **未** 注册 `BOOTSTRAP_SERVER`——若用户在 fake 模式 + prefill 配置下启动，`start_disagg_service` 会拿到什么？是否有 fallback 或 error？测试覆盖路径需查证。~~
-> **RESOLVED 2026-04-19**: 无 fallback；[`start_disagg_service`](d:\design\sglang\python\sglang\srt\managers\disagg_service.py:14-44) 在 PREFILL 模式下直接 `kv_bootstrap_server_class = get_kv_class(transfer_backend, KVClassType.BOOTSTRAP_SERVER)` 然后立即 `kv_bootstrap_server_class(host=..., port=...)`（[disagg_service.py:23-29](d:\design\sglang\python\sglang\srt\managers\disagg_service.py)）。FAKE 走该路径会得到 `None` 并触发 `TypeError: 'NoneType' object is not callable` —— 即 **fake 模式与 PREFILL 互斥但无显式校验**，靠 NoneType 异常在启动时崩溃。
+> [!todo] VERIFY: ~~[`get_kv_class`](d:\design\sglang\python\sglang\srt\disaggregation\utils.py) 对 `TransferBackend.FAKE` **未** 注册 `BOOTSTRAP_SERVER`——若用户在 fake 模式 + prefill 配置下启动，`start_disagg_service` 会拿到什么？是否有 fallback 或 error？测试覆盖路径需查证。~~
+> **RESOLVED 2026-04-19**: 无 fallback；[`start_disagg_service`](d:\design\sglang\python\sglang\srt\managers\disagg_service.py) 在 PREFILL 模式下直接 `kv_bootstrap_server_class = get_kv_class(transfer_backend, KVClassType.BOOTSTRAP_SERVER)` 然后立即 `kv_bootstrap_server_class(host=..., port=...)`（[disagg_service.py:23-29](d:\design\sglang\python\sglang\srt\managers\disagg_service.py)）。FAKE 走该路径会得到 `None` 并触发 `TypeError: 'NoneType' object is not callable` —— 即 **fake 模式与 PREFILL 互斥但无显式校验**，靠 NoneType 异常在启动时崩溃。
 
 > [!todo] VERIFY: ~~[`Scheduler.init_disaggregation`](d:\design\sglang\python\sglang\srt\managers\scheduler.py)（约 L1051）的精确分支结构——本页 §Scheduler integration 给的是"约 L1051 起"，未读完整流程，建议未来 verify pass 校准。~~
 > **RESOLVED 2026-04-19**: 精确锚定 [`init_disaggregation` L1051](d:\design\sglang\python\sglang\srt\managers\scheduler.py)（"约"已落实为精确行号）。结构：L1052-1057 解析 `disaggregation_mode` + `transfer_backend`；L1059-1071 处理 draft kv pool；L1073-1125 `DECODE` 分支构造 `MetadataBuffers` + `DecodeTransferQueue` + `DecodePreallocQueue`；L1127-1167 `PREFILL` 分支构造 `MetadataBuffers` + `PrefillBootstrapQueue` + `disagg_prefill_inflight_queue: List[Req] = []`；L1169 起再走 EPD `mm_receiver` 初始化。（**2026-08-18 更新**：HEAD `f7101b0a` 下该结构不变但行号漂移——`init_disaggregation` L1286 / DECODE L1337 / PREFILL L1386 / EPD L1432。）

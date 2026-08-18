@@ -52,7 +52,7 @@ related:
 | Scheduler rank 维度 | [managers/scheduler.py:337-356](d:\design\sglang\python\sglang\srt\managers\scheduler.py) |
 | 配置 | [server_args.py:372-455, 527, 641](d:\design\sglang\python\sglang\srt\server_args.py) |
 | 姊妹模块 handoff | [layers/dp_attention.py:13-25](d:\design\sglang\python\sglang\srt\layers\dp_attention.py) |
-| C++ 算子绑定（CPU SHM allreduce） | [sgl-kernel/csrc/cpu/torch_extension_cpu.cpp:315, 582-583](d:\design\sglang\sgl-kernel\csrc\cpu\torch_extension_cpu.cpp) |
+| C++ 算子绑定（CPU SHM allreduce） | [sgl-kernel/csrc/cpu/torch_extension_cpu.cpp:315, 582-583](d:\design\sglang\python\sglang\kernels\aot\csrc\cpu\torch_extension_cpu.cpp) |
 
 ## Architecture / Data flow
 
@@ -183,8 +183,8 @@ flowchart LR
 
 ### 1. 跨语言绑定（C++ / sgl-kernel）
 
-- Python 符号 `parallel_state` / `init_distributed_environment` / `get_tp_group` / `get_pp_group` / `get_world_group`：**在 [`d:\design\sglang\sgl-kernel\`](d:\design\sglang\sgl-kernel) 全 C++ 树 grep 0 命中**
-- **算子级**绑定（**部分跨语言**）：`shm_allreduce` 在 [sgl-kernel/csrc/cpu/torch_extension_cpu.cpp:582-583](d:\design\sglang\sgl-kernel\csrc\cpu\torch_extension_cpu.cpp) 注册；调用点 [parallel_state.py:566](d:\design\sglang\python\sglang\srt\distributed\parallel_state.py) `torch.ops.sgl_kernel.shm_allreduce`。**这是本模块唯一的 C++ 算子绑定**——绑定关系是算子名 `sgl_kernel::shm_allreduce`，不是 Python 模块名。
+- Python 符号 `parallel_state` / `init_distributed_environment` / `get_tp_group` / `get_pp_group` / `get_world_group`：**在 [`d:\design\sglang\sgl-kernel\`](d:\design\sglang\python\sglang\kernels\aot) 全 C++ 树 grep 0 命中**
+- **算子级**绑定（**部分跨语言**）：`shm_allreduce` 在 [sgl-kernel/csrc/cpu/torch_extension_cpu.cpp:582-583](d:\design\sglang\python\sglang\kernels\aot\csrc\cpu\torch_extension_cpu.cpp) 注册；调用点 [parallel_state.py:566](d:\design\sglang\python\sglang\srt\distributed\parallel_state.py) `torch.ops.sgl_kernel.shm_allreduce`。**这是本模块唯一的 C++ 算子绑定**——绑定关系是算子名 `sgl_kernel::shm_allreduce`，不是 Python 模块名。
 
 > synthesis: **`shm_allreduce` 是 SGLang `distributed/` 唯一的 sgl-kernel C++ 算子依赖**——其余 communicator 全靠 PyTorch 原生 / 第三方 Python 库（pynccl / mooncake / nixl / mscclpp）。
 
@@ -247,7 +247,7 @@ flowchart LR
 > **RESOLVED 2026-04-19**: 函数定义于 [parallel_state.py:2033-2063](d:\design\sglang\python\sglang\srt\distributed\parallel_state.py)，仅 `tensor/expert/pipeline + backend` 4 形参；全树 grep 仅在两处 docstring（[parallel_state.py:12](d:\design\sglang\python\sglang\srt\distributed\parallel_state.py)、[multimodal_gen/runtime/distributed/parallel_state.py:21](d:\design\sglang\python\sglang\multimodal_gen\runtime\distributed\parallel_state.py)）出现，**没有任何运行时调用**——属遗留/示例代码，调用方实际全部走 `initialize_model_parallel`，不会漏配 attn_cp_size。
 
 > [!todo] VERIFY: ~~NPU 上 `init_process_group` 注入 HCCL 选项（[parallel_state.py:72-87](d:\design\sglang\python\sglang\srt\distributed\parallel_state.py)）的精确触发条件——MoE 相关？所有组都注入还是只 `tp` / `attention_tp` 注入？~~
-> **RESOLVED 2026-04-19**: [`get_torch_distributed_pg_options`](d:\design\sglang\python\sglang\srt\distributed\parallel_state.py:72-87) 仅在 `_is_npu` 为真时生效；`group_name is None`（默认组）或 `"moe" in group_name` 才返回 `ProcessGroupHCCL.Options`（buffer 大小由 `DEEPEP_HCCL_BUFFSIZE` / `HCCL_BUFFSIZE` 决定，默认 200）；普通 `tp` / `attention_tp` 等非 MoE 命名组返回 `None`，不注入 HCCL 选项。
+> **RESOLVED 2026-04-19**: [`get_torch_distributed_pg_options`](d:\design\sglang\python\sglang\srt\distributed\parallel_state.py) 仅在 `_is_npu` 为真时生效；`group_name is None`（默认组）或 `"moe" in group_name` 才返回 `ProcessGroupHCCL.Options`（buffer 大小由 `DEEPEP_HCCL_BUFFSIZE` / `HCCL_BUFFSIZE` 决定，默认 200）；普通 `tp` / `attention_tp` 等非 MoE 命名组返回 `None`，不注入 HCCL 选项。
 
 ## See also
 

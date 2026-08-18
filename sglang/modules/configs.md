@@ -58,9 +58,9 @@ flowchart TB
     LC --> ML
 ```
 
-- **CLI → HF 配置合并**：[`ModelConfig.__init__`](d:\design\sglang\python\sglang\srt\configs\model_config.py) 将 `model_override_args` 解析为 dict 后传入 [`get_config`](d:\design\sglang\python\sglang\srt\utils\hf_transformers\config.py:52-58)；最终在 [`get_config` 尾部](d:\design\sglang\python\sglang\srt\utils\hf_transformers\config.py:204-205) 对 `PretrainedConfig` 调用 `config.update(model_override_args)`。
-- **LoadConfig 分离**：[`LoadConfig`](d:\design\sglang\python\sglang\srt\configs\load_config.py:37-105) 为 `@dataclass`，管 `load_format`、`download_dir`、`ignore_patterns`、远端实例/ModelOpt 等；**不包含** `hf_config`。
-- **update_config.py 语义**：[`adjust_config_with_unaligned_cpu_tp`](d:\design\sglang\python\sglang\srt\configs\update_config.py:112-211) 在 TP 与 head 数不整除时改写 `hf_config` / `hf_text_config` 上的 head 与 intermediate 尺寸，**不是** JSON 覆盖合并逻辑。
+- **CLI → HF 配置合并**：[`ModelConfig.__init__`](d:\design\sglang\python\sglang\srt\configs\model_config.py) 将 `model_override_args` 解析为 dict 后传入 [`get_config`](d:\design\sglang\python\sglang\srt\utils\hf_transformers\config.py)；最终在 [`get_config` 尾部](d:\design\sglang\python\sglang\srt\utils\hf_transformers\config.py) 对 `PretrainedConfig` 调用 `config.update(model_override_args)`。
+- **LoadConfig 分离**：[`LoadConfig`](d:\design\sglang\python\sglang\srt\configs\load_config.py) 为 `@dataclass`，管 `load_format`、`download_dir`、`ignore_patterns`、远端实例/ModelOpt 等；**不包含** `hf_config`。
+- **update_config.py 语义**：[`adjust_config_with_unaligned_cpu_tp`](d:\design\sglang\python\sglang\srt\configs\update_config.py) 在 TP 与 head 数不整除时改写 `hf_config` / `hf_text_config` 上的 head 与 intermediate 尺寸，**不是** JSON 覆盖合并逻辑。
 
 ## File inventory
 
@@ -128,7 +128,7 @@ flowchart TB
 
 ## CLI 交叉引用
 
-- **字段级入口**：优先 [`ModelConfig.from_server_args`](d:\design\sglang\python\sglang\srt\configs\model_config.py:262-300)（将 `ServerArgs` 映射到 `ModelConfig` 构造参数）。
+- **字段级入口**：优先 [`ModelConfig.from_server_args`](d:\design\sglang\python\sglang\srt\configs\model_config.py)（将 `ServerArgs` 映射到 `ModelConfig` 构造参数）。
 - **JSON 覆盖**：`json_model_override_args` → `get_config` → `config.update`（[hf_transformers/config.py:204-205](d:\design\sglang\python\sglang\srt\utils\hf_transformers\config.py)）。
 - **未逐项枚举** `--model-path`、`--dtype`、`--quantization`、`--load-format` 等；完整 CLI 见 [`server_args.py`](d:\design\sglang\python\sglang\srt\server_args.py) 与 [model_loader.md](model_loader.md)。
 

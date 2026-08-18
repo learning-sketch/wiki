@@ -1,7 +1,7 @@
 ---
 type: module
 project: sglang
-status: verified
+status: stale
 confidence: high
 verified_against: 2026-08-18 (increment pass; 正文主体锚点为 2026-04-19 版)
 sources:
@@ -30,6 +30,8 @@ related:
   - vllm/topics/kv-connector.md
   - comparison/dimensions.md
 ---
+
+> [!todo] VERIFY: **lint 2026-08-18** — 本页正文存在 **15** 处源码死锚（多为 sglang 上游 test 树重组 / docs 站点 mdx 化 / 文件迁移所致，锚点写于 2026-04 快照），已按 §7 标 `status: stale`，待重校对。死锚清单见 log.md lint entry。
 
 # `srt/observability` — Prometheus / OTel / 请求耗时 / KV 事件桥接
 

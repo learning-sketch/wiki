@@ -143,7 +143,7 @@ flowchart TB
 
 ### 1. sgl-kernel C++
 
-在 [`d:\design\sglang\sgl-kernel\`](d:\design\sglang\sgl-kernel) 对 `*.cpp`/`*.h`/`*.cu` 等使用词边界 **`[Rr]ay`** grep：**0 命中**（与「Ray 编排纯 Python」一致；偶发 `array` 等子串不计）。
+在 [`d:\design\sglang\sgl-kernel\`](d:\design\sglang\python\sglang\kernels\aot) 对 `*.cpp`/`*.h`/`*.cu` 等使用词边界 **`[Rr]ay`** grep：**0 命中**（与「Ray 编排纯 Python」一致；偶发 `array` 等子串不计）。
 
 ### 2. 协作 import
 
@@ -162,7 +162,7 @@ flowchart TB
 
 ### 5. 文档（`d:\design\sglang\docs\`）
 
-- 对 **`Ray` / `--use-ray` / `use_ray`** 的专门说明：**未**在顶层 `docs/**/*.md` 中发现（唯一命中为 **「Ray Less」** 论文链接，与 SGLang Ray 模式无关：[`docs/references/post_training_integration.md:26`](d:\design\sglang\docs\references\post_training_integration.md)）。
+- 对 **`Ray` / `--use-ray` / `use_ray`** 的专门说明：**未**在顶层 `docs/**/*.md` 中发现（唯一命中为 **「Ray Less」** 论文链接，与 SGLang Ray 模式无关：[`docs/references/post_training_integration.md:26`](d:\design\sglang\docs\docs\references\post_training_integration.mdx)）。
 
 ## Increment 2026-08-18 (06f32bab → f7101b0a)
 

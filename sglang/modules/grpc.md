@@ -17,11 +17,11 @@ related:
 
 > [!warning] 2026-08-18 增量：`srt/grpc/` 目录已被上游删除
 >
-> commit `67e12131df` "Build Rust extensions on demand in source checkouts" (#34994) 删除了 [`python/sglang/srt/grpc/__init__.py`](d:\design\sglang\python\sglang\srt\grpc\__init__.py)（该 commit stat 中 `python/sglang/srt/grpc/__init__.py | 1 -`），整个 `srt/grpc/` 目录在 HEAD `f7101b0a` 下**已不存在**。本页下文对占位包的描述保留作历史记录；gRPC 实现本来就不在该占位包内，仍在 `entrypoints/grpc_server.py`（委托外部 `smg-grpc-servicer` 包）与 `entrypoints/grpc_bridge.py`（Rust 原生 gRPC 的 Python 桥）。
+> commit `67e12131df` "Build Rust extensions on demand in source checkouts" (#34994) 删除了 ~~`python/sglang/srt/grpc/__init__.py`~~（文件已随 #34994 删除）（该 commit stat 中 `python/sglang/srt/grpc/__init__.py | 1 -`），整个 `srt/grpc/` 目录在 HEAD `f7101b0a` 下**已不存在**。本页下文对占位包的描述保留作历史记录；gRPC 实现本来就不在该占位包内，仍在 `entrypoints/grpc_server.py`（委托外部 `smg-grpc-servicer` 包）与 `entrypoints/grpc_bridge.py`（Rust 原生 gRPC 的 Python 桥）。
 
 ## Summary
 
-[`d:\design\sglang\python\sglang\srt\grpc\__init__.py`](d:\design\sglang\python\sglang\srt\grpc\__init__.py) 仅含一行注释 `# SGLang gRPC module`，**无**可执行代码、无 `grpcio` import，可视为 **空包占位**。**实际** gRPC 服务入口在 [`d:\design\sglang\python\sglang\srt\entrypoints\grpc_server.py`](d:\design\sglang\python\sglang\srt\entrypoints\grpc_server.py)：[`serve_grpc`](d:\design\sglang\python\sglang\srt\entrypoints\grpc_server.py:66) 委托外部包 `smg_grpc_servicer.sglang.server.serve_grpc`，缺失依赖时抛出明确 `ImportError`（[L69-76](d:\design\sglang\python\sglang\srt\entrypoints\grpc_server.py)）；同文件还包含可选 Prometheus metrics HTTP（[L13-63](d:\design\sglang\python\sglang\srt\entrypoints\grpc_server.py)）。
+~~`d:\design\sglang\python\sglang\srt\grpc\__init__.py`~~（文件已随 #34994 删除） 仅含一行注释 `# SGLang gRPC module`，**无**可执行代码、无 `grpcio` import，可视为 **空包占位**。**实际** gRPC 服务入口在 [`d:\design\sglang\python\sglang\srt\entrypoints\grpc_server.py`](d:\design\sglang\python\sglang\srt\entrypoints\grpc_server.py)：[`serve_grpc`](d:\design\sglang\python\sglang\srt\entrypoints\grpc_server.py) 委托外部包 `smg_grpc_servicer.sglang.server.serve_grpc`，缺失依赖时抛出明确 `ImportError`（[L69-76](d:\design\sglang\python\sglang\srt\entrypoints\grpc_server.py)）；同文件还包含可选 Prometheus metrics HTTP（[L13-63](d:\design\sglang\python\sglang\srt\entrypoints\grpc_server.py)）。
 
 > [!warning] CONTRADICTION（命名 — 必读）
 >
@@ -29,7 +29,7 @@ related:
 
 ## Sources
 
-- [d:\design\sglang\python\sglang\srt\grpc\__init__.py](d:\design\sglang\python\sglang\srt\grpc\__init__.py)（**1 .py / 22 字节占位**）
+- ~~d:\design\sglang\python\sglang\srt\grpc\__init__.py~~（文件已随 #34994 删除）（**1 .py / 22 字节占位**）
 - [d:\design\sglang\python\sglang\srt\entrypoints\grpc_server.py](d:\design\sglang\python\sglang\srt\entrypoints\grpc_server.py)（服务启动与 metrics）
 
 ## Architecture（占位 vs 实际）

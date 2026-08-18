@@ -170,7 +170,7 @@ flowchart TD
 
 ### 1. 跨语言绑定（C++ / sgl-kernel）
 
-在 [`d:\design\sglang\sgl-kernel\`](d:\design\sglang\sgl-kernel) 全树 grep `function_call` / `FunctionCall` / `ToolCall`：**0 命中**（本模块纯 Python）。
+在 [`d:\design\sglang\sgl-kernel\`](d:\design\sglang\python\sglang\kernels\aot) 全树 grep `function_call` / `FunctionCall` / `ToolCall`：**0 命中**（本模块纯 Python）。
 
 ### 2. 协作 import（`srt/`，排除 `function_call/`）
 

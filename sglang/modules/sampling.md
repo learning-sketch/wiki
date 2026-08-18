@@ -1,7 +1,7 @@
 ---
 type: module
 project: sglang
-status: verified
+status: stale
 confidence: high
 verified_against: 2026-04-19
 sources:
@@ -25,6 +25,8 @@ related:
   - sglang/modules/constrained.md
   - comparison/dimensions.md
 ---
+
+> [!todo] VERIFY: **lint 2026-08-18** — 本页正文存在 **4** 处源码死锚（多为 sglang 上游 test 树重组 / docs 站点 mdx 化 / 文件迁移所致，锚点写于 2026-04 快照），已按 §7 标 `status: stale`，待重校对。死锚清单见 log.md lint entry。
 
 # `srt/sampling` — 采样参数、批处理 logits 修正与惩罚项编排
 
@@ -52,8 +54,8 @@ related:
 | 四种 penalizer | [`frequency_penalty.py`](d:\design\sglang\python\sglang\srt\sampling\penaltylib\frequency_penalty.py)、[`presence_penalty.py`](d:\design\sglang\python\sglang\srt\sampling\penaltylib\presence_penalty.py)、[`repetition_penalty.py`](d:\design\sglang\python\sglang\srt\sampling\penaltylib\repetition_penalty.py)、[`min_new_tokens.py`](d:\design\sglang\python\sglang\srt\sampling\penaltylib\min_new_tokens.py) |
 | 采样执行（温度、softmax、FlashInfer） | [`layers/sampler.py`](d:\design\sglang\python\sglang\srt\layers\sampler.py) |
 | logits 前处理调用链 | [`model_runner.py` `_preprocess_logits` / `sample`](d:\design\sglang\python\sglang\srt\model_executor\model_runner.py) |
-| Grammar bitmask CUDA | [`xgrammar_backend.py`](d:\design\sglang\python\sglang\srt\constrained\xgrammar_backend.py) + [`common_extension.cc`](d:\design\sglang\sgl-kernel\csrc\common_extension.cc) `apply_token_bitmask_inplace_cuda` |
-| sgl-kernel Python 封装 | [`sgl-kernel/python/sgl_kernel/sampling.py`](d:\design\sglang\sgl-kernel\python\sgl_kernel\sampling.py) |
+| Grammar bitmask CUDA | [`xgrammar_backend.py`](d:\design\sglang\python\sglang\srt\constrained\xgrammar_backend.py) + [`common_extension.cc`](d:\design\sglang\python\sglang\kernels\aot\csrc\common_extension.cc) `apply_token_bitmask_inplace_cuda` |
+| sgl-kernel Python 封装 | [`sgl-kernel/python/sgl_kernel/sampling.py`](d:\design\sglang\python\sglang\kernels\aot\python\sgl_kernel\sampling.py) |
 
 ## Architecture / Data flow
 
@@ -184,13 +186,13 @@ flowchart TB
 
 | 算子名 | 行号 |
 |---|---|
-| `top_k_renorm_probs` | [L354-355](d:\design\sglang\sgl-kernel\csrc\common_extension.cc) |
-| `top_p_renorm_probs` | [L357-358](d:\design\sglang\sgl-kernel\csrc\common_extension.cc) |
-| `apply_token_bitmask_inplace_cuda`（grammar logits） | [L407-408](d:\design\sglang\sgl-kernel\csrc\common_extension.cc) |
+| `top_k_renorm_probs` | [L354-355](d:\design\sglang\python\sglang\kernels\aot\csrc\common_extension.cc) |
+| `top_p_renorm_probs` | [L357-358](d:\design\sglang\python\sglang\kernels\aot\csrc\common_extension.cc) |
+| `apply_token_bitmask_inplace_cuda`（grammar logits） | [L407-408](d:\design\sglang\python\sglang\kernels\aot\csrc\common_extension.cc) |
 
-**Python 封装**：[`sgl_kernel/sampling.py`](d:\design\sglang\sgl-kernel\python\sgl_kernel\sampling.py) 中 `torch.ops.sgl_kernel.top_k_renorm_probs.default` / `top_p_renorm_probs.default`；在可用时 **delegate 到 FlashInfer**。
+**Python 封装**：[`sgl_kernel/sampling.py`](d:\design\sglang\python\sglang\kernels\aot\python\sgl_kernel\sampling.py) 中 `torch.ops.sgl_kernel.top_k_renorm_probs.default` / `top_p_renorm_probs.default`；在可用时 **delegate 到 FlashInfer**。
 
-**MUSA 扩展**（[`common_extension_musa.cc`](d:\design\sglang\sgl-kernel\csrc\common_extension_musa.cc)）另注册 `min_p_sampling_from_probs`、`top_p_sampling_from_probs`、`top_k_top_p_sampling_from_probs` 等 — **非默认 CUDA 路径**。
+**MUSA 扩展**（[`common_extension_musa.cc`](d:\design\sglang\python\sglang\kernels\aot\csrc\common_extension_musa.cc)）另注册 `min_p_sampling_from_probs`、`top_p_sampling_from_probs`、`top_k_top_p_sampling_from_probs` 等 — **非默认 CUDA 路径**。
 
 **计数（CUDA 扩展中与采样管线直接相关的绑定）**：`common_extension.cc` 上 **3** 个：`top_k_renorm_probs`、`top_p_renorm_probs`、`apply_token_bitmask_inplace_cuda`（**不含** FlashInfer 自带的 multinomial 采样核； multinomial 在 `Sampler._sample_from_probs` 中由 **FlashInfer** 或 **PyTorch** 路径承担）。
 
@@ -213,7 +215,7 @@ flowchart TB
 
 ## §跨子系统 — 5 类 grep 摘要
 
-1. **sgl-kernel C++/CUDA / Python**：`top_k_renorm_probs`、`top_p_renorm_probs`、`apply_token_bitmask_inplace_cuda` 见 [`common_extension.cc:354-408`](d:\design\sglang\sgl-kernel\csrc\common_extension.cc)；[`sgl_kernel/sampling.py`](d:\design\sglang\sgl-kernel\python\sgl_kernel\sampling.py)；MUSA 全量采样算子见 [`common_extension_musa.cc`](d:\design\sglang\sgl-kernel\csrc\common_extension_musa.cc)。
+1. **sgl-kernel C++/CUDA / Python**：`top_k_renorm_probs`、`top_p_renorm_probs`、`apply_token_bitmask_inplace_cuda` 见 [`common_extension.cc:354-408`](d:\design\sglang\python\sglang\kernels\aot\csrc\common_extension.cc)；[`sgl_kernel/sampling.py`](d:\design\sglang\python\sglang\kernels\aot\python\sgl_kernel\sampling.py)；MUSA 全量采样算子见 [`common_extension_musa.cc`](d:\design\sglang\python\sglang\kernels\aot\csrc\common_extension_musa.cc)。
 2. **`from sglang.srt.sampling`**（`srt` 下，排除 `sampling/` 自引用）：[`model_runner.py`](d:\design\sglang\python\sglang\srt\model_executor\model_runner.py)、[`forward_batch_info.py`](d:\design\sglang\python\sglang\srt\model_executor\forward_batch_info.py)、[`tokenizer_manager.py`](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)、[`scheduler_pp_mixin.py`](d:\design\sglang\python\sglang\srt\managers\scheduler_pp_mixin.py)、[`scheduler.py`](d:\design\sglang\python\sglang\srt\managers\scheduler.py)、[`schedule_batch.py`](d:\design\sglang\python\sglang\srt\managers\schedule_batch.py)、[`io_struct.py`](d:\design\sglang\python\sglang\srt\managers\io_struct.py)、[`layers/sampler.py`](d:\design\sglang\python\sglang\srt\layers\sampler.py)、[`disaggregation/decode_schedule_batch_mixin.py`](d:\design\sglang\python\sglang\srt\disaggregation\decode_schedule_batch_mixin.py)、[`speculative/ngram_info.py`](d:\design\sglang\python\sglang\srt\speculative\ngram_info.py)、[`speculative/eagle_info_v2.py`](d:\design\sglang\python\sglang\srt\speculative\eagle_info_v2.py)、[`configs/deepseek_ocr.py`](d:\design\sglang\python\sglang\srt\configs\deepseek_ocr.py)。
 3. **CLI**：见上表（`--sampling-defaults`、`--preferred-sampling-params`、`--sampling-backend`、`--enable-custom-logit-processor`、`--enable-deterministic-inference`）。
 4. **`d:\design\sglang\test`**：`sampling_params` **114** 个文件含匹配；`BatchedPenalizerOrchestrator` **1** 文件（`test_penaltylib.py`）；`custom_logit_processor` **5** 文件；`top_k_top_p` **0** 处（端到端测试居多）。

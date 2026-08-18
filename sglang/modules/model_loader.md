@@ -1,7 +1,7 @@
 ---
 type: module
 project: sglang
-status: verified
+status: stale
 confidence: high
 verified_against: 2026-08-18 (increment pass; 正文主体锚点为 2026-04-19 版)
 sources:
@@ -23,6 +23,8 @@ related:
   - sglang/modules/lora.md
   - sglang/index.md
 ---
+
+> [!todo] VERIFY: **lint 2026-08-18** — 本页正文存在 **8** 处源码死锚（多为 sglang 上游 test 树重组 / docs 站点 mdx 化 / 文件迁移所致，锚点写于 2026-04 快照），已按 §7 标 `status: stale`，待重校对。死锚清单见 log.md lint entry。
 
 # `srt/model_loader` — 启动期权重管线（`LoadFormat` → `*ModelLoader`）
 
@@ -205,7 +207,7 @@ flowchart TD
 
 ### 1. `sgl-kernel` C++ 绑定
 
-在 [`d:\design\sglang\sgl-kernel\`](d:\design\sglang\sgl-kernel) 全树 grep `model_loader` / `ModelLoader`：**0 命中**（本模块纯 Python + PyTorch）。
+在 [`d:\design\sglang\sgl-kernel\`](d:\design\sglang\python\sglang\kernels\aot) 全树 grep `model_loader` / `ModelLoader`：**0 命中**（本模块纯 Python + PyTorch）。
 
 ### 2. 协作 import（`srt/`，排除 `model_loader/` 自身）
 

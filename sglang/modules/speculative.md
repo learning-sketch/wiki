@@ -94,7 +94,7 @@ flowchart TB
     MR -.NPU.-> NPU
 ```
 
-**调度持有关系**（锚点已按 HEAD 校正）：[`Scheduler.maybe_init_draft_worker`](d:\design\sglang\python\sglang\srt\managers\scheduler.py:923) 实例化 draft（工厂调用 [L941](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）；[`init_model_worker` L993](d:\design\sglang\python\sglang\srt\managers\scheduler.py) 在启用 spec 时 **`model_worker = draft_worker`**，**`tp_worker` 仍为 target**（资源信息从 [`tp_worker.get_worker_info()` L1043](d:\design\sglang\python\sglang\srt\managers\scheduler.py) 读）。
+**调度持有关系**（锚点已按 HEAD 校正）：[`Scheduler.maybe_init_draft_worker`](d:\design\sglang\python\sglang\srt\managers\scheduler.py) 实例化 draft（工厂调用 [L941](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）；[`init_model_worker` L993](d:\design\sglang\python\sglang\srt\managers\scheduler.py) 在启用 spec 时 **`model_worker = draft_worker`**，**`tp_worker` 仍为 target**（资源信息从 [`tp_worker.get_worker_info()` L1043](d:\design\sglang\python\sglang\srt\managers\scheduler.py) 读）。
 
 **verify 主链**（HEAD 校正；~~sgl-kernel 树已移出本仓库、`sgl_kernel` 为外部包~~ **更正 2026-08-18**：源树在仓内 [kernels/aot/](d:\design\sglang\python\sglang\kernels\aot)，独立打包为 `sglang-kernel` wheel）：EAGLE greedy / CPU / NPU / HIP / XPU 路径由 [`eagle_sample` L649](d:\design\sglang\python\sglang\srt\speculative\eagle_utils.py)（判定 [L726](d:\design\sglang\python\sglang\srt\speculative\eagle_utils.py)）调用 [`verify_tree_greedy_func` L374-441](d:\design\sglang\python\sglang\srt\speculative\eagle_utils.py)（callsite [L729](d:\design\sglang\python\sglang\srt\speculative\eagle_utils.py)）→ CUDA 走外部 `sgl_kernel.verify_tree_greedy`（[L386](d:\design\sglang\python\sglang\srt\speculative\eagle_utils.py)）/ NPU 走 `sgl_kernel_npu`（[L415](d:\design\sglang\python\sglang\srt\speculative\eagle_utils.py)）/ 无 kernel 包时 [`verify_tree_greedy_triton` L341](d:\design\sglang\python\sglang\srt\speculative\eagle_utils.py) fallback。**非 greedy** 走 [`tree_speculative_sampling_target_only`](d:\design\sglang\python\sglang\srt\speculative\eagle_utils.py)（callsite [L759, L822](d:\design\sglang\python\sglang\srt\speculative\eagle_utils.py)；DFlash 侧 [dflash_utils.py:L878](d:\design\sglang\python\sglang\srt\speculative\dflash_utils.py)；~~eagle_info.py:49-54 import~~ eagle_info.py 已不再引用该算子——verify 逻辑已从 info dataclass 移入 eagle_utils）。
 
@@ -156,8 +156,8 @@ flowchart TB
 ## Multi-layer EAGLE
 
 - **触发**：[`spec_info.create_worker`](d:\design\sglang\python\sglang\srt\speculative\spec_info.py:L286-292) 在 `is_eagle() and server_args.enable_multi_layer_eagle` 时返回 `MultiLayerEagleWorkerV2`（~~V1 `MultiLayerEagleWorker`~~ 已删）。
-- **`model_runner_list`**：[`TpModelWorker._init_multi_layer_eagle_model_runners`](d:\design\sglang\python\sglang\srt\managers\tp_worker.py:481)（字段 [L334](d:\design\sglang\python\sglang\srt\managers\tp_worker.py)，调用点 [L340](d:\design\sglang\python\sglang\srt\managers\tp_worker.py)）追加多个 `ModelRunner`，[`draft_model_idx`](d:\design\sglang\python\sglang\srt\model_executor\model_runner.py:299) 分层——**该机制在 HEAD 仍在**。
-- **按层访问**：[`mtp_model_runner(step)`](d:\design\sglang\python\sglang\srt\speculative\multi_layer_eagle_worker_v2.py:224) → `draft_runner_list[...]`（[L171](d:\design\sglang\python\sglang\srt\speculative\multi_layer_eagle_worker_v2.py) `draft_runner_list = draft_worker.model_runner_list`；~~multi_layer_eagle_worker.py:236-237~~ 文件已删，方法迁至 V2）。
+- **`model_runner_list`**：[`TpModelWorker._init_multi_layer_eagle_model_runners`](d:\design\sglang\python\sglang\srt\managers\tp_worker.py)（字段 [L334](d:\design\sglang\python\sglang\srt\managers\tp_worker.py)，调用点 [L340](d:\design\sglang\python\sglang\srt\managers\tp_worker.py)）追加多个 `ModelRunner`，[`draft_model_idx`](d:\design\sglang\python\sglang\srt\model_executor\model_runner.py) 分层——**该机制在 HEAD 仍在**。
+- **按层访问**：[`mtp_model_runner(step)`](d:\design\sglang\python\sglang\srt\speculative\multi_layer_eagle_worker_v2.py) → `draft_runner_list[...]`（[L171](d:\design\sglang\python\sglang\srt\speculative\multi_layer_eagle_worker_v2.py) `draft_runner_list = draft_worker.model_runner_list`；~~multi_layer_eagle_worker.py:236-237~~ 文件已删，方法迁至 V2）。
 
 > synthesis: 与单层 EAGLE 单 `draft_model_runner` 不同，multi-layer 在**同一 draft worker 进程内**维护**多条 `ModelRunner` 链**，用于多步 MTP 结构。这是 [comparison/topics/executor-worker.md §10](../../comparison/topics/executor-worker.md) 第 3 个 anchor 提到的"draft model runner 持有位置差异"中 **SGLang 在 worker 层共享多个 ModelRunner** 的精确实现。
 
@@ -172,7 +172,7 @@ flowchart TB
 | C++ 注册 | ~~[csrc/common_extension.cc:255-259]~~ **仓内文件已不存在** |
 | CUDA 实现 | ~~[csrc/speculative/eagle_utils.cu:323-331]~~ **仓内文件已不存在** |
 
-**主调用点**：~~[`EagleVerifyInput` 路径](d:\design\sglang\python\sglang\srt\speculative\eagle_info.py:317-330)~~ eagle_info.py 已纯 dataclass 化，verify 调用移至 [`eagle_sample` L649 → L729](d:\design\sglang\python\sglang\srt\speculative\eagle_utils.py)；kernel 可用性判定见 [`TREE_SPEC_KERNEL_AVAILABLE`](d:\design\sglang\python\sglang\srt\speculative\spec_utils.py) [L185]。
+**主调用点**：~~[`EagleVerifyInput` 路径](d:\design\sglang\python\sglang\srt\speculative\eagle_info.py)~~ eagle_info.py 已纯 dataclass 化，verify 调用移至 [`eagle_sample` L649 → L729](d:\design\sglang\python\sglang\srt\speculative\eagle_utils.py)；kernel 可用性判定见 [`TREE_SPEC_KERNEL_AVAILABLE`](d:\design\sglang\python\sglang\srt\speculative\spec_utils.py) [L185]。
 
 > synthesis: **`verify_tree_greedy` 是 SGLang 第二个已确认的 sgl-kernel C++ 算子绑定**（第一个是 [`shm_allreduce`](../modules/distributed.md)，详 [sglang/modules/distributed.md §跨子系统引用](distributed.md)）—— 反驳了"SGLang 全 Python 无 C++ 算子"的初步假设。该论断在 HEAD 仍成立，但绑定形式已从"仓内 sgl-kernel 子树"变为"外部 pip 包"，仓库内只剩 Python 调用面。
 
@@ -217,7 +217,7 @@ flowchart TB
 
 | 机制 | 锚点 |
 |---|---|
-| Scheduler 读取算法 | [`self.spec_algorithm = SpeculativeAlgorithm.from_string(...)`](d:\design\sglang\python\sglang\srt\managers\scheduler.py:438) |
+| Scheduler 读取算法 | [`self.spec_algorithm = SpeculativeAlgorithm.from_string(...)`](d:\design\sglang\python\sglang\srt\managers\scheduler.py) |
 | 实例化 draft | [`maybe_init_draft_worker` L923](d:\design\sglang\python\sglang\srt\managers\scheduler.py) → [`DraftWorkerClass = self.spec_algorithm.create_worker(...)` L941](d:\design\sglang\python\sglang\srt\managers\scheduler.py) |
 | `model_worker` vs `tp_worker` | [`init_model_worker` L993](d:\design\sglang\python\sglang\srt\managers\scheduler.py)（资源信息读 target：[`tp_worker.get_worker_info()` L1043](d:\design\sglang\python\sglang\srt\managers\scheduler.py)） |
 | TpModelWorker 上 multi-layer 列表 | [`model_runner_list` L334](d:\design\sglang\python\sglang\srt\managers\tp_worker.py)、[`_init_multi_layer_eagle_model_runners` L481](d:\design\sglang\python\sglang\srt\managers\tp_worker.py)（`is_draft_worker` 字段 [L308, L321](d:\design\sglang\python\sglang\srt\managers\tp_worker.py)） |

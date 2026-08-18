@@ -139,3 +139,22 @@
 - **触发**：append 2026-08-18 两条 increment entries 后 `log.md` = 997 行 / **114269 字节** > 110 KB 阈值（行数 997 < 1500 未触发）。
 - **归档**：2026-04-19 的全部 **8 条** entries（863 行 / ~100 KB）→ [log-archive/log-009.md](log-archive/log-009.md)（相对链接已修复 `../` 前缀；绝对 `d:\design\` 路径不变）。
 - **轮转后**：主 `log.md` = header + Archive Index（9 行）+ 3 条 2026-08-10 + 2 条 2026-08-18 increment + 本条 = **6 entries**，~20 KB。
+
+## [2026-08-18] compare + ingest | cross/sglang | comparison 4 页 SGLang 列刷新 + speculative/parser 重 ingest（4 subagent 并行）
+
+- **comparison 刷新**（SGLang 列 → f7101b0a；vLLM `5f7fab88` / MindIE `f032cd3f` pin 未动，MindIE 未检出 cross-check 跳过已页内注明）：
+  - [speculative-decoding.md](comparison/topics/speculative-decoding.md)：组织形式（48 .py / V2 单轨）、enum 8 成员、verify 机制等 8+ cell 重写；vLLM spec 文件数 12→11 死锚顺带修复。cross-check：`DSPARK`/`FROZEN_KV_MTP` 在 vLLM pin 0 命中（N/A）。
+  - [scheduler.md](comparison/topics/scheduler.md)：6 mixin + 19 组件、~5085 行；**+3 新维度行**（配置读取途径 `_ConfigBag` vs `get_current_vllm_config()`、prefill batch size 自适应、spec draft 跨步透传）。cross-check：`RecentPrefillBatchSizeTracker` 在 vLLM pin 0 命中。
+  - [kv-cache.md](comparison/topics/kv-cache.md)：+构造工厂入口行、cache salt 三方表（**vLLM 真等价物命中** kv_cache_utils.py:385）、HiCache retraction 在 vLLM 0 命中（N/A）。
+  - [pd-disaggregation.md](comparison/topics/pd-disaggregation.md)：§10「D 侧始终 ChunkCache」叙事作废（decode 侧现有 3 条 prefix 复用路径）；§13 send_kv_chunk 7 步表整表重写；prefill mixin 9→18。
+- **重 ingest**：[sglang/topics/speculative.md](sglang/topics/speculative.md)（V2 单轨 + BaseSpecWorker 继承树 + draft 承载三形态 + NGRAM 也走 `eagle_sample`）、[sglang/modules/parser.md](sglang/modules/parser.md)（22 detector / 26 键全表 + template_detection/template_manager/inkling 新小节 + **发现 Rust 语义镜像** `rust/sglang-server/.../reasoning.rs`）。两页升回 verified。
+- **重大更正（写错传播链已全部修复）**：~~sgl-kernel 树已移出仓库~~ → 实为 `c32c4ef79c` #32648 移入 **`python/sglang/kernels/aot/`**（独立 `sglang-kernel` wheel、import 名不变；仅 `sgl_kernel_npu` 是外部包）。已同步修正：topics/speculative（源头自愈）、modules/speculative、index.md、comparison/speculative-decoding、本 log 上一 entry 划线。
+- **Lessons learned**：主 agent 简报里的"已确认事实"也可能错——重 ingest 的 hidden cross-ref grep（§5 step 3）是发现该错误的机制，证明该步骤不可跳过。
+
+## [2026-08-18] lint | wiki | 全量 lint：735 → 245 issues（死链清零至 stale 页内）
+
+- **范围**：97 页（跳过 log-archive 锁定区）。检查：frontmatter 必填字段（**0 缺失**）、孤立页（**0**）、wiki 内部死链、源码死锚（`d:\design\sglang\`→/tmp/sglang@f7101b0a、`d:\design\vllm\`→/tmp/vllm-pin@5f7fab88 实测；MindIE 未检出跳过）。
+- **批量修复（~470 处）**：① 行号误写进链接 URL（`(...py:123-456)`→`(...py)`，35 文件）；② sgl-kernel 路径迁移（`sgl-kernel\`→`python\sglang\kernels\aot\`）；③ 改名定点修（`communicator_nsa_cp`→`communicator_dsa_cp` #25821、`scheduler_dp_attn_mixin`→`scheduler_components/dp_attn`、`scheduler_update_weights_mixin`→`scheduler_components/weight_updater`、dimensions.md 一处 wiki 链接层级）。
+- **定点修复（9 页）**：docs 站点 mdx 化（object_storage / server_arguments / ollama_api / post_training_integration / openai_api_completions / ascend support_features）+ test 树重组（anthropic test_serving、specv2 unit/ 前缀）+ comparison/moe 两处文件迁移（routed_experts→state_capturer、fuseep→hardware_backend/npu）+ grpc.md 已删文件 de-link。
+- **标 stale（13 页 + index 同步）**：compilation(23 死锚)/observability(15)/checkpoint_engine(8)/model_loader(8)/weight_sync(8)/constrained(7)/dllm(7)/batch_invariant_ops(5)/batch_overlap(5)/debug_utils(5)/eplb(4)/multiplex(4)/sampling(4)——4 月正文快照 vs f7101b0a 的真实漂移，按 §7 语义降级，各页加 `[!todo] VERIFY` lint 标记。
+- **终态**：剩余 242 处死锚**全部**位于 `status: stale` 页面内 + vllm/overview.md（draft，待 vLLM 增量处理）；2 处 `](set)`/`](self)` 为代码片段误匹配（非链接，false positive 不处理）。

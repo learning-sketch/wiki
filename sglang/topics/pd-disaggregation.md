@@ -93,7 +93,7 @@ flowchart TB
 **关键点**
 
 - **触发位置**：[`Scheduler.__init__ L615`](d:\design\sglang\python\sglang\srt\managers\scheduler.py) 调 `self.init_disaggregation()`，进入 [L1286-1440](d:\design\sglang\python\sglang\srt\managers\scheduler.py)，按 `DisaggregationMode(...)` + `TransferBackend(...)` 两枚举分发（枚举值现经 config-bag `get_disagg()` 读取，[L1293-1296](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）。
-- **请求级耦合**：每个 `Req` 上挂 [`Req.disagg_kv_sender: Optional[BaseKVSender]`](d:\design\sglang\python\sglang\srt\managers\schedule_batch.py:1157)（TYPE_CHECKING import [L141](d:\design\sglang\python\sglang\srt\managers\schedule_batch.py)），是「调度层 ↔ PD 包」的唯一显式类型接口。
+- **请求级耦合**：每个 `Req` 上挂 [`Req.disagg_kv_sender: Optional[BaseKVSender]`](d:\design\sglang\python\sglang\srt\managers\schedule_batch.py)（TYPE_CHECKING import [L141](d:\design\sglang\python\sglang\srt\managers\schedule_batch.py)），是「调度层 ↔ PD 包」的唯一显式类型接口。
 - **Bootstrap 仅 PREFILL 拉起**：[`start_disagg_service` L14-35](d:\design\sglang\python\sglang\srt\managers\disagg_service.py) 仅在 `DisaggregationMode.PREFILL` 时实例化 `kv_bootstrap_server_class`；DECODE 端仅做 receiver 注册；ASCEND 的 `memfabric_hybrid.create_config_store` 已抽为独立函数 [`maybe_create_ascend_config_store` L37](d:\design\sglang\python\sglang\srt\managers\disagg_service.py)（rust-server scheduler 也直接调用）。
 - **Event-loop 11 路分发**：[`dispatch_event_loop` L4902-4931](d:\design\sglang\python\sglang\srt\managers\scheduler.py)（现为**模块级函数**，入参 `scheduler`）：NULL 分支 5 路（pdmux / pp / overlap_mlx / overlap / normal）+ PREFILL 3 路 + DECODE 3 路；PP 路径走 [`scheduler_pp_mixin.py:178, 364`](d:\design\sglang\python\sglang\srt\managers\scheduler_pp_mixin.py)（PP 版本**不在** `disaggregation/` 包内）。
 
@@ -135,7 +135,7 @@ flowchart TB
 
 pin 前新增的 9 个方法（本页未逐一展开，行号 @HEAD）：`resolve_waiting_queue_bootstrap` [L501](d:\design\sglang\python\sglang\srt\disaggregation\prefill.py) / `has_bootstrapped_waiting_req` [L536](d:\design\sglang\python\sglang\srt\disaggregation\prefill.py) / `handle_inflight_transfer_failure` [L937](d:\design\sglang\python\sglang\srt\disaggregation\prefill.py) / `clear_pending_chunk_send` [L984](d:\design\sglang\python\sglang\srt\disaggregation\prefill.py)（**本期新增**，#35070）/ `handle_bootstrap_failure` [L993](d:\design\sglang\python\sglang\srt\disaggregation\prefill.py) / `handle_pending_bootstrap` [L1026](d:\design\sglang\python\sglang\srt\disaggregation\prefill.py) / `check_bootstrap` [L1045](d:\design\sglang\python\sglang\srt\disaggregation\prefill.py) / `maybe_send_cached_prefix_chunk` [L1100](d:\design\sglang\python\sglang\srt\disaggregation\prefill.py) / `optimistic_release_and_requeue` [L1328](d:\design\sglang\python\sglang\srt\disaggregation\prefill.py)——bootstrap 失败处理 / cached-prefix chunk / 乐观释放重排是 pin 前扩容的三大主题。
 
-**Scheduler 调用钩子**：主循环 `event_loop_normal/overlap_disagg_prefill` 由 [`dispatch_event_loop` L4917-4923](d:\design\sglang\python\sglang\srt\managers\scheduler.py) 在 PREFILL 模式下调用；`process_disagg_prefill_inflight_queue` 每 tick 扫 [`disagg_prefill_inflight_queue: List[Req]`](d:\design\sglang\python\sglang\srt\managers\scheduler.py:1417)。
+**Scheduler 调用钩子**：主循环 `event_loop_normal/overlap_disagg_prefill` 由 [`dispatch_event_loop` L4917-4923](d:\design\sglang\python\sglang\srt\managers\scheduler.py) 在 PREFILL 模式下调用；`process_disagg_prefill_inflight_queue` 每 tick 扫 [`disagg_prefill_inflight_queue: List[Req]`](d:\design\sglang\python\sglang\srt\managers\scheduler.py)。
 
 请求生命周期（[`prefill.py:1-18` docstring](d:\design\sglang\python\sglang\srt\disaggregation\prefill.py)）：**Bootstrap Queue → Waiting Queue → Inflight Queue**；`PrefillBootstrapQueue` ([L119](d:\design\sglang\python\sglang\srt\disaggregation\prefill.py)) 的 `pop_bootstrapped` ([L383](d:\design\sglang\python\sglang\srt\disaggregation\prefill.py)) 由 `BaseKVSender.poll()` 驱动；[`KVPoll` 5 状态 L89-94](d:\design\sglang\python\sglang\srt\disaggregation\base\conn.py) = `Failed=0` / `Bootstrapping=1` / `WaitingForInput=2` / `Transferring=3` / `Success=4`（5 状态计数仍成立）。
 
@@ -178,7 +178,7 @@ EPD 是 SGLang 在 PD 之外的**额外切分**：多模态模型的 ViT/VL enco
 
 ### 4 种 encoder 回程后端（原 3 种，pin 前新增 `auto`）
 
-[`ENCODER_TRANSFER_BACKEND_CHOICES = ["auto", "zmq_to_scheduler", "zmq_to_tokenizer", "mooncake"]`](d:\design\sglang\python\sglang\srt\server_args.py:324-329)，默认已从 ~~`zmq_to_scheduler`~~ 改为 **`auto`**（`ENCODER_TRANSFER_BACKEND_CHOICES[0]`，[`server_args.py:3185-3192`](d:\design\sglang\python\sglang\srt\server_args.py)，help 注明 "Auto selects a model- and TP-aware backend"）。
+[`ENCODER_TRANSFER_BACKEND_CHOICES = ["auto", "zmq_to_scheduler", "zmq_to_tokenizer", "mooncake"]`](d:\design\sglang\python\sglang\srt\server_args.py)，默认已从 ~~`zmq_to_scheduler`~~ 改为 **`auto`**（`ENCODER_TRANSFER_BACKEND_CHOICES[0]`，[`server_args.py:3185-3192`](d:\design\sglang\python\sglang\srt\server_args.py)，help 注明 "Auto selects a model- and TP-aware backend"）。
 
 | 模式 | 回程数据流 | 锚点 |
 |---|---|---|

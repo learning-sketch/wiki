@@ -149,11 +149,11 @@ flowchart TD
 
 ### 1. sgl-kernel C++ / Python 绑定
 
-在 [`d:\design\sglang\sgl-kernel\`](d:\design\sglang\sgl-kernel) 全树 grep `Multimodal`、`MMEncoder`：**0 命中**（与多模态子系统无直接符号绑定）。
+在 [`d:\design\sglang\sgl-kernel\`](d:\design\sglang\python\sglang\kernels\aot) 全树 grep `Multimodal`、`MMEncoder`：**0 命中**（与多模态子系统无直接符号绑定）。
 
 > [!todo] VERIFY: ~~模式 `mm_` 在 `sgl-kernel` 内会命中 `bmm_fp8` / `moe_mm` 等 **矩阵乘** 符号，**非** `srt/multimodal` 语义；不应解读为多模态专用内核。~~
 >
-> > **RESOLVED 2026-04-19**: 在 [`d:\design\sglang\sgl-kernel\`](d:\design\sglang\sgl-kernel) grep `mm_` 实测命中 [`test_bmm_fp8.py`](d:\design\sglang\sgl-kernel\tests\test_bmm_fp8.py)、[`test_cutlass_w4a8_moe_mm.py`](d:\design\sglang\sgl-kernel\tests\test_cutlass_w4a8_moe_mm.py)、[`gemm.py`](d:\design\sglang\sgl-kernel\python\sgl_kernel\gemm.py) 等矩阵乘符号，确认 `mm_` 在 sgl-kernel 内**仅**指 matrix multiplication，与 `srt/multimodal` 子系统无关。
+> > **RESOLVED 2026-04-19**: 在 [`d:\design\sglang\sgl-kernel\`](d:\design\sglang\python\sglang\kernels\aot) grep `mm_` 实测命中 [`test_bmm_fp8.py`](d:\design\sglang\python\sglang\kernels\aot\tests\test_bmm_fp8.py)、[`test_cutlass_w4a8_moe_mm.py`](d:\design\sglang\python\sglang\kernels\aot\tests\test_cutlass_w4a8_moe_mm.py)、[`gemm.py`](d:\design\sglang\python\sglang\kernels\aot\python\sgl_kernel\gemm.py) 等矩阵乘符号，确认 `mm_` 在 sgl-kernel 内**仅**指 matrix multiplication，与 `srt/multimodal` 子系统无关。
 
 ### 2. 协作 import（`srt/`，字面 `from sglang.srt.multimodal`）
 

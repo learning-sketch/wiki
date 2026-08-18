@@ -91,7 +91,7 @@ flowchart LR
     MR --> Attn
 ```
 
-**入口链**：[`TpModelWorker.forward_batch_generation`](d:\design\sglang\python\sglang\srt\managers\tp_worker.py:443-472) 中先 `ForwardBatch.init_new(model_worker_batch, self.model_runner)`，再 `self.model_runner.forward(forward_batch, ...)`。**注意：`forward_batch_generation` 在 TpModelWorker 实体页**，不在 ModelRunner——本模块页讲文件与数据流，详细 worker 协作见 [`sglang/entities/TpModelWorker.md`](../entities/TpModelWorker.md)。
+**入口链**：[`TpModelWorker.forward_batch_generation`](d:\design\sglang\python\sglang\srt\managers\tp_worker.py) 中先 `ForwardBatch.init_new(model_worker_batch, self.model_runner)`，再 `self.model_runner.forward(forward_batch, ...)`。**注意：`forward_batch_generation` 在 TpModelWorker 实体页**，不在 ModelRunner——本模块页讲文件与数据流，详细 worker 协作见 [`sglang/entities/TpModelWorker.md`](../entities/TpModelWorker.md)。
 
 **图路径**：[`ModelRunner._forward_raw`](d:\design\sglang\python\sglang\srt\model_executor\model_runner.py)（约 L2932-2955）在 `can_run_graph` 时走 `self.graph_runner.replay`；否则走 MLP sync / attn TP scatter 再进入常规前向。
 
@@ -180,7 +180,7 @@ flowchart LR
 
 ### 1. 跨语言绑定（C++ / sgl-kernel）
 
-- `ModelRunner`：**在 [`d:\design\sglang\sgl-kernel\`](d:\design\sglang\sgl-kernel) 全 C++ 树 grep 0 命中**
+- `ModelRunner`：**在 [`d:\design\sglang\sgl-kernel\`](d:\design\sglang\python\sglang\kernels\aot) 全 C++ 树 grep 0 命中**
 - `ForwardBatch`：**在 `d:\design\sglang\sgl-kernel\` 全 C++ 树 grep 0 命中**
 - `CudaGraphRunner`：**在 `d:\design\sglang\sgl-kernel\` 全 C++ 树 grep 0 命中**
 

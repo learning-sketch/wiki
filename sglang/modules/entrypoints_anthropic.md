@@ -46,9 +46,9 @@ flowchart LR
   AS --> SSE["StreamingResponse text/event-stream<br/>Anthropic event types"]
 ```
 
-- 入口：[`handle_messages`](d:\design\sglang\python\sglang\srt\entrypoints\anthropic\serving.py:69) 调用 [`_convert_to_chat_completion_request`](d:\design\sglang\python\sglang\srt\entrypoints\anthropic\serving.py:90)，再分支流式/非流式（[L85-88](d:\design\sglang\python\sglang\srt\entrypoints\anthropic\serving.py)）。
-- 非流式：[`_handle_non_streaming`](d:\design\sglang\python\sglang\srt\entrypoints\anthropic\serving.py:310) 使用 `OpenAIServingChat._validate_request`、`_convert_to_internal_request`、`_handle_non_streaming_request`（[L320-344](d:\design\sglang\python\sglang\srt\entrypoints\anthropic\serving.py)），再 [`_convert_response`](d:\design\sglang\python\sglang\srt\entrypoints\anthropic\serving.py:641)。
-- 流式：[`_handle_streaming`](d:\design\sglang\python\sglang\srt\entrypoints\anthropic\serving.py:366) 返回 `StreamingResponse`，body 来自 [`_generate_anthropic_stream`](d:\design\sglang\python\sglang\srt\entrypoints\anthropic\serving.py:416)；内部消费 OpenAI 侧 `_generate_chat_stream` 产出的 **SSE 行**（解析 `data: ` 后为 JSON，校验为 `ChatCompletionStreamResponse`，[L437-496](d:\design\sglang\python\sglang\srt\entrypoints\anthropic\serving.py)），再按 Anthropic 事件类型写出（[L54-56](d:\design\sglang\python\sglang\srt\entrypoints\anthropic\serving.py) `_wrap_sse_event`）。
+- 入口：[`handle_messages`](d:\design\sglang\python\sglang\srt\entrypoints\anthropic\serving.py) 调用 [`_convert_to_chat_completion_request`](d:\design\sglang\python\sglang\srt\entrypoints\anthropic\serving.py)，再分支流式/非流式（[L85-88](d:\design\sglang\python\sglang\srt\entrypoints\anthropic\serving.py)）。
+- 非流式：[`_handle_non_streaming`](d:\design\sglang\python\sglang\srt\entrypoints\anthropic\serving.py) 使用 `OpenAIServingChat._validate_request`、`_convert_to_internal_request`、`_handle_non_streaming_request`（[L320-344](d:\design\sglang\python\sglang\srt\entrypoints\anthropic\serving.py)），再 [`_convert_response`](d:\design\sglang\python\sglang\srt\entrypoints\anthropic\serving.py)。
+- 流式：[`_handle_streaming`](d:\design\sglang\python\sglang\srt\entrypoints\anthropic\serving.py) 返回 `StreamingResponse`，body 来自 [`_generate_anthropic_stream`](d:\design\sglang\python\sglang\srt\entrypoints\anthropic\serving.py)；内部消费 OpenAI 侧 `_generate_chat_stream` 产出的 **SSE 行**（解析 `data: ` 后为 JSON，校验为 `ChatCompletionStreamResponse`，[L437-496](d:\design\sglang\python\sglang\srt\entrypoints\anthropic\serving.py)），再按 Anthropic 事件类型写出（[L54-56](d:\design\sglang\python\sglang\srt\entrypoints\anthropic\serving.py) `_wrap_sse_event`）。
 - 中止：流式 `StreamingResponse` 的 `background` 使用 `tokenizer_manager.create_abort_task`（[L411-413](d:\design\sglang\python\sglang\srt\entrypoints\anthropic\serving.py)）。
 
 ## File inventory
@@ -79,7 +79,7 @@ flowchart LR
 
 **响应侧（OpenAI → Anthropic）**：
 
-- 非流式：[`_convert_response`](d:\design\sglang\python\sglang\srt\entrypoints\anthropic\serving.py:641) 将文本与 `tool_calls` 转为 `AnthropicContentBlock`（[L656-677](d:\design\sglang\python\sglang\srt\entrypoints\anthropic\serving.py)）。
+- 非流式：[`_convert_response`](d:\design\sglang\python\sglang\srt\entrypoints\anthropic\serving.py) 将文本与 `tool_calls` 转为 `AnthropicContentBlock`（[L656-677](d:\design\sglang\python\sglang\srt\entrypoints\anthropic\serving.py)）。
 - 流式：首个 chunk 发 `message_start`（[L498-518](d:\design\sglang\python\sglang\srt\entrypoints\anthropic\serving.py)）；文本用 `content_block_start` + `content_block_delta`（`text_delta`）（[L612-638](d:\design\sglang\python\sglang\srt\entrypoints\anthropic\serving.py)）；工具流用 `content_block_start`（`tool_use`）与 `input_json_delta`（[L544-609](d:\design\sglang\python\sglang\srt\entrypoints\anthropic\serving.py)）；`[DONE]` 后 `message_delta`（usage + stop_reason）与 `message_stop`（[L443-479](d:\design\sglang\python\sglang\srt\entrypoints\anthropic\serving.py)）。
 
 ## CLI / 配置
@@ -91,10 +91,10 @@ flowchart LR
 | 类别 | 结果 |
 |------|------|
 | **sgl-kernel** | `anthropic/` 内 **0** 处匹配 |
-| **Import `from sglang.srt.entrypoints.anthropic`** | 仅 [http_server.py:64-68](d:\design\sglang\python\sglang\srt\entrypoints\http_server.py)、[test_anthropic_server.py:22-23](d:\design\sglang\test\registered\openai_server\basic\test_anthropic_server.py) |
-| **`http_server` 路由** | [`/v1/messages`](d:\design\sglang\python\sglang\srt\entrypoints\http_server.py:1743)、[`/v1/messages/count_tokens`](d:\design\sglang\python\sglang\srt\entrypoints\http_server.py:1753) |
+| **Import `from sglang.srt.entrypoints.anthropic`** | 仅 [http_server.py:64-68](d:\design\sglang\python\sglang\srt\entrypoints\http_server.py)、[test_anthropic_server.py:22-23](d:\design\sglang\test\registered\unit\entrypoints\anthropic\test_serving.py) |
+| **`http_server` 路由** | [`/v1/messages`](d:\design\sglang\python\sglang\srt\entrypoints\http_server.py)、[`/v1/messages/count_tokens`](d:\design\sglang\python\sglang\srt\entrypoints\http_server.py) |
 | **CLI `--anthropic-*`** | `python/sglang` 下 **未** 发现服务端 argparse 的 `--anthropic-*`；[`scripts/ci_monitor/ci_auto_bisect.py`](d:\design\sglang\scripts\ci_monitor\ci_auto_bisect.py) 含 `--anthropic-api-key`（CI 工具） |
-| **Tests** | [test/registered/openai_server/basic/test_anthropic_server.py](d:\design\sglang\test\registered\openai_server\basic\test_anthropic_server.py)、[test/registered/openai_server/function_call/test_anthropic_tool_use.py](d:\design\sglang\test\registered\openai_server\function_call\test_anthropic_tool_use.py)、[test/manual/vlm/test_anthropic_vision.py](d:\design\sglang\test\manual\vlm\test_anthropic_vision.py) |
+| **Tests** | [test/registered/openai_server/basic/test_anthropic_server.py](d:\design\sglang\test\registered\unit\entrypoints\anthropic\test_serving.py)、[test/registered/openai_server/function_call/test_anthropic_tool_use.py](d:\design\sglang\test\registered\openai_server\function_call\test_anthropic_tool_use.py)、[test/manual/vlm/test_anthropic_vision.py](d:\design\sglang\test\manual\vlm\test_anthropic_vision.py) |
 | **Docs** | `docs/` 下 **未** 检索到 dedicated 的 Anthropic HTTP `/v1/messages` 说明 |
 
 ## Notes / Caveats

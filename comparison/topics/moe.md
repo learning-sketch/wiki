@@ -44,7 +44,7 @@ related:
 |---|---|
 | **MindIE** | [`runtime/layers/fused_moe/`](d:\design\MindIE-LLM\mindie_llm\runtime\layers\fused_moe)（6 .py）+ [`runtime/models/{deepseek_v3,deepseek_v32,qwen3_moe}/`](d:\design\MindIE-LLM\mindie_llm\runtime\models) + [`src/kernels/mie_ops/csrc/mc2/dispatch_ffn_combine/`](d:\design\MindIE-LLM\src\kernels\mie_ops\csrc\mc2\dispatch_ffn_combine)（6 .cpp）。详 `mindie/topics/moe.md`（已删） |
 | **vLLM**（fresh grep） | [`model_executor/layers/fused_moe/`](d:\design\vllm\vllm\model_executor\layers\fused_moe) **68 .py**（含 `prepare_finalize/` 7 + `runner/` 6 + `router/` 13 + `experts/` 8 + `oracle/` 6 子包）+ [`distributed/eplb/`](d:\design\vllm\vllm\distributed\eplb) 9 .py + [`distributed/elastic_ep/`](d:\design\vllm\vllm\distributed\elastic_ep) 3 .py + [`csrc/moe/`](d:\design\vllm\csrc\moe) 13 .cu。配置入口 [config/parallel.py](d:\design\vllm\vllm\config\parallel.py) + [config/kernel.py](d:\design\vllm\vllm\config\kernel.py)；通信 [device_communicators/all2all.py](d:\design\vllm\vllm\distributed\device_communicators\all2all.py)；EPLB 触发 [v1/worker/gpu/eplb_utils.py](d:\design\vllm\vllm\v1\worker\gpu\eplb_utils.py) |
-| **SGLang** | [`srt/layers/moe/`](d:\design\sglang\python\sglang\srt\layers\moe) 42 .py + [`srt/eplb/`](d:\design\sglang\python\sglang\srt\eplb) 12 + [`srt/elastic_ep/`](d:\design\sglang\python\sglang\srt\elastic_ep) 3 + [`srt/batch_overlap/`](d:\design\sglang\python\sglang\srt\batch_overlap) 2 + [`sgl-kernel/csrc/moe/`](d:\design\sglang\sgl-kernel\csrc\moe)。详 [sglang/topics/moe.md](../../sglang/topics/moe.md)（30 KB seed） |
+| **SGLang** | [`srt/layers/moe/`](d:\design\sglang\python\sglang\srt\layers\moe) 42 .py + [`srt/eplb/`](d:\design\sglang\python\sglang\srt\eplb) 12 + [`srt/elastic_ep/`](d:\design\sglang\python\sglang\srt\elastic_ep) 3 + [`srt/batch_overlap/`](d:\design\sglang\python\sglang\srt\batch_overlap) 2 + [`sgl-kernel/csrc/moe/`](d:\design\sglang\python\sglang\kernels\aot\csrc\moe)。详 [sglang/topics/moe.md](../../sglang/topics/moe.md)（30 KB seed） |
 
 ## 三方对照表（13 子维度）
 
@@ -133,8 +133,8 @@ related:
 
 | 维度 | MindIE | vLLM | SGLang |
 |---|---|---|---|
-| 顶层 C++/CUDA 目录 | [`src/kernels/mie_ops/csrc/mc2/dispatch_ffn_combine/`](d:\design\MindIE-LLM\src\kernels\mie_ops\csrc\mc2\dispatch_ffn_combine) **6 .cpp**（op_host + op_kernel + op_api 三层） | [`csrc/moe/`](d:\design\vllm\csrc\moe) **13 .cu**（含 `permute_unpermute_kernels/` + `marlin_moe_wna16/` + `mxfp8_moe/` 子目录） | [`sgl-kernel/csrc/moe/`](d:\design\sglang\sgl-kernel\csrc\moe) ~14 算子 + [`sgl-kernel/csrc/cpu/moe.cpp`](d:\design\sglang\sgl-kernel\csrc\cpu\moe.cpp) + 量化变体 |
-| **DeepSeek-V3 专属 router gemm** | **N/A**（DeepSeek 路由走 `experts_selector.select_experts` Python 调 `torch_npu.npu_moe_gating_top_k`） | ✅ [`csrc/moe/dsv3_router_gemm_{bf16,float}_out.cu`](d:\design\vllm\csrc\moe) + 入口 `dsv3_router_gemm_entry.cu`——**与 SGLang 同款命名** | ✅ [`sgl-kernel/csrc/gemm/dsv3_router_gemm_{bf16,float}_out.cu`](d:\design\sglang\sgl-kernel\csrc\gemm) + `dsv3_fused_a_gemm`（RMSNorm+量化+下投影 GEMM） |
+| 顶层 C++/CUDA 目录 | [`src/kernels/mie_ops/csrc/mc2/dispatch_ffn_combine/`](d:\design\MindIE-LLM\src\kernels\mie_ops\csrc\mc2\dispatch_ffn_combine) **6 .cpp**（op_host + op_kernel + op_api 三层） | [`csrc/moe/`](d:\design\vllm\csrc\moe) **13 .cu**（含 `permute_unpermute_kernels/` + `marlin_moe_wna16/` + `mxfp8_moe/` 子目录） | [`sgl-kernel/csrc/moe/`](d:\design\sglang\python\sglang\kernels\aot\csrc\moe) ~14 算子 + [`sgl-kernel/csrc/cpu/moe.cpp`](d:\design\sglang\python\sglang\kernels\aot\csrc\cpu\moe.cpp) + 量化变体 |
+| **DeepSeek-V3 专属 router gemm** | **N/A**（DeepSeek 路由走 `experts_selector.select_experts` Python 调 `torch_npu.npu_moe_gating_top_k`） | ✅ [`csrc/moe/dsv3_router_gemm_{bf16,float}_out.cu`](d:\design\vllm\csrc\moe) + 入口 `dsv3_router_gemm_entry.cu`——**与 SGLang 同款命名** | ✅ [`sgl-kernel/csrc/gemm/dsv3_router_gemm_{bf16,float}_out.cu`](d:\design\sglang\python\sglang\kernels\aot\csrc\gemm) + `dsv3_fused_a_gemm`（RMSNorm+量化+下投影 GEMM） |
 | **dispatch+FFN+combine 单算子融合** | ✅ **唯一**：`npu_dispatch_ffn_combine` ACLNN op | **N/A (verified 2026-04-19)**——prepare_finalize 与 expert kernel 仍独立 | **N/A (verified 2026-04-19)**——`fuseep` 仅融合 dispatch+combine，FFN 独立 |
 | **moe_align / topk / moe_sum** | NPU 算子 (`npu_moe_init_routing_v2` / `npu_moe_token_unpermute`) | `moe_align_sum_kernels.cu` + `topk_softmax_kernels.cu` + `grouped_topk_kernels.cu` + `moe_permute_unpermute_op.cu` | `moe_align_block_size` + `topk_softmax`/`topk_sigmoid`/`fast_topk` + `moe_sum`/`moe_sum_reduce` + `moe_fused_gate` + `kimi_k2_moe_fused_gate` |
 | **量化 grouped MM** | NPU 算子（依赖 ATB） | Marlin (`marlin_moe_wna16/ops.cu`) + Mxfp8 cutlass + WNA16 (`moe_wna16.cu`) | Cutlass W4A8 (`cutlass_w4a8_moe_mm`) + GGUF (`gguf/moe.cuh`+`moe_vec.cuh`) + Marlin (`gemm/marlin/dequant.h`) |
@@ -151,7 +151,7 @@ related:
 
 | 维度 | MindIE | vLLM | SGLang |
 |---|---|---|---|
-| 录制实现 | **N/A (verified 2026-04-19)**——`mindie_llm/runtime/` grep `expert_distribution`/`expert_balance` **0 命中** | ✅ via EPLB `EplbState.add_model` 内建 ([eplb_state.py:241](d:\design\vllm\vllm\distributed\eplb\eplb_state.py))；`EplbConfig.window_size=1000` + `log_balancedness` ([parallel.py:58,71-78](d:\design\vllm\vllm\config\parallel.py)) | ✅ `ExpertDistributionRecorder` + [`routed_experts_capturer.py`](d:\design\sglang\python\sglang\srt\layers\moe\routed_experts_capturer.py) `_RoutedExpertsDeviceCache` |
+| 录制实现 | **N/A (verified 2026-04-19)**——`mindie_llm/runtime/` grep `expert_distribution`/`expert_balance` **0 命中** | ✅ via EPLB `EplbState.add_model` 内建 ([eplb_state.py:241](d:\design\vllm\vllm\distributed\eplb\eplb_state.py))；`EplbConfig.window_size=1000` + `log_balancedness` ([parallel.py:58,71-78](d:\design\vllm\vllm\config\parallel.py)) | ✅ `ExpertDistributionRecorder` + [`routed_experts_capturer.py`](d:\design\sglang\python\sglang\srt\state_capturer\routed_experts.py) `_RoutedExpertsDeviceCache` |
 | 跨项目继承 | N/A | **vLLM 端 [`routed_experts_capturer.py:4`](d:\design\vllm\vllm\model_executor\layers\fused_moe\routed_experts_capturer.py) 文件头注释 `# https://github.com/sgl-project/sglang/blob/.../routed_experts_capturer.py` —— 直接拷贝自 SGLang**（synthesis：跨项目代码继承的稀有显式案例） | ✅ 原始实现 |
 
 ### 12. 量化 MoE 方法
@@ -258,7 +258,7 @@ related:
 
 > [!todo] VERIFY: vLLM `routed_experts_capturer.py` 注释引用 SGLang commit `bed301a5acaa9577c9aa706468bdf242f6a43051`——与 SGLang 当前 HEAD 之间是否有功能 drift？若 drift，vLLM 端是否落后？
 
-> [!todo] VERIFY: MindIE `mie_ops.npu_dispatch_ffn_combine` 与 SGLang `NpuFuseEPDispatcher`（[fuseep.py:43](d:\design\sglang\python\sglang\srt\layers\moe\token_dispatcher\fuseep.py)）在 NPU 上的实测吞吐差异——前者把 FFN 合进单算子（理论 latency 低），后者 FFN 独立（quant 切换灵活）。生产 DeepSeek-V3 部署上谁 ROI 高需 benchmark。
+> [!todo] VERIFY: MindIE `mie_ops.npu_dispatch_ffn_combine` 与 SGLang `NpuFuseEPDispatcher`（[fuseep.py:43](d:\design\sglang\python\sglang\srt\hardware_backend\npu\moe\fuseep.py)）在 NPU 上的实测吞吐差异——前者把 FFN 合进单算子（理论 latency 低），后者 FFN 独立（quant 切换灵活）。生产 DeepSeek-V3 部署上谁 ROI 高需 benchmark。
 
 > [!todo] VERIFY: vLLM `enable_dbo` 默认 `False`、SGLang `--enable-two-batch-overlap` 默认 `False`——**为什么默认关？** 推测 micro-batch 切分对小 batch 不友好，但具体阈值（`dbo_*_token_threshold`）以下的 ROI 数据未见。
 
