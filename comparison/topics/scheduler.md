@@ -35,6 +35,8 @@ related:
   - sglang/topics/scheduler-mixins.md
 ---
 
+> [!todo] VERIFY: **vLLM pin 滞后提示（2026-08-18）**——本页 vLLM 列锚点最后核对于旧 pin `5f7fab88`；同日晚些时候 vLLM pin 已推进至 `d29dc3ab`（4273 commits，含 P2P connector 删除、`serve/disagg`→`scale_out` 迁移、fused_moe runner 重构、spec_decode 目录重组）。vLLM 列需按 [source-versions.md](../../source-versions.md) 新 pin 做一轮 verify pass；SGLang 列（f7101b0a）与 MindIE 列（f032cd3f）不受影响。
+
 # Cross-project Comparison: Scheduler
 
 > 三项目调度器对比。覆盖 [§dim-scheduler](../dimensions.md) 维度。

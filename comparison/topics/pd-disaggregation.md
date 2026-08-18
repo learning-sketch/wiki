@@ -70,6 +70,8 @@ related:
   - sglang/modules/disaggregation.md
 ---
 
+> [!todo] VERIFY: **vLLM pin 滞后提示（2026-08-18）**——本页 vLLM 列锚点最后核对于旧 pin `5f7fab88`；同日晚些时候 vLLM pin 已推进至 `d29dc3ab`（4273 commits，含 P2P connector 删除、`serve/disagg`→`scale_out` 迁移、fused_moe runner 重构、spec_decode 目录重组）。vLLM 列需按 [source-versions.md](../../source-versions.md) 新 pin 做一轮 verify pass；SGLang 列（f7101b0a）与 MindIE 列（f032cd3f）不受影响。
+
 # Cross-project Comparison: PD-Disaggregation (Prefill/Decode 分离)
 
 > 三项目 Prefill/Decode 分离实现对比。覆盖 [§dim-pd](../dimensions.md) 与 [§dim-kv-transfer](../dimensions.md) 维度。
@@ -166,7 +168,7 @@ flowchart TB
 - `KVConnectorRole {SCHEDULER, WORKER}`：[base.py:123-128](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\base.py)
 - Scheduler 集成：`self.connector` 字段 + `_try_promote_blocked_waiting_request` + `_update_waiting_for_remote_kv` + `_update_from_kv_xfer_finished`：[scheduler.py:120, 2036-2150](d:\design\vllm\vllm\v1\core\sched\scheduler.py)
 - 13 个 connector 实现（v1）：[kv_connector/v1/](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1) — `nixl/`, `mooncake/`, `moriio/`, `lmcache_integration/`, `hf3fs/`, `p2p/`, `offloading/`, `flexkv_connector.py`, `lmcache_connector.py`, `lmcache_mp_connector.py`, `multi_connector.py`, `simple_cpu_offload_connector.py`, `decode_bench_connector.py`, `example_*.py`
-- 服务前端：[entrypoints/serve/disagg/serving.py:46-393](d:\design\vllm\vllm\entrypoints\serve\disagg\serving.py)（`ServingTokens` 类，专门为"tokens-in tokens-out + `kv_transfer_params` 透传"设计）+ [api_router.py:46-105](d:\design\vllm\vllm\entrypoints\serve\disagg\api_router.py)（`/inference/v1/generate`）
+- 服务前端：[entrypoints/serve/disagg/serving.py:46-393](d:\design\vllm\vllm\entrypoints\scale_out)（`ServingTokens` 类，专门为"tokens-in tokens-out + `kv_transfer_params` 透传"设计）+ [api_router.py:46-105](d:\design\vllm\vllm\entrypoints\scale_out)（`/inference/v1/generate`）
 
 ### SGLang
 PD 是独立的 `disaggregation/` 子系统，scheduler 通过 `event_loop_normal_disagg_prefill` / `event_loop_normal_disagg_decode` 两条独立主循环跑（不与普通 `event_loop_normal` 共用）。
@@ -550,11 +552,11 @@ SGLang 还有 `DISAGGREGATION_TEST_FAILURE_PROB` env（[utils.py:168](d:\design\
 | 项目 | 入口 | 协议 | 锚点 |
 |---|---|---|---|
 | MindIE | 独立 `connector` 进程（用 `argparse` 起 `RequestListener`，shm 或 http 与上层通信） | shared_meme / http；`RequestRouter` 内部分发到 inference / pdlink / transfer / command / query 5 类 op | [connector/main.py](d:\design\MindIE-LLM\mindie_llm\connector\main.py), [connector/request_router/request_router.py](d:\design\MindIE-LLM\mindie_llm\connector\request_router\request_router.py)（`do_inference` / `do_pdlink` / `do_transfer` / `do_command` / `do_query`） |
-| vLLM | `entrypoints/serve/disagg/`：`ServingTokens` + `/inference/v1/generate` 端点 | OpenAI-like 但 **token-only**（不 detokenize）；含 `kv_transfer_params` 透传字段 | [serving.py:46-393](d:\design\vllm\vllm\entrypoints\serve\disagg\serving.py), [api_router.py:46-105](d:\design\vllm\vllm\entrypoints\serve\disagg\api_router.py)（含 `/abort_requests` 端点） |
+| vLLM | `entrypoints/serve/disagg/`：`ServingTokens` + `/inference/v1/generate` 端点 | OpenAI-like 但 **token-only**（不 detokenize）；含 `kv_transfer_params` 透传字段 | [serving.py:46-393](d:\design\vllm\vllm\entrypoints\scale_out), [api_router.py:46-105](d:\design\vllm\vllm\entrypoints\scale_out)（含 `/abort_requests` 端点） |
 | SGLang | 普通 `Engine` / OpenAI server，**`disaggregation_mode` 在 server_args 上**（启动时一次性决定整个进程角色；字段现为注解式定义 [server_args.py:3101-3105](d:\design\sglang\python\sglang\srt\server_args.py)） | OpenAI 等标准协议，PD 路由由请求中的 `bootstrap_room` 字段隐式决定 | [server_args.py:3101-3196](d:\design\sglang\python\sglang\srt\server_args.py), [scheduler.py:2420](d:\design\sglang\python\sglang\srt\managers\scheduler.py)（`disagg_prefill_dp_rank` 进入请求，~~L1849-1864~~ @f7101b0a 校正） |
 
 > synthesis: **前端边界**：
-> - vLLM 的 `/inference/v1/generate` 是为"**Disaggregated Everything**"场景设计的（含 `tokens_only` flag 与 `/abort_requests`）—— 注释里明示"to be used in a Disaggregated Everything setup"（[api_router.py:84-87](d:\design\vllm\vllm\entrypoints\serve\disagg\api_router.py)）
+> - vLLM 的 `/inference/v1/generate` 是为"**Disaggregated Everything**"场景设计的（含 `tokens_only` flag 与 `/abort_requests`）—— 注释里明示"to be used in a Disaggregated Everything setup"（[api_router.py:84-87](d:\design\vllm\vllm\entrypoints\scale_out)）
 > - MindIE 把 connector 做成独立进程，与 server 通过 shm/http 解耦，更适合"**多 server 共享一个 connector**"或"**connector 跑在专门 NIC 节点**"
 > - SGLang 不专门做 PD 前端，复用 OpenAI server，靠请求字段路由
 
@@ -660,7 +662,7 @@ SGLang 还有 `DISAGGREGATION_TEST_FAILURE_PROB` env（[utils.py:168](d:\design\
 ### 新增 follow-up（verify pass 中发现）
 
 > [!todo] VERIFY: MindIE `_fill_window_worker` / `_process_window_worker` 双线程在高并发链路抖动场景的行为，特别是 `window_size=16` 是否够（[separate_deployment_engine.py:424, 743-819](d:\design\MindIE-LLM\mindie_llm\text_generator\utils\separate_deployment_engine.py)）。
-> [!todo] VERIFY: vLLM `kv_transfer_params.do_remote_decode` 在 P 端何时被 set —— 需追上层 entrypoints/serve/disagg 路由器代码（[serving.py:229](d:\design\vllm\vllm\entrypoints\serve\disagg\serving.py) 把 `kv_transfer_params` 透传，但 set 点未确认）。
+> [!todo] VERIFY: vLLM `kv_transfer_params.do_remote_decode` 在 P 端何时被 set —— 需追上层 entrypoints/serve/disagg 路由器代码（[serving.py:229](d:\design\vllm\vllm\entrypoints\scale_out) 把 `kv_transfer_params` 透传，但 set 点未确认）。
 > [!todo] VERIFY: SGLang `process_disagg_prefill_inflight_queue`（[prefill.py:830](d:\design\sglang\python\sglang\srt\disaggregation\prefill.py)，~~L589-700~~ @f7101b0a 校正）如何在 KV transfer 失败时清理 inflight req——pin 期已新增 `handle_inflight_transfer_failure`（[prefill.py:937](d:\design\sglang\python\sglang\srt\disaggregation\prefill.py)），具体清理语义未逐行展开。
 > [!warning] CONTRADICTION (NEW): vLLM `kv_transfer_params["do_remote_prefill"]` 在 D 端的 req 上意为"让本地 D 去远端 P 拉 prefill"——这与字段名直觉相反（"do remote prefill" 听起来像 "本地做 remote prefill"）。这是 vLLM 命名混淆点，文档并未解释（[scheduler.py:282-302](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\nixl\scheduler.py) 的注释只说语义，不解释命名）。
 
