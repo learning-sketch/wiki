@@ -3,16 +3,16 @@ type: topic
 project: sglang
 status: verified
 confidence: high
-verified_against: 2026-08-10
+verified_against: 2026-08-18
 sources:
-  - d:\design\sglang\python\sglang\srt\managers\scheduler.py:L375-L382
-  - d:\design\sglang\python\sglang\srt\managers\scheduler.py:L634-L648
-  - d:\design\sglang\python\sglang\srt\managers\scheduler.py:L2008-L2147
-  - d:\design\sglang\python\sglang\srt\managers\scheduler.py:L3887-L3918
-  - d:\design\sglang\python\sglang\srt\managers\scheduler.py:L4861-L4889
+  - d:\design\sglang\python\sglang\srt\managers\scheduler.py:L383-L390
+  - d:\design\sglang\python\sglang\srt\managers\scheduler.py:L642-L656
+  - d:\design\sglang\python\sglang\srt\managers\scheduler.py:L2035-L2176
+  - d:\design\sglang\python\sglang\srt\managers\scheduler.py:L3922-L3957
+  - d:\design\sglang\python\sglang\srt\managers\scheduler.py:L4902-L4929
   - d:\design\sglang\python\sglang\srt\managers\scheduler_components\
   - d:\design\sglang\python\sglang\srt\managers\scheduler_pp_mixin.py:L67
-  - d:\design\sglang\python\sglang\srt\disaggregation\decode.py:L2112
+  - d:\design\sglang\python\sglang\srt\disaggregation\decode.py:L2137
   - d:\design\sglang\python\sglang\srt\disaggregation\prefill.py:L485
   - d:\design\sglang\python\sglang\srt\multiplex\multiplexing_mixin.py:L33
   - d:\design\sglang\python\sglang\srt\dllm\mixin\scheduler.py:L22
@@ -33,11 +33,11 @@ related:
 # Scheduler Mixin + Composition 架构
 
 > ~~[!warning] CONTRADICTION: 本页按 **11 mixin**（锚点 `scheduler.py:317-329`）撰写，但 HEAD `06f32bab` 上 `Scheduler` MRO 已变为 **6 mixin + `SchedulerMlxOverlapMixin`**；`SchedulerOutputProcessorMixin` / `SchedulerUpdateWeightsMixin` / `SchedulerProfilerMixin` / `SchedulerMetricsMixin` / `SchedulerRuntimeCheckerMixin` / `SchedulerDPAttnMixin` 源文件已删除，逻辑迁入 `managers/scheduler_components/`。~~
-> **RESOLVED 2026-08-10**: 本页已按 HEAD `06f32bab` **re-ingest**。权威 MRO 为 [scheduler.py:375-382](d:\design\sglang\python\sglang\srt\managers\scheduler.py)（6 mixin，含条件性 `SchedulerMlxOverlapMixin`）；横切职责走 [scheduler_components/](d:\design\sglang\python\sglang\srt\managers\scheduler_components) 组合对象。总览见 [entities/Scheduler.md](../entities/Scheduler.md)。
+> **RESOLVED 2026-08-10**: 本页已按 HEAD `06f32bab` **re-ingest**。权威 MRO 为 [scheduler.py:383-390](d:\design\sglang\python\sglang\srt\managers\scheduler.py)（6 mixin，含条件性 `SchedulerMlxOverlapMixin`；行号 @2026-08-18 增量核对）；横切职责走 [scheduler_components/](d:\design\sglang\python\sglang\srt\managers\scheduler_components) 组合对象。总览见 [entities/Scheduler.md](../entities/Scheduler.md)。
 
 ## Summary
 
-synthesis: HEAD `06f32bab` 上 SGLang `Scheduler` 采用 **少量 mixin（事件循环 / PD / PP / DLLM / MLX）+ 大量 composition（`scheduler_components/`）**。[scheduler.py:375-382](d:\design\sglang\python\sglang\srt\managers\scheduler.py) 的 MRO 只剩 6 个基类；原先 OutputProcessor / UpdateWeights / Profiler / Metrics / RuntimeChecker / DPAttn 等已从多重继承拆成可测试的组合对象（[scheduler.py:634-648](d:\design\sglang\python\sglang\srt\managers\scheduler.py)、[L2008-2147](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）。
+synthesis: HEAD `f7101b0a` 上 SGLang `Scheduler` 采用 **少量 mixin（事件循环 / PD / PP / DLLM / MLX）+ 大量 composition（`scheduler_components/`）**。[scheduler.py:383-390](d:\design\sglang\python\sglang\srt\managers\scheduler.py) 的 MRO 只剩 6 个基类；原先 OutputProcessor / UpdateWeights / Profiler / Metrics / RuntimeChecker / DPAttn 等已从多重继承拆成可测试的组合对象（[scheduler.py:642-656](d:\design\sglang\python\sglang\srt\managers\scheduler.py)、[L2035-2176](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）。
 
 ## Sources
 
@@ -45,19 +45,19 @@ synthesis: HEAD `06f32bab` 上 SGLang `Scheduler` 采用 **少量 mixin（事件
 
 | # | Mixin | 文件 | 类定义行 |
 |---|---|---|---|
-| 1 | `SchedulerDisaggregationDecodeMixin` | [disaggregation/decode.py:2112](d:\design\sglang\python\sglang\srt\disaggregation\decode.py) | L2112 |
+| 1 | `SchedulerDisaggregationDecodeMixin` | [disaggregation/decode.py:2137](d:\design\sglang\python\sglang\srt\disaggregation\decode.py) | L2137 |
 | 2 | `SchedulerDisaggregationPrefillMixin` | [disaggregation/prefill.py:485](d:\design\sglang\python\sglang\srt\disaggregation\prefill.py) | L485 |
 | 3 | `SchedulerMultiplexMixin` | [multiplex/multiplexing_mixin.py:33](d:\design\sglang\python\sglang\srt\multiplex\multiplexing_mixin.py) | L33 |
 | 4 | `SchedulerPPMixin` | [scheduler_pp_mixin.py:67](d:\design\sglang\python\sglang\srt\managers\scheduler_pp_mixin.py) | L67 |
 | 5 | `SchedulerDllmMixin` | [dllm/mixin/scheduler.py:22](d:\design\sglang\python\sglang\srt\dllm\mixin\scheduler.py) | L22 |
-| 6 | `SchedulerMlxOverlapMixin` | [hardware_backend/mlx/scheduler_mixin.py:73](d:\design\sglang\python\sglang\srt\hardware_backend\mlx\scheduler_mixin.py)（非 MPS 时 [scheduler.py:330-331](d:\design\sglang\python\sglang\srt\managers\scheduler.py) stub） | L73 / stub |
+| 6 | `SchedulerMlxOverlapMixin` | [hardware_backend/mlx/scheduler_mixin.py:73](d:\design\sglang\python\sglang\srt\hardware_backend\mlx\scheduler_mixin.py)（非 MPS 时 [scheduler.py:338-339](d:\design\sglang\python\sglang\srt\managers\scheduler.py) stub） | L73 / stub |
 
-声明顺序权威：[scheduler.py:375-382](d:\design\sglang\python\sglang\srt\managers\scheduler.py)。
+声明顺序权威：[scheduler.py:383-390](d:\design\sglang\python\sglang\srt\managers\scheduler.py)。
 
 ### Composition 目录
 
-- [d:\design\sglang\python\sglang\srt\managers\scheduler_components\](d:\design\sglang\python\sglang\srt\managers\scheduler_components)（19 模块 + `__init__.py`）
-- 组件装配入口：[scheduler.py:634-648](d:\design\sglang\python\sglang\srt\managers\scheduler.py)、各 `init_*` 于 [L2008-2147](d:\design\sglang\python\sglang\srt\managers\scheduler.py)
+- [d:\design\sglang\python\sglang\srt\managers\scheduler_components\](d:\design\sglang\python\sglang\srt\managers\scheduler_components)（19 模块 + `__init__.py`，@2026-08-18 复核数量不变）
+- 组件装配入口：[scheduler.py:642-656](d:\design\sglang\python\sglang\srt\managers\scheduler.py)、各 `init_*` 于 [L2035-2176](d:\design\sglang\python\sglang\srt\managers\scheduler.py)（`init_metrics_reporter` 已提前至 [L1198](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）
 
 ## Architecture / Data flow
 

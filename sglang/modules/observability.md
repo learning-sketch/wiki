@@ -3,8 +3,9 @@ type: module
 project: sglang
 status: verified
 confidence: high
-verified_against: 2026-04-19
+verified_against: 2026-08-18 (increment pass; 正文主体锚点为 2026-04-19 版)
 sources:
+  - d:\design\sglang\python\sglang\srt\observability\trace_async.py
   - d:\design\sglang\python\sglang\srt\observability\metrics_collector.py
   - d:\design\sglang\python\sglang\srt\observability\request_metrics_exporter.py
   - d:\design\sglang\python\sglang\srt\observability\trace.py
@@ -194,6 +195,14 @@ flowchart TB
 | **SGLang（本页）** | 指标集中在 [`observability/metrics_collector.py`](d:\design\sglang\python\sglang\srt\observability\metrics_collector.py)；与调度强耦合的 mixin [`scheduler_metrics_mixin.py`](d:\design\sglang\python\sglang\srt\observability\scheduler_metrics_mixin.py)；OTel 在 [`trace.py`](d:\design\sglang\python\sglang\srt\observability\trace.py) |
 | **vLLM** | [`vllm/v1/metrics/`](d:\design\vllm\vllm\v1\metrics)（如 [`prometheus.py`](d:\design\vllm\vllm\v1\metrics\prometheus.py) 的 `setup_multiprocess_prometheus`）—— synthesis: 同样使用 `PROMETHEUS_MULTIPROC_DIR` + 多进程收集器模式 |
 | **MindIE** | 本工作区 `mindie/` wiki 已删除（2026-08-10）；MindIE 通常有独立监控导出管线 |
+
+## Increment 2026-08-18 (06f32bab → f7101b0a)
+
+- **新文件 [`trace_async.py`](d:\design\sglang\python\sglang\srt\observability\trace_async.py)（1036 行）**：tracing v2 异步导出（commit `fb3d1419fd` "[tracing] sglang tracing v2: support exporting tracing data asynchronously" #30023）。`SGLANG_TRACE_ASYNC=1` 时 trace 操作按请求缓冲，经 **ZMQ PUSH/PULL 发到独立 exporter 进程**回放为真实 `TraceReqContext`，把 OTel 开销移出 scheduler/tokenizer 热路径（docstring [trace_async.py:L14-19](d:\design\sglang\python\sglang\srt\observability\trace_async.py)；`_TraceExporterProcess(multiprocessing.Process)` [L243](d:\design\sglang\python\sglang\srt\observability\trace_async.py)、`TraceReqContextAsync` [L534](d:\design\sglang\python\sglang\srt\observability\trace_async.py)、`start_trace_exporter` [L133](d:\design\sglang\python\sglang\srt\observability\trace_async.py)）。
+- 本子树 06f32bab→HEAD diff = +1146/-25：除新文件外仅 [`trace.py`](d:\design\sglang\python\sglang\srt\observability\trace.py)（+76）、[`req_time_stats.py`](d:\design\sglang\python\sglang\srt\observability\req_time_stats.py)（+53）、[`metrics_collector.py`](d:\design\sglang\python\sglang\srt\observability\metrics_collector.py)（+6）小改，正文既有锚点大体仍有效。
+- **文件数修正**：HEAD 下 **14** 个 `.py`；`git ls-tree` 核对 pin `06f32bab` 时已是 **13** 个（含 `forward_pass_metrics.py` / `mooncake_trace.py` / `ray_wrappers.py` / `startup_time.py`，且 `scheduler_metrics_mixin.py` 早在 pin 前已被 commit `fd97fbb096` #25630 删除）——正文「10 个 `.py`」与 File inventory、frontmatter sources 里的 `scheduler_metrics_mixin.py` 均为 2026-04-19 旧口径，早于本次 increment 即已漂移。
+
+> [!todo] VERIFY: `scheduler_metrics_mixin.py` 删除后 `report_prefill_stats` / `report_decode_stats` 等锚点迁往 `SchedulerMetricsReporter`（#25630）的新位置未逐一重核；File inventory 需按 14 文件重写。
 
 ## Notes / Caveats
 

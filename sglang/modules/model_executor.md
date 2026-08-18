@@ -3,7 +3,7 @@ type: module
 project: sglang
 status: stale
 confidence: high
-verified_against: 2026-04-19
+verified_against: 2026-08-18 (increment pass; 正文主体锚点为 2026-04-19 版，status 保持 stale——正文文件清单与目录结构已大幅漂移未重核)
 sources:
   - d:\design\sglang\python\sglang\srt\model_executor
   - d:\design\sglang\python\sglang\srt\model_executor\model_runner.py
@@ -227,6 +227,15 @@ flowchart LR
 | **Attention backend dispatch** | C++ 内嵌 + Python wrapper | 多 backend（FlashAttention / FlexAttention / Triton 等） | `ATTENTION_BACKENDS` 注册表 + 混合 prefill/decode 路径 |
 
 详细 11 子维度对比见 [`comparison/topics/executor-worker.md`](../../comparison/topics/executor-worker.md)；维度索引 [`comparison/dimensions.md §dim-executor`](../../comparison/dimensions.md)。
+
+## Increment 2026-08-18 (06f32bab → f7101b0a)
+
+- 本子树 06f32bab→HEAD diff = **25 文件 / +1528 / -351**（`git diff --stat` 实测，churn ≈ 1879 行）。文件数：`git ls-tree` @06f32bab = **54** 个 `.py`（与 index 记录一致），HEAD = **56**（+2）。正文「13 个 `.py`」为 2026-04-19 旧口径，目录已重组出 `model_runner_components/`、`runner/`、`runner_backend/`、`runner_utils/` 等子包（本 increment 仅实地 ls 确认存在，未逐一 ingest）。
+- **新文件 [`step_span_utils.py`](d:\design\sglang\python\sglang\srt\model_executor\step_span_utils.py)**（139 行，commit `fc0b95e7ba` "Profiling Enhancements [2/3]: detailed execution step annotations" #24911）：为 profiler 提供每步执行的细粒度标注后缀（`build_detailed_annotation_suffix` [L75](d:\design\sglang\python\sglang\srt\model_executor\step_span_utils.py)、开关 `set_detailed_annotations_enabled` [L40](d:\design\sglang\python\sglang\srt\model_executor\step_span_utils.py)）。
+- **新文件 [`model_runner_components/startup_weight_load.py`](d:\design\sglang\python\sglang\srt\model_executor\model_runner_components\startup_weight_load.py)**（589 行，commit `6b94d39f13` #32017）：启动期 checkpoint staging 与 CUDA graph capture 重叠，`StartupWeightLoadManager` [L238](d:\design\sglang\python\sglang\srt\model_executor\model_runner_components\startup_weight_load.py)；详见 [model_loader.md](model_loader.md) 的同名 increment 条目。
+- **重命名**：`runner_utils/war_event.py` → [`runner_utils/shared_read_event.py`](d:\design\sglang\python\sglang\srt\model_executor\runner_utils\shared_read_event.py)（commit `0f7aaceda5` "[misc] Rename the WAR read-done fastpath to shared-read-done" #34916，+20/- 行级小改；涉及该文件的旧锚点需改路径）。
+
+> [!todo] VERIFY: `model_runner_components/` 共 14 个文件（attention_backend_setup / cuda_graph_setup / kv_pool_runtime / weight_updater 等）与 `runner/` / `runner_backend/` 子包均未 ingest；正文 File inventory 需按 56 文件的新目录树重写。
 
 ## Notes / Caveats
 

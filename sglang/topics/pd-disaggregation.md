@@ -1,12 +1,12 @@
 ---
 type: topic
 project: sglang
-status: stale
+status: verified
 confidence: high
-verified_against: 2026-04-19
+verified_against: 2026-08-18
 sources:
-  - d:\design\sglang\python\sglang\srt\disaggregation\utils.py:L304-L309
-  - d:\design\sglang\python\sglang\srt\disaggregation\utils.py:L342-L431
+  - d:\design\sglang\python\sglang\srt\disaggregation\utils.py:L592-L605
+  - d:\design\sglang\python\sglang\srt\disaggregation\utils.py:L609-L721
   - d:\design\sglang\python\sglang\srt\disaggregation\base\conn.py
   - d:\design\sglang\python\sglang\srt\disaggregation\common\conn.py
   - d:\design\sglang\python\sglang\srt\disaggregation\mooncake\conn.py
@@ -15,17 +15,18 @@ sources:
   - d:\design\sglang\python\sglang\srt\disaggregation\ascend\conn.py
   - d:\design\sglang\python\sglang\srt\disaggregation\ascend\transfer_engine.py
   - d:\design\sglang\python\sglang\srt\disaggregation\fake\conn.py
-  - d:\design\sglang\python\sglang\srt\disaggregation\decode.py:L1171-L1370
-  - d:\design\sglang\python\sglang\srt\disaggregation\prefill.py:L355-L800
+  - d:\design\sglang\python\sglang\srt\disaggregation\decode.py:L2137-L2372
+  - d:\design\sglang\python\sglang\srt\disaggregation\prefill.py:L485-L1361
   - d:\design\sglang\python\sglang\srt\disaggregation\encode_server.py
   - d:\design\sglang\python\sglang\srt\disaggregation\encode_receiver.py
   - d:\design\sglang\python\sglang\srt\disaggregation\encode_grpc_server.py
-  - d:\design\sglang\python\sglang\srt\managers\scheduler.py:L317-L329
-  - d:\design\sglang\python\sglang\srt\managers\scheduler.py:L1051-L1182
-  - d:\design\sglang\python\sglang\srt\managers\scheduler.py:L3628-L3654
+  - d:\design\sglang\python\sglang\srt\managers\scheduler.py:L383-L390
+  - d:\design\sglang\python\sglang\srt\managers\scheduler.py:L1286-L1440
+  - d:\design\sglang\python\sglang\srt\managers\scheduler.py:L4902-L4931
   - d:\design\sglang\python\sglang\srt\managers\disagg_service.py
-  - d:\design\sglang\python\sglang\srt\managers\scheduler_pp_mixin.py:L148, L324
-  - d:\design\sglang\python\sglang\srt\server_args.py:L160, L212, L706-L718, L3537-L3603, L6138-L6215, L6510-L6523
+  - d:\design\sglang\python\sglang\srt\managers\scheduler_pp_mixin.py:L178, L364
+  - d:\design\sglang\python\sglang\srt\server_args.py:L236-L243, L324-L329, L3101-L3196, L7731-L7749, L9206-L9219
+  - d:\design\sglang\python\sglang\srt\arg_groups\pd_disaggregation_hook.py
 related:
   - sglang/modules/disaggregation.md
   - sglang/modules/multimodal.md

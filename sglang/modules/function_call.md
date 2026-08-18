@@ -3,7 +3,7 @@ type: module
 project: sglang
 status: stale
 confidence: high
-verified_against: 2026-04-19
+verified_against: 2026-08-18 (increment pass; 正文主体锚点为 2026-04-19 版，文件/注册表计数已在 Increment 小节修正)
 sources:
   - d:\design\sglang\python\sglang\srt\function_call\function_call_parser.py
   - d:\design\sglang\python\sglang\srt\function_call\base_format_detector.py
@@ -212,6 +212,12 @@ flowchart TD
 | `ToolCallParserEnum` 字符串键 | **24**（含别名键；见 [`function_call_parser.py:53-78`](d:\design\sglang\python\sglang\srt\function_call\function_call_parser.py)） |
 | 独立 detector 源文件 | **21**（另 5 个为核心/工具/编排/json_array） |
 | DeepSeek 变体 | 代码上 **3** 个类 + **3** 个 CLI 键（v3/v31/v32）；CLI 与类均为三分 |
+
+## Increment 2026-08-18 (06f32bab → f7101b0a)
+
+- **新模型族 Muse Glimmer**（commit `fde9ad2531` "[Feature] Add Muse Glimmer model support" #34262）：新增 [`muse_glimmer_detector.py`](d:\design\sglang\python\sglang\srt\function_call\muse_glimmer_detector.py)（264 行，`MuseGlimmerDetector(BaseFormatDetector)` [L72](d:\design\sglang\python\sglang\srt\function_call\muse_glimmer_detector.py)）与 [`muse_glimmer_format.py`](d:\design\sglang\python\sglang\srt\function_call\muse_glimmer_format.py)（54 行）；注册键 `"muse"` 见 [`function_call_parser.py:L82`](d:\design\sglang\python\sglang\srt\function_call\function_call_parser.py)（import 在 [L40](d:\design\sglang\python\sglang\srt\function_call\function_call_parser.py)）。
+- **计数重核**（`git ls-tree` + 实地正则统计）：文件数 @06f32bab = **37**（与 index 记录一致）→ HEAD = **39**；`ToolCallParserEnum` 注册键 @06f32bab = **33** → HEAD = **34**（`ToolCallParserEnum` 定义现位于 [`function_call_parser.py:L64`](d:\design\sglang\python\sglang\srt\function_call\function_call_parser.py)）。正文「26 个 `.py` / 24 键 / 21 detector」为 2026-04-19 旧口径，pin 时即已漂移。
+- 本子树 06f32bab→HEAD diff = 6 文件 / +401 / -19，除 Muse Glimmer 外均为小改，正文既有锚点大体仍有效。
 
 ## Notes / Caveats
 
