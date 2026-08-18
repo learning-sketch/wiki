@@ -7,7 +7,7 @@ verified_against: 2026-04-19
 sources:
   - d:\design\sglang\python\sglang\srt\managers\scheduler.py
   - d:\design\sglang\python\sglang\srt\managers\scheduler_output_processor_mixin.py
-  - d:\design\sglang\python\sglang\srt\managers\scheduler_update_weights_mixin.py
+  - d:\design\sglang\python\sglang\srt\managers\scheduler_components\weight_updater.py
   - d:\design\sglang\python\sglang\srt\managers\scheduler_profiler_mixin.py
   - d:\design\sglang\python\sglang\srt\managers\scheduler_runtime_checker_mixin.py
   - d:\design\sglang\python\sglang\srt\managers\scheduler_pp_mixin.py
@@ -187,7 +187,7 @@ related:
 | **跨语言集成测试成本** | 高（C++ + Python 双 fixture） | 低（纯 pytest） | 低（纯 pytest） |
 | **热替换 schedule 算法** | ❌ rebuild + 重启 | ⚠️ monkey-patch（`self.scheduler` 对象需 swap） | ⚠️ monkey-patch（mixin MRO 类创建时已绑） |
 | **运行时 PD 角色切换** | ✅ `SwitchRole()` 一等公民 ([scheduler.h:112](d:\design\MindIE-LLM\src\scheduler\scheduler.h)、[generator.py:150-152](d:\design\MindIE-LLM\mindie_llm\text_generator\generator.py)) | ❌ `kv_role` 启动定 | ❌ `disaggregation_mode` 启动定 |
-| **Live weight update** | ❌（待 ingest） | ✅ `Scheduler.reset_prefix_cache` + `EngineCore.profile/reset_*` ([core.py:580-624](d:\design\vllm\vllm\v1\engine\core.py)) | ✅ `SchedulerUpdateWeightsMixin.update_weights_from_{disk,distributed,tensor,ipc}` ([scheduler_update_weights_mixin.py:46-106](d:\design\sglang\python\sglang\srt\managers\scheduler_update_weights_mixin.py)) |
+| **Live weight update** | ❌（待 ingest） | ✅ `Scheduler.reset_prefix_cache` + `EngineCore.profile/reset_*` ([core.py:580-624](d:\design\vllm\vllm\v1\engine\core.py)) | ✅ `SchedulerUpdateWeightsMixin.update_weights_from_{disk,distributed,tensor,ipc}` ([scheduler_components/weight_updater.py:46-106](d:\design\sglang\python\sglang\srt\managers\scheduler_components\weight_updater.py)) |
 
 `synthesis:` MindIE C++ Policy 是真独立单元，测试粒度最细；SGLang mixin "独立性是名义上的"，源于 `def foo(self: Scheduler, ...)` 签名隐含完整 Scheduler 依赖（详 [scheduler-mixins.md "为什么用 mixin"](../../sglang/topics/scheduler-mixins.md)）。MindIE 在 **PD 角色切换 + Policy 替换**最强；vLLM/SGLang 在 **weight update** 接口最清晰。三家都**不**支持"运行时换 schedule 算法"——核心调度逻辑改动都要重启。
 

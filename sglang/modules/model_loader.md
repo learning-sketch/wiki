@@ -1,10 +1,12 @@
 ---
 type: module
 project: sglang
-status: verified
+status: stale
 confidence: high
-verified_against: 2026-04-19
+verified_against: 2026-08-18 (increment pass; 正文主体锚点为 2026-04-19 版)
 sources:
+  - d:\design\sglang\python\sglang\srt\model_loader\gguf_name_maps.py
+  - d:\design\sglang\python\sglang\srt\model_executor\model_runner_components\startup_weight_load.py
   - d:\design\sglang\python\sglang\srt\model_loader\__init__.py
   - d:\design\sglang\python\sglang\srt\model_loader\loader.py
   - d:\design\sglang\python\sglang\srt\model_loader\weight_utils.py
@@ -21,6 +23,8 @@ related:
   - sglang/modules/lora.md
   - sglang/index.md
 ---
+
+> [!todo] VERIFY: **lint 2026-08-18** — 本页正文存在 **8** 处源码死锚（多为 sglang 上游 test 树重组 / docs 站点 mdx 化 / 文件迁移所致，锚点写于 2026-04 快照），已按 §7 标 `status: stale`，待重校对。死锚清单见 log.md lint entry。
 
 # `srt/model_loader` — 启动期权重管线（`LoadFormat` → `*ModelLoader`）
 
@@ -203,7 +207,7 @@ flowchart TD
 
 ### 1. `sgl-kernel` C++ 绑定
 
-在 [`d:\design\sglang\sgl-kernel\`](d:\design\sglang\sgl-kernel) 全树 grep `model_loader` / `ModelLoader`：**0 命中**（本模块纯 Python + PyTorch）。
+在 [`d:\design\sglang\sgl-kernel\`](d:\design\sglang\python\sglang\kernels\aot) 全树 grep `model_loader` / `ModelLoader`：**0 命中**（本模块纯 Python + PyTorch）。
 
 ### 2. 协作 import（`srt/`，排除 `model_loader/` 自身）
 
@@ -275,6 +279,14 @@ SGLang 在之上叠加：`REMOTE` / `REMOTE_INSTANCE` / `FLASH_RL` / `RUNAI_STRE
 | `LoadFormat` 枚举成员数 | **19** |
 | `BaseModelLoader` 的具体子类数 | **11** |
 | `LOAD_FORMAT_CHOICES`（CLI）项数 | **16** |
+
+## Increment 2026-08-18 (06f32bab → f7101b0a)
+
+- **GGUF 原生加载**（commit `fde9ad2531` #34262，随 Muse Glimmer 模型族引入）：新文件 [`model_loader/gguf_name_maps.py`](d:\design\sglang\python\sglang\srt\model_loader\gguf_name_maps.py)（72 行）为 **上游 gguf-py 不认识的架构**手写 `{gguf_tensor_name: hf_param_name}` 映射表（docstring [gguf_name_maps.py:L16-23](d:\design\sglang\python\sglang\srt\model_loader\gguf_name_maps.py)，供 `GGUFModelLoader` / `gguf_quant_weights_iterator` 使用，消费方 [`loader.py`](d:\design\sglang\python\sglang\srt\model_loader\loader.py)）；配套新文件 [`utils/hf_transformers/gguf_native.py`](d:\design\sglang\python\sglang\srt\utils\hf_transformers\gguf_native.py)（258 行）从 transformers `load_gguf_checkpoint` 拒绝的架构 GGUF 中直接读 config/tokenizer（docstring [gguf_native.py:L15-21](d:\design\sglang\python\sglang\srt\utils\hf_transformers\gguf_native.py)；被 `utils/hf_transformers/` 的 `tokenizer.py` / `common.py` / `config.py` 引用）。
+- **启动期 checkpoint staging 与 CUDA graph capture 重叠**（commit `6b94d39f13` #32017）：新文件 [`model_executor/model_runner_components/startup_weight_load.py`](d:\design\sglang\python\sglang\srt\model_executor\model_runner_components\startup_weight_load.py)（589 行，`StartupWeightLoadManager` [L238](d:\design\sglang\python\sglang\srt\model_executor\model_runner_components\startup_weight_load.py)）；由 `--startup-weight-load-mode overlap` 触发（[`server_args.py:L3226`](d:\design\sglang\python\sglang\srt\server_args.py)、[L8961-8962](d:\design\sglang\python\sglang\srt\server_args.py)），scheduler 在 [`scheduler.py:L996-997`](d:\design\sglang\python\sglang\srt\managers\scheduler.py) / [L1014-1015](d:\design\sglang\python\sglang\srt\managers\scheduler.py) 调 `tp_worker.start_startup_weight_load()` / `finalize_startup_weight_load()`。synthesis: 该文件属 `model_executor` 树但功能上是本页「启动期权重管线」的延伸，双方页面均记一笔。
+- **文件数修正**：HEAD 下 `model_loader/` = **8** 个 `.py`（+`gguf_name_maps.py`）；`git ls-tree` 核对 pin `06f32bab` 时已是 **7** 个（`auto_loader.py` 在 pin 前已存在），正文「6 个 `.py`」为 2026-04-19 旧口径。本子树 06f32bab→HEAD diff：`loader.py` +220/-、`weight_utils.py` +162/-，行号锚点可能有小幅漂移。
+
+> [!todo] VERIFY: `auto_loader.py`（pin 前新增）尚未纳入正文 Loader 清单；`LoadFormat` 枚举成员数（19）与 `LOAD_FORMAT_CHOICES`（16）是否因 GGUF 相关新格式变化未重数。
 
 ## Notes / Caveats
 

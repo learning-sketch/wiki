@@ -3,7 +3,7 @@ type: source-versions
 project: cross
 status: verified
 confidence: high
-verified_against: 2026-08-10
+verified_against: 2026-08-18
 sources: []
 related:
   - AGENTS.md
@@ -19,32 +19,32 @@ related:
 
 ---
 
-## Current pins (as of 2026-08-10)
+## Current pins (as of 2026-08-18)
 
 | 项目 | 路径 | branch | commit (full) | commit (short) | last commit date | last commit msg |
 |---|---|---|---|---|---|---|
 | MindIE-LLM | [d:\design\MindIE-LLM\](d:\design\MindIE-LLM) | `master` | `f032cd3f73fee59b0985c3b5fde1e9c0dc3c8691` | `f032cd3f` | 2026-04-15 22:48:40 +0800 | `!901 merge dev into master` |
-| vLLM | [d:\design\vllm\](d:\design\vllm) | `main` | `5f7fab881a13df2926f50cb8d9f67b0bbc2ee41f` | `5f7fab88` | 2026-04-16 09:55:29 +0800 | `[ROCm][FEAT] Integrate aiter gemm w8a8 ptpc (#33773)` |
-| SGLang | [d:\design\sglang\](d:\design\sglang) | `main` | `06f32bab6baa12b8616a5260e6f2fa2597eb930e` | `06f32bab` | 2026-08-09 23:52:14 -0700 | `[BCG][5/N] MLA Fully Support (#33661)` |
+| vLLM | [d:\design\vllm\](d:\design\vllm) | `main` | `d29dc3ab87840aef42129b30825176295ea73b07` | `d29dc3ab` | 2026-08-18 12:41:26 +0000 | `[Bugfix][Gemma4] Align parser enable_thinking default with template (#52430)` |
+| SGLang | [d:\design\sglang\](d:\design\sglang) | `main` | `f7101b0ae626d6d8700f8f5fa444e9cbe69351ad` | `f7101b0a` | 2026-08-18 03:01:01 -0700 | `[AMD] MiniMax-M3 : Fuse QKV+index proj for block-fp8 (#32099)` |
 
 ### Working tree state at pin time
 
 | 项目 | working tree status |
 |---|---|
 | MindIE-LLM | **未在本环境检出**（pin 仍为 2026-04-18 值；`wiki/mindie/` 已删除） |
-| vLLM | **未在本环境检出**（pin 仍为 2026-04-18 值） |
-| SGLang | clean @ `06f32bab`（本轮增量从 GitHub `sgl-project/sglang` clone 核对） |
+| vLLM | clean @ `d29dc3ab`（本轮增量从 GitHub `vllm-project/vllm` clone 核对；`5f7fab88..d29dc3ab` 共 4273 commits / wiki 相关子树 ~200 文件 ±6 万行；旧 pin worktree 曾建于 /tmp/vllm-pin 供对比页 cross-check） |
+| SGLang | clean @ `f7101b0a`（本轮增量从 GitHub `sgl-project/sglang` clone 核对；`06f32bab..f7101b0a` 共 433 commits / srt 子树 407 文件 ±39k 行） |
 
 ### Quick verify commands
 
 ```powershell
 # 在三个仓根目录依次跑，验证本表 commit 仍是 HEAD
 cd d:\design\MindIE-LLM; git rev-parse HEAD  # 期望 f032cd3f...
-cd d:\design\vllm;       git rev-parse HEAD  # 期望 5f7fab88...
-cd d:\design\sglang;     git rev-parse HEAD  # 期望 06f32bab...
+cd d:\design\vllm;       git rev-parse HEAD  # 期望 d29dc3ab...
+cd d:\design\sglang;     git rev-parse HEAD  # 期望 f7101b0a...
 ```
 
-如三个 HEAD 都未动 → 已 `verified_against: 2026-08-10` 的 SGLang 页仍有效；MindIE/vLLM 仍对应 2026-04-18 pin。
+如三个 HEAD 都未动 → 已 `verified_against: 2026-08-18` 的 SGLang / vLLM 页仍有效；MindIE 仍对应 2026-04-18 pin。
 如任一 HEAD 已变 → 触发 [§12 增量工作流](AGENTS.md)。
 
 ---
@@ -55,6 +55,8 @@ cd d:\design\sglang;     git rev-parse HEAD  # 期望 06f32bab...
 
 | Pin date | Op | MindIE | vLLM | SGLang | Action |
 |---|---|---|---|---|---|
+| **2026-08-18 (2nd)** | increment | `f032cd3f` (unchanged) | `5f7fab88` → **`d29dc3ab`** | `f7101b0a` (unchanged) | vLLM §12 增量：19 页全处理（13 verified / 4 stale-诚实降级 / spec-decode-eagle+kv-connector 架构重写）；V2 model runner 转正、v0 目录删除、EEP/FT 框架；另 comparison 4 页 SGLang 列刷新 + speculative/parser 重 ingest + 全量 lint（735→245） |
+| **2026-08-18** | increment | `f032cd3f` (unchanged) | `5f7fab88` (unchanged) | `06f32bab` → **`f7101b0a`** | SGLang §12 增量：5 entity 页 re-anchor；kv-cache / pd-disaggregation / speculative / scheduler-mixins topic 增量；grpc 模块上游已删；+新页 rust_extensions；multimodal 3 新子包；parser 重大补漏（4 月快照漂移）；models/layers/hardware_backend 高 churn 标 stale |
 | **2026-08-10** | increment | `f032cd3f` (unchanged) | `5f7fab88` (unchanged) | `34fef07a` → **`06f32bab`** | SGLang §12 增量：+7 新模块页；re-ingest Scheduler / TokenizerManager / scheduler-mixins；re-anchor Engine / TpModelWorker / DataParallelController / managers；高 churn 模块/topic 标 stale |
 | **2026-04-18** | initial pin | `f032cd3f` (master) | `5f7fab88` (main) | `34fef07a` (main) | wiki bootstrap + L1 ingest 三家 + 9 comparison topic + 9 mindie entity + 8 mindie topic + 5 vllm topic + 2 sglang module/topic 等 56 页 |
 

@@ -1,7 +1,7 @@
 ---
 type: module
 project: sglang
-status: verified
+status: stale
 confidence: high
 verified_against: 2026-04-19
 sources:
@@ -21,6 +21,8 @@ related:
   - sglang/modules/eplb.md
   - sglang/modules/entrypoints.md
 ---
+
+> [!todo] VERIFY: **lint 2026-08-18** — 本页正文存在 **5** 处源码死锚（多为 sglang 上游 test 树重组 / docs 站点 mdx 化 / 文件迁移所致，锚点写于 2026-04 快照），已按 §7 标 `status: stale`，待重校对。死锚清单见 log.md lint entry。
 
 # `srt/debug_utils` — 张量 dump、对比、调度仿真与周边工具
 
@@ -55,7 +57,7 @@ related:
 | `ServerArgs` 中 debug tensor dump 字段 | [server_args.py:697-703](d:\design\sglang\python\sglang\srt\server_args.py) |
 | argparse `--debug-tensor-dump-*` | [server_args.py:6112-6134](d:\design\sglang\python\sglang\srt\server_args.py) |
 | `environ` 侧载 `cuda_coredump` | [environ.py:627](d:\design\sglang\python\sglang\srt\environ.py) |
-| sgl-kernel 独立 `debug_utils`（非本模块） | [sgl-kernel/debug_utils.py:7-17](d:\design\sglang\sgl-kernel\python\sgl_kernel\debug_utils.py) |
+| sgl-kernel 独立 `debug_utils`（非本模块） | [sgl-kernel/debug_utils.py:7-17](d:\design\sglang\python\sglang\kernels\aot\python\sgl_kernel\debug_utils.py) |
 
 ## Architecture / Data flow
 
@@ -152,7 +154,7 @@ flowchart TB
 | `DUMPER_*` | [dumper.py:144-147](d:\design\sglang\python\sglang\srt\debug_utils\dumper.py) | `DumperConfig._env_prefix` → `"DUMPER_"`；具体字段见 dataclass [L127-142](d:\design\sglang\python\sglang\srt\debug_utils\dumper.py) |
 | `SGLANG_DUMP_LOADER_DIR` | [dump_loader.py:61](d:\design\sglang\python\sglang\srt\debug_utils\dump_loader.py) | dump_loader 默认目录覆盖 |
 | `SGLANG_CUDA_COREDUMP` / `SGLANG_CUDA_COREDUMP_DIR` | [cuda_coredump.py:3](d:\design\sglang\python\sglang\srt\debug_utils\cuda_coredump.py)、[environ.py:180-181](d:\design\sglang\python\sglang\srt\environ.py) | CUDA coredump 注入 |
-| `SGLANG_KERNEL_API_LOGLEVEL` 等 | [sgl-kernel debug_utils.py:9](d:\design\sglang\sgl-kernel\python\sgl_kernel\debug_utils.py) | **不属于** `srt/debug_utils`；属 sgl-kernel 包装 |
+| `SGLANG_KERNEL_API_LOGLEVEL` 等 | [sgl-kernel debug_utils.py:9](d:\design\sglang\python\sglang\kernels\aot\python\sgl_kernel\debug_utils.py) | **不属于** `srt/debug_utils`；属 sgl-kernel 包装 |
 
 > synthesis: 用户常搜的 `SGLANG_DUMP_*` 在本模块中**主要**体现为 `SGLANG_DUMP_LOADER_DIR`；**通用 dumper 开关是 `DUMPER_*`**，而非 `SGLANG_DUMP_*` 前缀。
 
@@ -167,11 +169,11 @@ flowchart TB
 
 > [!todo] VERIFY: ~~既有 wiki 推断的 `--enable-dumper` / `--dump-path` / `--enable-mock-*` 在 [`server_args.py`](d:\design\sglang\python\sglang\srt\server_args.py) 的 grep 中**未**与 `debug_utils` 对齐；实际 flag 为 **`--debug-tensor-dump-*`**。~~
 >
-> > **RESOLVED 2026-04-19**: 在 [`server_args.py`](d:\design\sglang\python\sglang\srt\server_args.py) grep `enable-dumper` / `--dump-path` / `enable-mock` **0 命中**；实际开关确为 [`--debug-tensor-dump-*`](d:\design\sglang\python\sglang\srt\server_args.py:6112-6134) 系列与 [`--crash-dump-folder`](d:\design\sglang\python\sglang\srt\server_args.py:4608-4611)。
+> > **RESOLVED 2026-04-19**: 在 [`server_args.py`](d:\design\sglang\python\sglang\srt\server_args.py) grep `enable-dumper` / `--dump-path` / `enable-mock` **0 命中**；实际开关确为 [`--debug-tensor-dump-*`](d:\design\sglang\python\sglang\srt\server_args.py) 系列与 [`--crash-dump-folder`](d:\design\sglang\python\sglang\srt\server_args.py)。
 
 ## §跨子系统「5 类」检索
 
-1. **sgl-kernel**：[`sgl_kernel.debug_utils.maybe_wrap_debug_kernel`](d:\design\sglang\sgl-kernel\python\sgl_kernel\debug_utils.py) — **独立包**，与 `sglang.srt.debug_utils` **无** import 关系；受 `SGLANG_KERNEL_API_LOGLEVEL` 控制。
+1. **sgl-kernel**：[`sgl_kernel.debug_utils.maybe_wrap_debug_kernel`](d:\design\sglang\python\sglang\kernels\aot\python\sgl_kernel\debug_utils.py) — **独立包**，与 `sglang.srt.debug_utils` **无** import 关系；受 `SGLANG_KERNEL_API_LOGLEVEL` 控制。
 2. **`srt/` 协作 import（`from sglang.srt.debug_utils...`，不含包内自引用）**
    - [`utils/weight_checker.py:61,122`](d:\design\sglang\python\sglang\srt\utils\weight_checker.py) — `get_tensor_info`
    - [`model_executor/model_runner.py:59-60`](d:\design\sglang\python\sglang\srt\model_executor\model_runner.py) — `dumper`、`register_forward_hook_for_model`

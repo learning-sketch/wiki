@@ -1,7 +1,7 @@
 ---
 type: module
 project: sglang
-status: verified
+status: stale
 confidence: high
 verified_against: 2026-04-19
 sources:
@@ -16,6 +16,8 @@ related:
   - sglang/modules/model_loader.md
   - sglang/modules/managers.md
 ---
+
+> [!todo] VERIFY: **lint 2026-08-18** — 本页正文存在 **8** 处源码死锚（多为 sglang 上游 test 树重组 / docs 站点 mdx 化 / 文件迁移所致，锚点写于 2026-04 快照），已按 §7 标 `status: stale`，待重校对。死锚清单见 log.md lint entry。
 
 # `srt/weight_sync` — 张量分桶与训练侧 `update_weights` 桥接
 
@@ -91,7 +93,7 @@ flowchart TB
 
 ## §跨子系统引用（§5 step 3）
 
-1. **sgl-kernel C++**：在 [`d:\design\sglang\sgl-kernel\`](d:\design\sglang\sgl-kernel) 全树对 `weight_sync` / `tensor_bucket` / `FlattenedTensorBucket` **grep 0 命中**。
+1. **sgl-kernel C++**：在 [`d:\design\sglang\sgl-kernel\`](d:\design\sglang\python\sglang\kernels\aot) 全树对 `weight_sync` / `tensor_bucket` / `FlattenedTensorBucket` **grep 0 命中**。
 2. **协作伙伴**：见上表 `model_runner` / `tp_worker` / `common.py`；调度入口为 [`SchedulerUpdateWeightsMixin.update_weights_from_tensor`](d:\design\sglang\python\sglang\srt\managers\scheduler_update_weights_mixin.py)（[L87-L104](d:\design\sglang\python\sglang\srt\managers\scheduler_update_weights_mixin.py)）；HTTP [`/update_weights_from_tensor`](d:\design\sglang\python\sglang\srt\entrypoints\http_server.py)（约 L1151 起）；[`Engine.update_weights_from_tensor`](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)（约 L910 起）。
 3. **配置 / 共享结构**：`load_format` 字符串 `"flattened_bucket"` / `"direct"` 分支见 [`ModelRunner.update_weights_from_tensor`](d:\design\sglang\python\sglang\srt\model_executor\model_runner.py)（[L1760-L1782](d:\design\sglang\python\sglang\srt\model_executor\model_runner.py)）。
 4. **测试**（`d:\design\sglang\test\`）：至少 **5** 个文件命中 `weight_sync` / `FlattenedTensorBucket` / `utils.update_weights`——例如 `test_update_weights_from_tensor.py`、`test_update_weights_from_distributed.py`、`test_utils_update_weights.py`、`test_lora_load_from_tensor.py`、`test_type_based_dispatcher.py`。

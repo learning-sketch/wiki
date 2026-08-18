@@ -1,12 +1,18 @@
 ---
 type: topic
 project: vllm
-status: verified
-confidence: high
-verified_against: 2026-04-18
+status: stale
+confidence: medium
+verified_against: 2026-08-18 (vLLM d29dc3ab, increment from 5f7fab88)
 sources:
   - d:\design\vllm\vllm\v1\spec_decode\__init__.py
   - d:\design\vllm\vllm\v1\spec_decode\eagle.py
+  - d:\design\vllm\vllm\v1\spec_decode\llm_base_proposer.py
+  - d:\design\vllm\vllm\v1\spec_decode\gemma4.py
+  - d:\design\vllm\vllm\v1\spec_decode\step3p5.py
+  - d:\design\vllm\vllm\v1\spec_decode\custom_class_proposer.py
+  - d:\design\vllm\vllm\v1\spec_decode\vocab_mapping.py
+  - d:\design\vllm\vllm\v1\spec_decode\dynamic\utils.py
   - d:\design\vllm\vllm\v1\spec_decode\dflash.py
   - d:\design\vllm\vllm\v1\spec_decode\medusa.py
   - d:\design\vllm\vllm\v1\spec_decode\draft_model.py
@@ -18,13 +24,19 @@ sources:
   - d:\design\vllm\vllm\v1\spec_decode\metrics.py
   - d:\design\vllm\vllm\v1\spec_decode\utils.py
   - d:\design\vllm\vllm\v1\worker\gpu\spec_decode\__init__.py
+  - d:\design\vllm\vllm\v1\worker\gpu\spec_decode\speculator.py
   - d:\design\vllm\vllm\v1\worker\gpu\spec_decode\rejection_sampler.py
-  - d:\design\vllm\vllm\v1\worker\gpu\spec_decode\probabilistic_rejection_sampler_utils.py
-  - d:\design\vllm\vllm\v1\worker\gpu\spec_decode\synthetic_rejection_sampler_utils.py
+  - d:\design\vllm\vllm\v1\worker\gpu\spec_decode\rejection_sampler_utils.py
+  - d:\design\vllm\vllm\v1\worker\gpu\spec_decode\adaptive_verification.py
+  - d:\design\vllm\vllm\v1\worker\gpu\spec_decode\autoregressive\speculator.py
   - d:\design\vllm\vllm\v1\worker\gpu\spec_decode\eagle\speculator.py
-  - d:\design\vllm\vllm\v1\worker\gpu\spec_decode\eagle\cudagraph.py
   - d:\design\vllm\vllm\v1\worker\gpu\spec_decode\eagle\eagle3_utils.py
   - d:\design\vllm\vllm\v1\worker\gpu\spec_decode\eagle\utils.py
+  - d:\design\vllm\vllm\v1\worker\gpu\spec_decode\dflash\speculator.py
+  - d:\design\vllm\vllm\v1\worker\gpu\spec_decode\dspark\speculator.py
+  - d:\design\vllm\vllm\v1\worker\gpu\spec_decode\mtp\speculator.py
+  - d:\design\vllm\vllm\v1\worker\gpu\spec_decode\gemma4\speculator.py
+  - d:\design\vllm\vllm\v1\worker\gpu\spec_decode\multi_module_mtp\speculator.py
   - d:\design\vllm\vllm\v1\sample\rejection_sampler.py
   - d:\design\vllm\vllm\config\speculative.py
   - d:\design\vllm\vllm\config\vllm.py
@@ -44,18 +56,20 @@ related:
 
 # Speculative Decoding（v1/spec_decode/ 全家 + EagleSpeculator GPU 路径）
 
+> [!warning] STALE NOTICE (2026-08-18)：本页正文（§1-§10）基于 vLLM 5f7fab88（2026-04-16）。本期增量（→ d29dc3ab，4273 commits）中 spec_decode 子系统发生**结构性重构**：`eagle.py` 被抽空（-1773 行）、`SpecDecodeBaseProposer` 迁至新文件 `llm_base_proposer.py`、`v1/worker/gpu/spec_decode/` 从"仅 eagle/"扩成 7 成员 Speculator 家族、RejectionSampler 三模式换血。**新架构主干见 [§Increment 2026-08-18](#increment-2026-08-18-vllm-5f7fab88--d29dc3ab)**；正文中已失效的结构性论断已划线标 RESOLVED，但正文的大量 `[file:line]` 细节锚点未逐一重核（见 §Notes 的 VERIFY 清单）。
+
 ## Summary
 
-> synthesis: vLLM v1 把投机解码切成两个并存的实现层：
+> synthesis: vLLM v1 把投机解码切成两个并存的实现层（双层结构在 d29dc3ab 仍成立，但两层内部都已重构，详见 §Increment）：
 >
-> 1. **`v1/spec_decode/` 通用 proposer 包**（12 个 .py）—— 以 [`SpecDecodeBaseProposer`](d:\design\vllm\vllm\v1\spec_decode\eagle.py)（[eagle.py:60](d:\design\vllm\vllm\v1\spec_decode\eagle.py)）为根，派生 EAGLE / EAGLE3 / DraftModel / DFlash 4 个走 base 通路的子类，并存独立的 `MedusaProposer` / `NgramProposer` (numba CPU) / `NgramProposerGPU` (torch.compile) / `SuffixDecodingProposer` / `ExtractHiddenStatesProposer`。被 `gpu_model_runner.GPUModelRunner` 在 `__init__` 按 `SpeculativeMethod` 分支选择装载（[gpu_model_runner.py:528-579](d:\design\vllm\vllm\v1\worker\gpu_model_runner.py)）。
-> 2. **`v1/worker/gpu/spec_decode/` 新版 GPU 路径**（含 `eagle/speculator.py`）—— `init_speculator()`（[__init__.py:8-15](d:\design\vllm\vllm\v1\worker\gpu\spec_decode\__init__.py)）目前**仅**返回 `EagleSpeculator`（覆盖 `use_eagle()` 方法 = `eagle/eagle3/mtp/dflash`），由新 `v1/worker/gpu/model_runner.GPUModelRunner` 使用（[model_runner.py:172](d:\design\vllm\vllm\v1\worker\gpu\model_runner.py)）。`EagleSpeculator` 自带独立 `InputBuffers` + 独立 prefill/decode `EagleCudaGraphManager` + 独立 `BlockTables`。
+> 1. **`v1/spec_decode/` 通用 proposer 包**——~~以 [`SpecDecodeBaseProposer`](d:\design\vllm\vllm\v1\spec_decode\eagle.py)（[eagle.py:60](d:\design\vllm\vllm\v1\spec_decode\eagle.py)）为根~~ **RESOLVED 2026-08-18**：基类已迁至 [llm_base_proposer.py:71](d:\design\vllm\vllm\v1\spec_decode\llm_base_proposer.py)（1892 行），`eagle.py` 只剩 22 行薄壳（commit `cde8d24710`，PR #40732）。派生 EAGLE / DraftModel / DFlash / **Gemma4 / Step3p5**（新增）等走 base 通路的子类，并存独立的 `MedusaProposer` / `NgramProposer` (numba CPU) / `NgramProposerGPU` (torch.compile) / `SuffixDecodingProposer` / `ExtractHiddenStatesProposer` / **`create_custom_proposer`**（新增 `custom_class` method）。被 `gpu_model_runner.GPUModelRunner` 在 `__init__` 按 `SpeculativeMethod` 分支选择装载（现 [gpu_model_runner.py:647-698](d:\design\vllm\vllm\v1\worker\gpu_model_runner.py)，原 528-579）。
+> 2. **`v1/worker/gpu/spec_decode/` 新版 GPU 路径**——~~`init_speculator()` 目前**仅**返回 `EagleSpeculator`~~ **RESOLVED 2026-08-18**：`init_speculator()` 已扩成 **6 分支工厂**（dflash / dspark / gemma4_mtp / multi_module_mtp / mtp / eagle，[__init__.py:8-47](d:\design\vllm\vllm\v1\worker\gpu\spec_decode\__init__.py)），底层是 `BaseSpeculator(ABC) → DraftModelSpeculator → AutoRegressiveSpeculator` 三级基类 + 7 个子目录实现（见 §Increment 类层次图）。由新 `v1/worker/gpu/model_runner.GPUModelRunner` 使用（现 [model_runner.py:243-248](d:\design\vllm\vllm\v1\worker\gpu\model_runner.py)）。
 >
-> **`SpeculativeMethod` Literal 实际 6 顶层 + 13 个 MTP 子类型 + 2 EAGLE 衍生**（[speculative.py:34-64](d:\design\vllm\vllm\config\speculative.py)）：`ngram` / `medusa` / `mlp_speculator` / `draft_model` / `suffix` / `EagleModelTypes`(`eagle` + `eagle3` + `extract_hidden_states` + 13 MTP + `dflash`) / `ngram_gpu`。`mlp_speculator` 在 `SpeculativeMethod` 枚举中存在但**没有**对应的 proposer 子类（仅枚举）。
+> ~~**`SpeculativeMethod` Literal 实际 6 顶层 + 13 个 MTP 子类型 + 2 EAGLE 衍生**~~ **RESOLVED 2026-08-18**：枚举已扩至 **MTPModelTypes 25 个字面值 + 新顶层 `custom_class` + 新 `DSparkModelTypes`（`dspark`）**（[speculative.py:37-79](d:\design\vllm\vllm\config\speculative.py)）。`mlp_speculator` 在 `SpeculativeMethod` 枚举中存在但仍**没有**对应的 proposer 分支（re-verified 2026-08-18：[gpu_model_runner.py:647-698](d:\design\vllm\vllm\v1\worker\gpu_model_runner.py) if/elif 链无 mlp 分支）。
 >
 > **占位机制双层**：scheduler 层用 `scheduled_spec_decode_tokens: dict[str, list[int]]` 直接传递（[scheduler.py:376, 525-535, 905-924](d:\design\vllm\vllm\v1\core\sched\scheduler.py)）；async path 在 [`AsyncScheduler`](d:\design\vllm\vllm\v1\core\sched\async_scheduler.py) 额外维护 `request.num_output_placeholders`（int 计数）+ 共享只读 `_spec_token_placeholders = [-1] * num_spec_tokens` 列表（[async_scheduler.py:16, 32-35, 51-58](d:\design\vllm\vllm\v1\core\sched\async_scheduler.py)）。`SpecDecodeBaseProposer` 内部还自管 `extra_slots_per_request` 和 `needs_extra_input_slots` 标志做 worker 端 KV 槽预留（[eagle.py:91-97, 185-192](d:\design\vllm\vllm\v1\spec_decode\eagle.py)）。
 >
-> **Verify 有两套 `RejectionSampler` 并存**：旧版 [`v1/sample/rejection_sampler.py`](d:\design\vllm\vllm\v1\sample\rejection_sampler.py)（`nn.Module`，单一 `_strict_rejection_sample_kernel` Triton + Python 循环）+ 新版 [`v1/worker/gpu/spec_decode/rejection_sampler.py`](d:\design\vllm\vllm\v1\worker\gpu\spec_decode\rejection_sampler.py)（**3 模式：strict / probabilistic / synthetic**，由 `SpeculativeConfig.rejection_sample_method` 控制，[speculative.py:65, 185-189](d:\design\vllm\vllm\config\speculative.py)）。
+> **Verify 有两套 `RejectionSampler` 并存**（d29dc3ab 仍成立）：旧版 [`v1/sample/rejection_sampler.py`](d:\design\vllm\vllm\v1\sample\rejection_sampler.py)（`nn.Module`，现 [rejection_sampler.py:38](d:\design\vllm\vllm\v1\sample\rejection_sampler.py)）+ 新版 [`v1/worker/gpu/spec_decode/rejection_sampler.py`](d:\design\vllm\vllm\v1\worker\gpu\spec_decode\rejection_sampler.py)。~~**3 模式：strict / probabilistic / synthetic**~~ **RESOLVED 2026-08-18**：三模式已换血为 **`standard` / `synthetic` / `block`**（[speculative.py:80, 219](d:\design\vllm\vllm\config\speculative.py)，默认 `standard`），`probabilistic` 模式与 `probabilistic_rejection_sampler_utils.py` / `synthetic_rejection_sampler_utils.py` 两文件已删除，合并为 [rejection_sampler_utils.py](d:\design\vllm\vllm\v1\worker\gpu\spec_decode\rejection_sampler_utils.py)；详见 §Increment.4。
 
 > **本页的定位**：跨家对照已在 [comparison/topics/speculative-decoding.md](../../comparison/topics/speculative-decoding.md) 写完 9 个子维度（含 MindIE / vLLM / SGLang 对比表与 anchor-driven cross-check），**本页只补 vLLM 内部细节**——文件清单、`SpeculativeMethod` 完整枚举、proposer 类层级、双层占位机制、新旧 GPU 路径并存、3 模式 RejectionSampler、ngram CPU/GPU 双实现、dflash + extract_hidden_states 的配合、与 chunked prefill / structured output / async scheduling 的兼容性硬约束。
 
@@ -63,7 +77,9 @@ related:
 
 见 frontmatter `sources`（含两个 RejectionSampler、`v1/spec_decode/` 全包、`v1/worker/gpu/spec_decode/` 全包、SpeculativeConfig、scheduler 接入点）。
 
-## 1. 文件清单（12 个 .py）
+## 1. 文件清单（~~12 个 .py~~ 现 18 个 .py + dynamic/ 子目录）
+
+> [!warning] STALE (2026-08-18)：本节文件清单与行号为 5f7fab88 快照。现 `v1/spec_decode/` 已扩至 18 文件（新增 `llm_base_proposer.py` / `gemma4.py` / `step3p5.py` / `custom_class_proposer.py` / `vocab_mapping.py` / `dynamic/`），`eagle.py` 从 1794 行缩至 22 行。新清单见 [§Increment.2](#increment-2026-08-18-vllm-5f7fab88--d29dc3ab)。
 
 `v1/spec_decode/` 一级（12 文件，含 1 个空 `__init__.py`）：
 
@@ -105,6 +121,8 @@ related:
 | [`eagle/utils.py`](d:\design\vllm\vllm\v1\worker\gpu\spec_decode\eagle\utils.py) | `load_eagle_model`（[utils.py:9-52](d:\design\vllm\vllm\v1\worker\gpu\spec_decode\eagle\utils.py)）：`set_model_tag("eagle_head")` + 共享 target embed_tokens / lm_head |
 
 ## 2. `SpeculativeMethod` 完整枚举（13 顶层名）
+
+> [!warning] STALE (2026-08-18)：枚举已扩容——`MTPModelTypes` 现 25 个字面值（新增 `dots3_note_mtp` / `mimo_v2_mtp` / `bailing_hybrid_v3_mtp` / `minimax_m3_mtp` / `bailing_hybrid_mtp` / `kimi_k3_mtp` / `hy_v3_mtp` / `gemma4_mtp` / `inkling_mtp` 等）；顶层新增 `custom_class` 与 `DSparkModelTypes = Literal["dspark"]`；`RejectionSampleMethod` 换血为 `["standard", "synthetic", "block"]`（[speculative.py:37-80](d:\design\vllm\vllm\config\speculative.py)）。`use_eagle()` 现含 `dspark`：`("eagle", "eagle3", "mtp", "dflash", "dspark")`（[speculative.py:1480-1484](d:\design\vllm\vllm\config\speculative.py)）。下文引文为旧快照。
 
 [`config/speculative.py:34-64`](d:\design\vllm\vllm\config\speculative.py)：
 
@@ -205,6 +223,8 @@ classDiagram
 - `NgramProposer` / `NgramProposerGPU` / `SuffixDecodingProposer` / `ExtractHiddenStatesProposer` 都不继承 base —— 它们的 `propose` 签名都不同（不接受 `target_hidden_states`，而接受 `sampled_token_ids` / `input_batch`）。
 
 ## 4. EAGLE 双路径：`SpecDecodeBaseProposer` vs `EagleSpeculator`
+
+> [!warning] STALE (2026-08-18)：双路径并存**仍成立**，但新路径侧的实现结构已完全重排——`EagleSpeculator` 不再是自含 561 行的独立类，而是继承 `AutoRegressiveSpeculator` 的 18 行薄壳（[eagle/speculator.py:12](d:\design\vllm\vllm\v1\worker\gpu\spec_decode\eagle\speculator.py)），旧表中"独立 InputBuffers / EagleCudaGraphManager / gumbel_sample"等细节的归属文件与行号全部漂移（多数逻辑上移至 [autoregressive/speculator.py](d:\design\vllm\vllm\v1\worker\gpu\spec_decode\autoregressive\speculator.py) 947 行与 [speculator.py](d:\design\vllm\vllm\v1\worker\gpu\spec_decode\speculator.py) 的 `DraftModelSpeculator`）。新类层次见 §Increment.3。
 
 vLLM 当前**有两套并存的 EAGLE GPU 实现**，由两套不同的 ModelRunner 选择：
 
@@ -332,6 +352,8 @@ worker 端 forward 时调 [`compute_new_slot_mapping`](d:\design\vllm\vllm\v1\sp
 
 ## 6. `RejectionSampler` 三模式（新版 GPU 路径）
 
+> [!warning] STALE (2026-08-18)：本节的 `strict / probabilistic / synthetic` 三模式已被 **`standard / synthetic / block`** 取代（见 §Increment.4）；`probabilistic_rejection_sampler_utils.py` / `synthetic_rejection_sampler_utils.py` 已删除。下表保留作历史对照。
+
 [`v1/worker/gpu/spec_decode/rejection_sampler.py:100-235`](d:\design\vllm\vllm\v1\worker\gpu\spec_decode\rejection_sampler.py) 中 `RejectionSampler.__call__`：
 
 | 模式 | 说明 | 关键调用 |
@@ -402,6 +424,8 @@ worker 端 forward 时调 [`compute_new_slot_mapping`](d:\design\vllm\vllm\v1\sp
 > synthesis（与 MindIE/SGLang 的差异，不重复 [comparison/topics/speculative-decoding.md §6](../../comparison/topics/speculative-decoding.md) 的 9 子维度对照）：vLLM **唯一在 scheduler 层**做"`num_lookahead_tokens` + `scheduled_spec_decode_tokens` dict + `num_output_placeholders` int + 共享 `[-1]` list" **四件套**；MindIE 是 C++ scheduler 写字面 `-1` 到 outputTokenIds 序列；SGLang 完全用 `EagleDraftInput` dataclass + `accept_length` 在下一 batch 收回。**vLLM 唯一暴露 RejectionSampleMethod 三选一作为 config**（strict / probabilistic / synthetic）；MindIE / SGLang 都没有 synthetic 这种"测试用接受率合成"模式。
 
 ## 10. 接入入口（GPUModelRunner 选 proposer 的 if/elif 链）
+
+> [!warning] STALE (2026-08-18)：if/elif 链已移至 [gpu_model_runner.py:647-698](d:\design\vllm\vllm\v1\worker\gpu_model_runner.py)，且**新增 4 个分支**：`custom_class` → `create_custom_proposer`（L647-650，链首）、`use_gemma4_mtp()` → `Gemma4Proposer`（L678-679）、`use_step3p5_mtp()` → `Step3p5MTPProposer`（L680-681）；新路径 `init_speculator` 调用点移至 [gpu/model_runner.py:243-248](d:\design\vllm\vllm\v1\worker\gpu\model_runner.py)。下方引文为旧快照。
 
 老路径 [`gpu_model_runner.py:514-580`](d:\design\vllm\vllm\v1\worker\gpu_model_runner.py)：
 
@@ -551,13 +575,122 @@ E2E 路径 `d:\design\vllm\tests\v1\e2e\spec_decode\`：
 | `*.json` 反查 spec | `d:\design\vllm\examples` | examples 内有 `*.json` 草稿模型 hf_config，但**不是** spec config 本身；spec config 通过 CLI flag 传 |
 | metrics 文档 | `d:\design\vllm\docs\usage\metrics.md` + `docs/mkdocs/hooks/generate_metrics.py` | 提到 `vllm:spec_decode_num_*` 4 个 prometheus counter（与 [metrics.py:154-198](d:\design\vllm\vllm\v1\spec_decode\metrics.py) 一致） |
 
+## Increment 2026-08-18 (vLLM 5f7fab88 → d29dc3ab)
+
+> 摸底命令：`git -C <vllm> diff 5f7fab88..HEAD --stat -- vllm/v1/spec_decode`（17 文件，+3393/-1875）。本节所有行号已在 d29dc3ab 实地核对。
+
+### Inc.1 eagle.py 抽空：`SpecDecodeBaseProposer` 基类独立成文件
+
+单一 commit `cde8d24710`（"[Spec Decode] Move `SpecDecodeBaseProposer` out of `eagle.py`"，PR #40732）——这是**本期 range 内唯一触碰 eagle.py 的 commit**（`git log --oneline 5f7fab88..HEAD -- vllm/v1/spec_decode/eagle.py` 仅 1 命中）：
+
+- [`eagle.py`](d:\design\vllm\vllm\v1\spec_decode\eagle.py) 从 1794 行缩至 **22 行**：只剩 `EagleProposer(SpecDecodeBaseProposer)`，`__init__` 透传 `pass_hidden_states_to_model=True`（[eagle.py:10-22](d:\design\vllm\vllm\v1\spec_decode\eagle.py)）。
+- 基类落户 [`llm_base_proposer.py`](d:\design\vllm\vllm\v1\spec_decode\llm_base_proposer.py)（**1892 行**）：`class SpecDecodeBaseProposer` 在 [llm_base_proposer.py:71](d:\design\vllm\vllm\v1\spec_decode\llm_base_proposer.py)；旧页 §3/§5 描述的关键方法均仍在且新位置为：`_init_parallel_drafting_params`（L350）/ `propose`（L510）/ `set_inputs_first_pass`（L829）/ `prepare_inputs`（L1172）/ `load_model`（L1338）/ `_maybe_share_embeddings`（L1430）/ `_maybe_share_lm_head`（L1523）/ `dummy_run`（L1634）/ `initialize_attn_backend`（L1727）。`compute_probs_and_sample_next_token` 也随迁（[llm_base_proposer.py:1854](d:\design\vllm\vllm\v1\spec_decode\llm_base_proposer.py)）。
+- 所有子类 import 改为 `from vllm.v1.spec_decode.llm_base_proposer import SpecDecodeBaseProposer`（dflash.py:14 / draft_model.py:13 / eagle.py:7 / gemma4.py:26 均已核对）。
+
+synthesis: 旧页所有指向 `eagle.py:L>22` 的锚点**全部失效**，语义等价物在 `llm_base_proposer.py`；正文未逐条改写（见 VERIFY）。
+
+### Inc.2 `v1/spec_decode/` 新成员（proposer 层）
+
+| 新文件 | 主实体 | 作用 |
+|---|---|---|
+| [`gemma4.py`](d:\design\vllm\vllm\v1\spec_decode\gemma4.py)（364 行） | `Gemma4Proposer(SpecDecodeBaseProposer)`（[gemma4.py:32](d:\design\vllm\vllm\v1\spec_decode\gemma4.py)） | Gemma4 MTP（draft 用不同 block tables，见 [gemma4.py:79](d:\design\vllm\vllm\v1\spec_decode\gemma4.py) 注释）；触发条件 `use_gemma4_mtp()` = `method=="mtp"` 且 draft `model_type=="gemma4_mtp"`（[speculative.py:1464-1470](d:\design\vllm\vllm\config\speculative.py)） |
+| [`step3p5.py`](d:\design\vllm\vllm\v1\spec_decode\step3p5.py)（463 行） | `Step3p5MTPProposer(EagleProposer)`（[step3p5.py:24](d:\design\vllm\vllm\v1\spec_decode\step3p5.py)） | Step3p5 MTP，**继承 EagleProposer**（唯一二级子类）；触发 `use_step3p5_mtp()`（[speculative.py:1472-1478](d:\design\vllm\vllm\config\speculative.py)） |
+| [`custom_class_proposer.py`](d:\design\vllm\vllm\v1\spec_decode\custom_class_proposer.py)（73 行） | `create_custom_proposer(vllm_config)`（[custom_class_proposer.py:12](d:\design\vllm\vllm\v1\spec_decode\custom_class_proposer.py)） | 新 method `"custom_class"`：从 `speculative_config.model` 读类路径（如 `"my_module.MyCustomProposer"`）动态 import，要求类有 `propose` 方法——**第三方 proposer 插件机制**（解决旧页 mlp_speculator 那类"枚举有但无实现"的扩展诉求） |
+| [`vocab_mapping.py`](d:\design\vllm\vllm\v1\spec_decode\vocab_mapping.py)（154 行） | `VocabMapping`（[vocab_mapping.py:68](d:\design\vllm\vllm\v1\spec_decode\vocab_mapping.py)） | draft/target 词表映射 |
+| [`dynamic/`](d:\design\vllm\vllm\v1\spec_decode\dynamic\utils.py)（2 文件，150 行） | dynamic spec utils | 按 batch size 动态调 spec token 数：配置 `num_speculative_tokens_per_batch_size: list[tuple[int,int,int]]`（[speculative.py:181](d:\design\vllm\vllm\config\speculative.py)）+ `uses_dynamic_speculative_decoding()`（[speculative.py:1492-1493](d:\design\vllm\vllm\config\speculative.py)） |
+
+另 `metrics.py` +156 行、`extract_hidden_states.py` +59、`dflash.py` ±98（未细读，见 VERIFY）。
+
+### Inc.3 `v1/worker/gpu/spec_decode/`：从"仅 EAGLE"到 Speculator 家族
+
+新类层次（全部实地核对 class 声明行）：
+
+```mermaid
+classDiagram
+    class BaseSpeculator {
+      <<ABC>> speculator.py:32
+      +init_cudagraph_manager(mode)
+      +capture()
+      +propose(...)
+    }
+    class DraftModelSpeculator {
+      speculator.py:72
+      +load_model / set_attn / sample_draft
+      +_greedy_sample_draft / set_eplb_state
+    }
+    class AutoRegressiveSpeculator {
+      autoregressive/speculator.py:29 (947 行, 主逻辑)
+    }
+    class EagleSpeculator {
+      eagle/speculator.py:12 (整文件仅 18 行)
+    }
+    class MTPSpeculator {
+      mtp/speculator.py:12
+    }
+    class Gemma4Speculator {
+      gemma4/speculator.py:43
+    }
+    class MultiModuleMTPSpeculator {
+      multi_module_mtp/speculator.py:27
+    }
+    class DFlashSpeculator {
+      dflash/speculator.py:33
+    }
+    class DSparkSpeculator {
+      dspark/speculator.py:40
+    }
+    BaseSpeculator <|-- DraftModelSpeculator
+    DraftModelSpeculator <|-- AutoRegressiveSpeculator
+    AutoRegressiveSpeculator <|-- EagleSpeculator
+    AutoRegressiveSpeculator <|-- MTPSpeculator
+    AutoRegressiveSpeculator <|-- Gemma4Speculator
+    DraftModelSpeculator <|-- MultiModuleMTPSpeculator
+    DraftModelSpeculator <|-- DFlashSpeculator
+    DFlashSpeculator <|-- DSparkSpeculator
+```
+
+要点：
+
+- **工厂扩容**：`init_speculator()` 现按序 dispatch 6 分支——`dflash` → `DFlashSpeculator`、`dspark` → `DSparkSpeculator`、`use_gemma4_mtp()` → `Gemma4Speculator`、`use_multi_module_mtp()` → `MultiModuleMTPSpeculator`、`mtp` → `MTPSpeculator`、`use_eagle()` → `EagleSpeculator`，其余 raise `NotImplementedError`（[__init__.py:8-47](d:\design\vllm\vllm\v1\worker\gpu\spec_decode\__init__.py)）。
+- **EagleSpeculator 被"抽空"成薄壳**（与 eagle.py 同款手法）：整文件 18 行，仅 `class EagleSpeculator(AutoRegressiveSpeculator)`（[eagle/speculator.py:12](d:\design\vllm\vllm\v1\worker\gpu\spec_decode\eagle\speculator.py)）；旧页 §4 表中的 InputBuffers / cudagraph / gumbel_sample 等逻辑上移至 [autoregressive/speculator.py](d:\design\vllm\vllm\v1\worker\gpu\spec_decode\autoregressive\speculator.py)（947 行，`AutoRegressiveSpeculator(DraftModelSpeculator)` at L29）与 [speculator.py](d:\design\vllm\vllm\v1\worker\gpu\spec_decode\speculator.py)（`DraftModelSpeculator` at L72：`load_model` L153 / `set_attn` L203 / `sample_draft` L321）。`eagle/cudagraph.py` 已不存在（autoregressive 侧现有 `cudagraph_utils.py`）。
+- **新家族成员的引入 commit**：`ceb0111a90`（"[Model Runner V2][Spec Decode] Add Gemma4 MTP support"，PR #43241）、`f5a8d73377`（"[Spec Decode] DSpark"，PR #46995）、`7f7a32cfec`(“[Spec Decode] DSpark confidence-scheduled verification”，PR #47808)。
+- **DSpark = DFlash 的衍生**（`DSparkSpeculator(DFlashSpeculator)`，[dspark/speculator.py:40](d:\design\vllm\vllm\v1\worker\gpu\spec_decode\dspark\speculator.py)），有专属 config：`dspark_draft_topk`（[speculative.py:298](d:\design\vllm\vllm\config\speculative.py)）等；`use_eagle()` 谓词现把 `dspark` 也计入（[speculative.py:1480-1484](d:\design\vllm\vllm\config\speculative.py)，注释自嘲该命名实为"用 target hidden states 的投机解码"统称，`TODO(ben): Refactor this so the naming is clearer`）。
+- **adaptive verification（新机制）**：[adaptive_verification.py](d:\design\vllm\vllm\v1\worker\gpu\spec_decode\adaptive_verification.py)（477 行）的 `AdaptiveVerificationManager`（[adaptive_verification.py:114](d:\design\vllm\vllm\v1\worker\gpu\spec_decode\adaptive_verification.py)，docstring "Adaptive verification for DSpark speculative decoding"）——按 draft 置信度动态决定 verify 多少 token；model runner 侧读 `speculator.enable_adaptive_verification` 开关（[gpu/model_runner.py:544](d:\design\vllm\vllm\v1\worker\gpu\model_runner.py)）。
+- **model runner v2 集成点漂移**：`init_speculator` 调用在 [gpu/model_runner.py:243-248](d:\design\vllm\vllm\v1\worker\gpu\model_runner.py)（旧 172）；load 阶段按 `isinstance(self.speculator, DraftModelSpeculator)` 分支（[gpu/model_runner.py:376-380, 596-598](d:\design\vllm\vllm\v1\worker\gpu\model_runner.py)）。
+
+### Inc.4 RejectionSampler 三模式换血：`standard / synthetic / block`
+
+`RejectionSampleMethod = Literal["standard", "synthetic", "block"]`，默认 `"standard"`（[speculative.py:80, 219](d:\design\vllm\vllm\config\speculative.py)）：
+
+| 新模式 | 语义（源码直接观察） | 锚点 |
+|---|---|---|
+| `standard` | 默认路径（无特殊初始化分支） | [rejection_sampler.py:84-97](d:\design\vllm\vllm\v1\worker\gpu\spec_decode\rejection_sampler.py) |
+| `synthetic` | 保留，但配置从标量 `synthetic_acceptance_rate` 改为 **per-position 列表 `synthetic_acceptance_rates: list[float]`**（[speculative.py:227](d:\design\vllm\vllm\config\speculative.py)），或互斥的 `synthetic_acceptance_length`（[speculative.py:238-239, 256](d:\design\vllm\vllm\config\speculative.py)）；init 时经 `unconditional_to_conditional_rates` 转条件接受率 tensor（[rejection_sampler.py:87-95](d:\design\vllm\vllm\v1\worker\gpu\spec_decode\rejection_sampler.py)） |
+| `block`（新增） | `use_block_verification = True`（[rejection_sampler.py:96-97](d:\design\vllm\vllm\v1\worker\gpu\spec_decode\rejection_sampler.py)）——block-level verify |
+
+- 新版 `RejectionSampler` 类现位于 [rejection_sampler.py:75](d:\design\vllm\vllm\v1\worker\gpu\spec_decode\rejection_sampler.py)（290 行文件），`__init__` 三参 `(sampler, spec_config, device)`（旧页说双参，已变）。
+- 旧 `strict` / `probabilistic` 字面值消失；`probabilistic_rejection_sampler_utils.py` 与 `synthetic_rejection_sampler_utils.py` 被 [rejection_sampler_utils.py](d:\design\vllm\vllm\v1\worker\gpu\spec_decode\rejection_sampler_utils.py) 取代。
+- 旧版 `v1/sample/rejection_sampler.py` 仍在（`RejectionSampler(nn.Module)` at [sample/rejection_sampler.py:38](d:\design\vllm\vllm\v1\sample\rejection_sampler.py)），老路径构造点移至 [gpu_model_runner.py:707](d:\design\vllm\vllm\v1\worker\gpu_model_runner.py)——**两套 RejectionSampler 并存的 CONTRADICTION 仍成立**。
+
+> [!todo] VERIFY: `standard` 与旧 `strict` 是否语义等价（贪婪完全匹配才接受）、`probabilistic`（Leviathan ratio-based）是否被移除还是并入 `standard`，需读 [rejection_sampler_utils.py](d:\design\vllm\vllm\v1\worker\gpu\spec_decode\rejection_sampler_utils.py) 与 `_verify`（[rejection_sampler.py:134](d:\design\vllm\vllm\v1\worker\gpu\spec_decode\rejection_sampler.py)）内核确认；`block` verification 的算法出处也未查。
+
+### Inc.5 本页未覆盖面（工作量超限，标 status: stale 的原因）
+
+> [!todo] VERIFY（增量未覆盖清单，后续 verify pass 处理）：
+> - 正文 §3/§5/§8/§9 中所有 `eagle.py:L>22` 锚点需批量替换为 `llm_base_proposer.py` 新行号（语义大概率不变，但未逐条核对）。
+> - [autoregressive/speculator.py](d:\design\vllm\vllm\v1\worker\gpu\spec_decode\autoregressive\speculator.py)（947 行）内部结构（buffers / cudagraph_utils / propose 循环）未细读。
+> - `dflash/` / `dspark/` / `gemma4/` / `mtp/` / `multi_module_mtp/` 各 speculator 的差异化实现未细读。
+> - `v1/spec_decode/metrics.py`（+156）/ `extract_hidden_states.py`（+59）/ `ngram_proposer_gpu.py`（+31）的增量未分析。
+> - scheduler 端占位机制（§5）与 config/vllm.py 的 async 兼容矩阵（§9）在 d29dc3ab 是否有行为变化未核对。
+> - tree spec（`propose_tree`）在 llm_base_proposer.py 的 grep 结果中未见 `def propose_tree`——旧页 §4 说老路径支持 tree spec，**可能已被移除**，需确认。
+
 ## Notes / Caveats
 
-> [!warning] CONTRADICTION: `SpeculativeMethod` Literal 的 `"mlp_speculator"` 字面值（[speculative.py:59](d:\design\vllm\vllm\config\speculative.py)）在 `SpeculativeConfig.__post_init__` 自动检测分支被设置（[speculative.py:525-526](d:\design\vllm\vllm\config\speculative.py)），但 `gpu_model_runner.py:528-579` 的 proposer 选择 `if/elif` 链**没有** `"mlp_speculator"` 分支 → 落入 `raise ValueError("Unknown speculative decoding method ...")`。配合 docs 仍有 [mlp.md](d:\design\vllm\docs\features\speculative_decoding\mlp.md) → mlp_speculator 可能仅在 v0 路径或独立 plugin 实现，v1 当前**无 proposer 实现**。
+> [!warning] CONTRADICTION (re-verified 2026-08-18 仍成立): `SpeculativeMethod` Literal 的 `"mlp_speculator"` 字面值（现 [speculative.py:72](d:\design\vllm\vllm\config\speculative.py)）在 d29dc3ab 的 proposer 选择 `if/elif` 链（[gpu_model_runner.py:647-698](d:\design\vllm\vllm\v1\worker\gpu_model_runner.py)）仍**没有**对应分支 → 落入 raise。配合 docs 仍有 [mlp.md](d:\design\vllm\docs\features\speculative_decoding\mlp.md) → v1 当前**无 proposer 实现**。synthesis: 新增的 `custom_class` 插件机制（[custom_class_proposer.py](d:\design\vllm\vllm\v1\spec_decode\custom_class_proposer.py)）是官方给这类"枚举有但无内置实现"method 留的逃生门。
 
-> [!warning] CONTRADICTION: 两套 `RejectionSampler` 同名并存：旧 [`v1/sample/rejection_sampler.py:30`](d:\design\vllm\vllm\v1\sample\rejection_sampler.py)（`nn.Module`，老 `gpu_model_runner.py:580` 调 `RejectionSampler(self.sampler)` 单参）vs 新 [`v1/worker/gpu/spec_decode/rejection_sampler.py:100`](d:\design\vllm\vllm\v1\worker\gpu\spec_decode\rejection_sampler.py)（双参 `RejectionSampler(self.sampler, self.spec_config)` + 3 模式）。新读者不要混淆 import 路径。
+> [!warning] CONTRADICTION (re-verified 2026-08-18 仍成立，细节更新): 两套 `RejectionSampler` 同名并存：旧 [`v1/sample/rejection_sampler.py:38`](d:\design\vllm\vllm\v1\sample\rejection_sampler.py)（`nn.Module`，老路径 [gpu_model_runner.py:707](d:\design\vllm\vllm\v1\worker\gpu_model_runner.py) 构造）vs 新 [`v1/worker/gpu/spec_decode/rejection_sampler.py:75`](d:\design\vllm\vllm\v1\worker\gpu\spec_decode\rejection_sampler.py)（现**三参** `RejectionSampler(sampler, spec_config, device)` + `standard/synthetic/block` 3 模式）。新读者不要混淆 import 路径。
 
-> [!warning] CONTRADICTION: 两套 EAGLE GPU 实现并存：老 `EagleProposer(SpecDecodeBaseProposer)`（in `v1/spec_decode/eagle.py`，复用 GPUModelRunner 状态、支持 tree spec / parallel drafting / 7 种 method 通用）vs 新 `EagleSpeculator`（in `v1/worker/gpu/spec_decode/eagle/speculator.py`，独立 InputBuffers + 独立 BlockTables + 独立两个 cudagraph manager、仅链式 spec、仅 4 种 method `use_eagle()`）。两者实际选择由 ModelRunner 类型决定。
+> [!warning] CONTRADICTION (re-verified 2026-08-18 仍成立，结构更新): 两套 EAGLE GPU 实现并存：老 `EagleProposer(SpecDecodeBaseProposer)`（薄壳在 `v1/spec_decode/eagle.py`，主体在 `llm_base_proposer.py`，复用 GPUModelRunner 状态、支持 parallel drafting、10+ method 通用）vs 新 `EagleSpeculator(AutoRegressiveSpeculator)`（薄壳在 `v1/worker/gpu/spec_decode/eagle/speculator.py`，主体在 `autoregressive/speculator.py`，独立状态、6 分支工厂）。两者实际选择仍由 ModelRunner 类型决定。
 
 > [!todo] VERIFY: `EagleSpeculator` 与新 `RejectionSampler` 实际上由哪条 ModelRunner 路径（`v1/worker/gpu/model_runner.py` vs 老 `gpu_model_runner.py`）在生产场景中使用，何时切换，需要追 `Executor.get_class` 与 [docs/design/model_runner_v2.md](d:\design\vllm\docs\design\model_runner_v2.md)。
 

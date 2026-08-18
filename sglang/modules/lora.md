@@ -139,7 +139,7 @@ CLI 可选集合：[`LORA_BACKEND_CHOICES = ["triton", "csgmv", "ascend", "torch
 
 ### C++ / CUDA（`d:\design\sglang\sgl-kernel\csrc\`）
 
-对 `lora` / `LoRA` / `Lora` / `BatchedLoRA` 的检索中，**命中主要为 DeepSeek MLA 的 `q_lora_rank` / `kv_lora_rank` 维度**（例：[`sgl-kernel/csrc/cpu/qkv_proj.cpp`](d:\design\sglang\sgl-kernel\csrc\cpu\qkv_proj.cpp) 大量 `q_lora_rank`），**并非** `srt/lora` 的 adapter serving kernel。
+对 `lora` / `LoRA` / `Lora` / `BatchedLoRA` 的检索中，**命中主要为 DeepSeek MLA 的 `q_lora_rank` / `kv_lora_rank` 维度**（例：[`sgl-kernel/csrc/cpu/qkv_proj.cpp`](d:\design\sglang\python\sglang\kernels\aot\csrc\cpu\qkv_proj.cpp) 大量 `q_lora_rank`），**并非** `srt/lora` 的 adapter serving kernel。
 
 对 `sgmv|SGMV|bgmv|punica|BatchedLoRA`（大小写不敏感）在 `csrc` 下 **0 命中**。
 

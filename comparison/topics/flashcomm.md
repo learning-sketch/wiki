@@ -23,7 +23,7 @@ sources:
   - d:\design\vllm\vllm\distributed\communication_op.py
   - d:\design\vllm\vllm\distributed\parallel_state.py
   - d:\design\sglang\python\sglang\srt\layers\communicator.py
-  - d:\design\sglang\python\sglang\srt\layers\communicator_nsa_cp.py
+  - d:\design\sglang\python\sglang\srt\layers\communicator_dsa_cp.py
   - d:\design\sglang\python\sglang\srt\layers\dp_attention.py
 related:
   - comparison/index.md
@@ -332,7 +332,7 @@ threshold = (min_per_gpu_size_mb * tp_size * MiB) // (hidden_size * element_size
 
 ### 实现位置
 - [sglang/srt/layers/communicator.py](d:\design\sglang\python\sglang\srt\layers\communicator.py)（约 750 行）
-- 协助：[layers/communicator_nsa_cp.py](d:\design\sglang\python\sglang\srt\layers\communicator_nsa_cp.py)
+- 协助：[layers/communicator_dsa_cp.py](d:\design\sglang\python\sglang\srt\layers\communicator_dsa_cp.py)
 
 ### 关键抽象
 

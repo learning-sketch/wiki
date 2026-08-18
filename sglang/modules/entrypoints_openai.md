@@ -3,7 +3,7 @@ type: module
 project: sglang
 status: stale
 confidence: high
-verified_against: 2026-04-19
+verified_against: 2026-08-18 (increment pass; 正文主体锚点为 2026-04-19 版)
 sources:
   - d:\design\sglang\python\sglang\srt\entrypoints\http_server.py
   - d:\design\sglang\python\sglang\srt\entrypoints\openai\serving_base.py
@@ -186,6 +186,12 @@ flowchart LR
 
 - [`serving_responses.py:2`](d:\design\sglang\python\sglang\srt\entrypoints\openai\serving_responses.py) 明示 *Adapted from vLLM's OpenAIServingResponses*。
 - [`tool_server.py:2`](d:\design\sglang\python\sglang\srt\entrypoints\openai\tool_server.py) SPDX 指向 vLLM 贡献者。
+
+## Increment 2026-08-18 (06f32bab → f7101b0a)
+
+- **音频转写扩展是本期主 churn**（子树 diff = 9 文件 / +673 / -76）：新文件 [`audio_chunking.py`](d:\design\sglang\python\sglang\srt\entrypoints\openai\audio_chunking.py)（102 行，commit `fb97be4359` "Fix Whisper transcription for audio over 30 seconds" #33604）——把超长音频按最低 RMS 能量处切成连续不重叠的 chunk（docstring 自述对齐 vLLM `OpenAISpeechToText._split_audio` / `_find_split_point` 行为，[audio_chunking.py:L1-12](d:\design\sglang\python\sglang\srt\entrypoints\openai\audio_chunking.py)）；[`serving_transcription.py`](d:\design\sglang\python\sglang\srt\entrypoints\openai\serving_transcription.py) +377/-27、[`transcription_adapters/whisper.py`](d:\design\sglang\python\sglang\srt\entrypoints\openai\transcription_adapters\whisper.py) +61/-9、[`protocol.py`](d:\design\sglang\python\sglang\srt\entrypoints\openai\protocol.py) +20/-7。
+- **路由数 / serving 类数论断核对（不变）**：`/v1/audio/transcriptions` 在 pin 与 HEAD 均为**唯一**音频路由（HEAD [http_server.py:L1792](d:\design\sglang\python\sglang\srt\entrypoints\http_server.py)，pin 时 L1772——行号漂移 +20）；`OpenAIServing*` 类清单不变（`audio_chunking.py` 无类、纯函数；transcription 仍只有 `OpenAIServingTranscription` [serving_transcription.py:L65](d:\design\sglang\python\sglang\srt\entrypoints\openai\serving_transcription.py)）。
+- **文件数**：@06f32bab = 29 → HEAD = **30** 个 `.py`（+`audio_chunking.py`；`transcription_adapters/` 仍 5 文件：base / whisper / qwen3_asr / mimo_v2_asr / `__init__`）。正文 RESOLVED 块里的「20 .py」为 2026-04-19 旧口径。
 
 ## Notes / Caveats
 

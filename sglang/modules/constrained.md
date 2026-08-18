@@ -1,7 +1,7 @@
 ---
 type: module
 project: sglang
-status: verified
+status: stale
 confidence: high
 verified_against: 2026-04-19
 sources:
@@ -25,6 +25,8 @@ related:
   - sglang/modules/managers.md
 ---
 
+> [!todo] VERIFY: **lint 2026-08-18** — 本页正文存在 **7** 处源码死锚（多为 sglang 上游 test 树重组 / docs 站点 mdx 化 / 文件迁移所致，锚点写于 2026-04 快照），已按 §7 标 `status: stale`，待重校对。死锚清单见 log.md lint entry。
+
 # `srt/constrained` — 语法约束解码（多后端 + 异步编译 + bitmask）
 
 ## Summary
@@ -33,7 +35,7 @@ related:
 
 > [!warning] CONTRADICTION（命名 / 清单）
 >
-> 本树 **不存在** 名为 `GrammarCache` 的类；缓存是 [`BaseGrammarBackend.cache: Dict[Tuple[str, str], BaseGrammarObject]`](d:\design\sglang\python\sglang\srt\constrained\base_grammar_backend.py:133) + [`get_cached_or_future_value`](d:\design\sglang\python\sglang\srt\constrained\base_grammar_backend.py:177-186) 的 **Future + `set_cache`** 路径（见 [`grammar_manager.py:90-181`](d:\design\sglang\python\sglang\srt\constrained\grammar_manager.py)）。若外部文档写「GrammarCache LRU」，应视为 **概念别名** 而非本仓库符号名（**实际为不淘汰 dict cache**——`reset()` 会全清，但无 LRU 上限）。
+> 本树 **不存在** 名为 `GrammarCache` 的类；缓存是 [`BaseGrammarBackend.cache: Dict[Tuple[str, str], BaseGrammarObject]`](d:\design\sglang\python\sglang\srt\constrained\base_grammar_backend.py) + [`get_cached_or_future_value`](d:\design\sglang\python\sglang\srt\constrained\base_grammar_backend.py) 的 **Future + `set_cache`** 路径（见 [`grammar_manager.py:90-181`](d:\design\sglang\python\sglang\srt\constrained\grammar_manager.py)）。若外部文档写「GrammarCache LRU」，应视为 **概念别名** 而非本仓库符号名（**实际为不淘汰 dict cache**——`reset()` 会全清，但无 LRU 上限）。
 
 ## Sources
 
@@ -49,7 +51,7 @@ related:
 | Structural tag 判别 | [`utils.py`](d:\design\sglang\python\sglang\srt\constrained\utils.py)（`is_legacy_structural_tag` L4-12） |
 | Triton bitmask | [`triton_ops/bitmask_ops.py`](d:\design\sglang\python\sglang\srt\constrained\triton_ops\bitmask_ops.py)（`apply_token_bitmask_inplace_kernel` L13-81、`apply_token_bitmask_inplace_triton` L84-141） |
 | CLI / 默认 | [`server_args.py`](d:\design\sglang\python\sglang\srt\server_args.py)（`GRAMMAR_BACKEND_CHOICES` L162、`add_grammar_backend_choices` L262-263、`grammar_backend` 字段 L483、`constrained_json_whitespace_pattern` L381 / `constrained_json_disable_any_whitespace` L382、`_handle_grammar_backend` 默认 xgrammar L2672-2674、CLI `--grammar-backend` L5030-5031、`--constrained-json-whitespace-pattern` L4491） |
-| sgl-kernel CUDA 同源 bitmask | [`apply_token_bitmask_inplace_cuda.cu`](d:\design\sglang\sgl-kernel\csrc\grammar\apply_token_bitmask_inplace_cuda.cu) — 在 [`common_extension.cc:407-408`](d:\design\sglang\sgl-kernel\csrc\common_extension.cc) 注册为 `apply_token_bitmask_inplace_cuda` |
+| sgl-kernel CUDA 同源 bitmask | [`apply_token_bitmask_inplace_cuda.cu`](d:\design\sglang\python\sglang\kernels\aot\csrc\grammar\apply_token_bitmask_inplace_cuda.cu) — 在 [`common_extension.cc:407-408`](d:\design\sglang\python\sglang\kernels\aot\csrc\common_extension.cc) 注册为 `apply_token_bitmask_inplace_cuda` |
 
 ## Architecture / Data flow
 
@@ -82,11 +84,11 @@ flowchart TB
     SAMP --> L
 ```
 
-- **请求侧键构造**：[`process_req_with_grammar`](d:\design\sglang\python\sglang\srt\constrained\grammar_manager.py:68-110) 在 L81-88 将 `json_schema` / `regex` / `ebnf` / `structural_tag` 映射为 `("json"|"regex"|"ebnf"|"structural_tag", key_string)`，再交给 [`get_cached_or_future_value`](d:\design\sglang\python\sglang\srt\constrained\base_grammar_backend.py:177-186)。
-- **异步编译**：缓存未命中时 [`executor.submit(self._init_value_dispatch, ...)`](d:\design\sglang\python\sglang\srt\constrained\base_grammar_backend.py:185)；就绪后 [`set_cache(req.grammar_key, req.grammar.copy())`](d:\design\sglang\python\sglang\srt\constrained\grammar_manager.py:181)。
-- **多卡同步**：[`get_ready_grammar_requests`](d:\design\sglang\python\sglang\srt\constrained\grammar_manager.py:112-205) 对 `ready_req_idxs` 做 `set.intersection`、`failed_req_idxs` 做 `set.union`（L162-169）；只有所有 rank 都就绪的请求才进入 `waiting_queue`，避免 deadlock。
+- **请求侧键构造**：[`process_req_with_grammar`](d:\design\sglang\python\sglang\srt\constrained\grammar_manager.py) 在 L81-88 将 `json_schema` / `regex` / `ebnf` / `structural_tag` 映射为 `("json"|"regex"|"ebnf"|"structural_tag", key_string)`，再交给 [`get_cached_or_future_value`](d:\design\sglang\python\sglang\srt\constrained\base_grammar_backend.py)。
+- **异步编译**：缓存未命中时 [`executor.submit(self._init_value_dispatch, ...)`](d:\design\sglang\python\sglang\srt\constrained\base_grammar_backend.py)；就绪后 [`set_cache(req.grammar_key, req.grammar.copy())`](d:\design\sglang\python\sglang\srt\constrained\grammar_manager.py)。
+- **多卡同步**：[`get_ready_grammar_requests`](d:\design\sglang\python\sglang\srt\constrained\grammar_manager.py) 对 `ready_req_idxs` 做 `set.intersection`、`failed_req_idxs` 做 `set.union`（L162-169）；只有所有 rank 都就绪的请求才进入 `waiting_queue`，避免 deadlock。
 - **采样 bitmask**：[`update_regex_vocab_mask`](d:\design\sglang\python\sglang\srt\sampling\sampling_batch_info.py) 分配并 fill `vocab_mask`，在 [`apply_logits_bias`](d:\design\sglang\python\sglang\srt\sampling\sampling_batch_info.py) 中调用各后端 `apply_vocab_mask`。
-- **Reasoner 状态机**：[`ReasonerGrammarObject`](d:\design\sglang\python\sglang\srt\constrained\reasoner_grammar_backend.py:27-106) 用 `tokens_after_think_end ∈ {-1, 0, +}` 三态：在 `think_end_id` 出现前不喂 grammar；之后才转发 `accept_token` / `fill_vocab_mask`。
+- **Reasoner 状态机**：[`ReasonerGrammarObject`](d:\design\sglang\python\sglang\srt\constrained\reasoner_grammar_backend.py) 用 `tokens_after_think_end ∈ {-1, 0, +}` 三态：在 `think_end_id` 出现前不喂 grammar；之后才转发 `accept_token` / `fill_vocab_mask`。
 
 ## File inventory（9 文件）
 
@@ -104,7 +106,7 @@ flowchart TB
 
 ## `BaseGrammarObject` API
 
-抽象 [`BaseGrammarObject`](d:\design\sglang\python\sglang\srt\constrained\base_grammar_backend.py:41-116) 约定：
+抽象 [`BaseGrammarObject`](d:\design\sglang\python\sglang\srt\constrained\base_grammar_backend.py) 约定：
 
 | 方法 | 用途 |
 |---|---|
@@ -121,18 +123,18 @@ flowchart TB
 
 ## Backend 矩阵（4 选 1）
 
-`--grammar-backend` 选择 `xgrammar` / `outlines` / `llguidance` / `none`（[`GRAMMAR_BACKEND_CHOICES`](d:\design\sglang\python\sglang\srt\server_args.py)，L162）。**默认值**：未指定时由 [`_handle_grammar_backend`](d:\design\sglang\python\sglang\srt\server_args.py:2672-2674) 设为 `xgrammar`。
+`--grammar-backend` 选择 `xgrammar` / `outlines` / `llguidance` / `none`（[`GRAMMAR_BACKEND_CHOICES`](d:\design\sglang\python\sglang\srt\server_args.py)，L162）。**默认值**：未指定时由 [`_handle_grammar_backend`](d:\design\sglang\python\sglang\srt\server_args.py) 设为 `xgrammar`。
 
 | 后端 | 主类 | jump-forward | bitmask CUDA 路径 | 自定义 whitespace | 异步编译 |
 |---|---|---|---|---|---|
-| **xgrammar** | [`XGrammarGrammar`](d:\design\sglang\python\sglang\srt\constrained\xgrammar_backend.py:54-150) + `XGrammarGrammarBackend` | ❌ 无 | sgl-kernel `apply_token_bitmask_inplace_cuda`（HIP/CUDA）或 Triton（[xgrammar_backend.py:107-114](d:\design\sglang\python\sglang\srt\constrained\xgrammar_backend.py)） | `any_whitespace` 反映 `--constrained-json-disable-any-whitespace` | ✅ `BaseGrammarBackend.executor` |
+| **xgrammar** | [`XGrammarGrammar`](d:\design\sglang\python\sglang\srt\constrained\xgrammar_backend.py) + `XGrammarGrammarBackend` | ❌ 无 | sgl-kernel `apply_token_bitmask_inplace_cuda`（HIP/CUDA）或 Triton（[xgrammar_backend.py:107-114](d:\design\sglang\python\sglang\srt\constrained\xgrammar_backend.py)） | `any_whitespace` 反映 `--constrained-json-disable-any-whitespace` | ✅ `BaseGrammarBackend.executor` |
 | **outlines** | `OutlinesGrammarBackend` | ✅（依赖 `outlines_jump_forward.py` 与 `try_jump_forward` 钩子） | bool mask（`bool` tensor），不走 sgl-kernel CUDA bitmask；自带 mask 应用 | `whitespace_pattern` 直接传入 | ✅ |
 | **llguidance** | `GuidanceBackend` / `GuidanceGrammar` | ❌（依赖 `LLMatcher` 自身回退） | `llguidance.torch` bitmask 应用 | `any_whitespace` + `whitespace_pattern` | ✅ |
 | **none** | — | — | — | — | 直接返回 `None`（grammar 请求会被 `--grammar-backend none` 错误拒绝，[grammar_manager.py:77-79](d:\design\sglang\python\sglang\srt\constrained\grammar_manager.py)） |
 
-**Reasoner 包装**：当 `--reasoning-parser` 启用并且模型有 `think_end_id` 时，`create_grammar_backend` 末尾再用 [`ReasonerGrammarBackend(grammar_backend, think_end_id)`](d:\design\sglang\python\sglang\srt\constrained\base_grammar_backend.py:262-267) 包内层后端 — 推理段（`<think>...</think>`）内不施加约束。**4 选 1 + 1 wrap = 实际实例形态最多 8 种**。
+**Reasoner 包装**：当 `--reasoning-parser` 启用并且模型有 `think_end_id` 时，`create_grammar_backend` 末尾再用 [`ReasonerGrammarBackend(grammar_backend, think_end_id)`](d:\design\sglang\python\sglang\srt\constrained\base_grammar_backend.py) 包内层后端 — 推理段（`<think>...</think>`）内不施加约束。**4 选 1 + 1 wrap = 实际实例形态最多 8 种**。
 
-**第三方扩展**：`register_grammar_backend(name, init_func)` 允许把自定义 backend 名字注入 [`GRAMMAR_BACKEND_REGISTRY`](d:\design\sglang\python\sglang\srt\constrained\base_grammar_backend.py:195) 与 `add_grammar_backend_choices`（[server_args.py:262-263](d:\design\sglang\python\sglang\srt\server_args.py)）扩 CLI 选项。
+**第三方扩展**：`register_grammar_backend(name, init_func)` 允许把自定义 backend 名字注入 [`GRAMMAR_BACKEND_REGISTRY`](d:\design\sglang\python\sglang\srt\constrained\base_grammar_backend.py) 与 `add_grammar_backend_choices`（[server_args.py:262-263](d:\design\sglang\python\sglang\srt\server_args.py)）扩 CLI 选项。
 
 ## Jump-forward decoding（仅 outlines）
 
@@ -147,16 +149,16 @@ flowchart TB
 
 ## Triton bitmask 内核
 
-[`apply_token_bitmask_inplace_kernel`](d:\design\sglang\python\sglang\srt\constrained\triton_ops\bitmask_ops.py:13-81)：
+[`apply_token_bitmask_inplace_kernel`](d:\design\sglang\python\sglang\srt\constrained\triton_ops\bitmask_ops.py)：
 
 - **谱系**：[L1-2](d:\design\sglang\python\sglang\srt\constrained\triton_ops\bitmask_ops.py) 文件头 *"Adapt from xgrammar v0.1.17 `apply_token_bitmask_inplace_triton.py`"* — **直接 fork** xgrammar 上游 Triton 内核到 SGLang 仓内（无修改地复用，仅供 HIP 之外的非 CUDA 编译路径作为 fallback）。
-- **Python 包装**：[`apply_token_bitmask_inplace_triton`](d:\design\sglang\python\sglang\srt\constrained\triton_ops\bitmask_ops.py:84-141) — `BLOCK_SIZE=4096` / `BITS_PER_BLOCK=32`；按 `NUM_SMS = get_device_core_count()` 启 grid；支持 `indices` 参数选行（spec decode 等场景）。
+- **Python 包装**：[`apply_token_bitmask_inplace_triton`](d:\design\sglang\python\sglang\srt\constrained\triton_ops\bitmask_ops.py) — `BLOCK_SIZE=4096` / `BITS_PER_BLOCK=32`；按 `NUM_SMS = get_device_core_count()` 启 grid；支持 `indices` 参数选行（spec decode 等场景）。
 
 **与 sgl-kernel CUDA 内核的关系**：
 
 | 路径 | 触发条件 | 实现 |
 |---|---|---|
-| `sgl_kernel.apply_token_bitmask_inplace_cuda` | `is_hip=True`（[xgrammar_backend.py:42-43](d:\design\sglang\python\sglang\srt\constrained\xgrammar_backend.py)） | C++/CUDA 注册 [`common_extension.cc:407-408`](d:\design\sglang\sgl-kernel\csrc\common_extension.cc)；本体在 [`csrc/grammar/apply_token_bitmask_inplace_cuda.cu`](d:\design\sglang\sgl-kernel\csrc\grammar\apply_token_bitmask_inplace_cuda.cu) |
+| `sgl_kernel.apply_token_bitmask_inplace_cuda` | `is_hip=True`（[xgrammar_backend.py:42-43](d:\design\sglang\python\sglang\srt\constrained\xgrammar_backend.py)） | C++/CUDA 注册 [`common_extension.cc:407-408`](d:\design\sglang\python\sglang\kernels\aot\csrc\common_extension.cc)；本体在 [`csrc/grammar/apply_token_bitmask_inplace_cuda.cu`](d:\design\sglang\python\sglang\kernels\aot\csrc\grammar\apply_token_bitmask_inplace_cuda.cu) |
 | Triton fallback | 非 HIP 设备（CUDA / NPU / XPU / MUSA） | 本目录 `triton_ops/bitmask_ops.py` |
 
 **这是 SGLang 中第二个 sgl-kernel 算子直接服务于 grammar 路径**（第一个为采样侧 `top_k_renorm_probs` 等，见 [sampling.md](sampling.md)）。
@@ -175,7 +177,7 @@ flowchart TB
 | `SGLANG_DISABLE_OUTLINES_DISK_CACHE` env | `"true"` | [outlines_jump_forward.py:41](d:\design\sglang\python\sglang\srt\constrained\outlines_jump_forward.py) |
 
 > [!todo] VERIFY: ~~历史 wiki 中常出现的 `--disable-jump-forward` CLI 在当前 [`server_args.py`](d:\design\sglang\python\sglang\srt\server_args.py) 中**未检索到**；`outlines` 后端的 jump-forward 是否有显式开关需进一步核对，或仅由 `--grammar-backend outlines` 隐式启用。~~
-> **RESOLVED 2026-04-19**: 已 grep 全 [`server_args.py`](d:\design\sglang\python\sglang\srt\server_args.py)：`disable[-_]jump[-_]forward` **0 命中**。**不存在**显式 CLI 开关；jump-forward 由 `--grammar-backend outlines` 隐式启用（`OutlinesGrammarBackend` 自动构造 [`OutlinesJumpForwardMap`](d:\design\sglang\python\sglang\srt\constrained\outlines_jump_forward.py:142)，调度器在 [`BaseGrammarObject.try_jump_forward`](d:\design\sglang\python\sglang\srt\constrained\base_grammar_backend.py:90) 命中时使用）。
+> **RESOLVED 2026-04-19**: 已 grep 全 [`server_args.py`](d:\design\sglang\python\sglang\srt\server_args.py)：`disable[-_]jump[-_]forward` **0 命中**。**不存在**显式 CLI 开关；jump-forward 由 `--grammar-backend outlines` 隐式启用（`OutlinesGrammarBackend` 自动构造 [`OutlinesJumpForwardMap`](d:\design\sglang\python\sglang\srt\constrained\outlines_jump_forward.py)，调度器在 [`BaseGrammarObject.try_jump_forward`](d:\design\sglang\python\sglang\srt\constrained\base_grammar_backend.py) 命中时使用）。
 
 ## §跨子系统引用（§5 step 3）
 
@@ -183,8 +185,8 @@ flowchart TB
 
 | 算子 / 文件 | 锚点 |
 |---|---|
-| `apply_token_bitmask_inplace_cuda` 注册 | [common_extension.cc:407-408](d:\design\sglang\sgl-kernel\csrc\common_extension.cc) |
-| 本体 .cu | [`csrc/grammar/apply_token_bitmask_inplace_cuda.cu`](d:\design\sglang\sgl-kernel\csrc\grammar\apply_token_bitmask_inplace_cuda.cu) |
+| `apply_token_bitmask_inplace_cuda` 注册 | [common_extension.cc:407-408](d:\design\sglang\python\sglang\kernels\aot\csrc\common_extension.cc) |
+| 本体 .cu | [`csrc/grammar/apply_token_bitmask_inplace_cuda.cu`](d:\design\sglang\python\sglang\kernels\aot\csrc\grammar\apply_token_bitmask_inplace_cuda.cu) |
 | Python 进入点 | xgrammar_backend HIP 分支（[L42-43](d:\design\sglang\python\sglang\srt\constrained\xgrammar_backend.py)） |
 
 **这是 SGLang `constrained/` 唯一的 sgl-kernel C++/CUDA 算子绑定**（除此之外全 Python / Triton）。
@@ -231,7 +233,7 @@ flowchart TB
 
 ## Notes / Caveats
 
-> [!warning] CONTRADICTION（缓存上限）：本模块的 grammar cache **无 LRU 上限**：[`BaseGrammarBackend.cache: Dict`](d:\design\sglang\python\sglang\srt\constrained\base_grammar_backend.py:133) 与 [`set_cache`](d:\design\sglang\python\sglang\srt\constrained\base_grammar_backend.py:188-189) 仅做 dict insert；只有 `reset()` 整体清空。在 schema 极多的工作负载下需注意内存增长。
+> [!warning] CONTRADICTION（缓存上限）：本模块的 grammar cache **无 LRU 上限**：[`BaseGrammarBackend.cache: Dict`](d:\design\sglang\python\sglang\srt\constrained\base_grammar_backend.py) 与 [`set_cache`](d:\design\sglang\python\sglang\srt\constrained\base_grammar_backend.py) 仅做 dict insert；只有 `reset()` 整体清空。在 schema 极多的工作负载下需注意内存增长。
 
 > [!warning] CONTRADICTION（`GrammarCache` 命名）：本仓库**无** `GrammarCache` 类，仅有 `BaseGrammarBackend.cache` 字段。外部文档若引用该命名，应理解为概念别名。
 

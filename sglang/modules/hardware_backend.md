@@ -1,9 +1,9 @@
 ---
 type: module
 project: sglang
-status: verified
+status: stale
 confidence: high
-verified_against: 2026-04-19
+verified_against: 2026-08-18 (仅文件数重计 + 增量注记；22 文件/5539 行高 churn 未深核，标 stale)
 sources:
   - d:\design\sglang\python\sglang\srt\hardware_backend\npu\utils.py
   - d:\design\sglang\python\sglang\srt\hardware_backend\npu\graph_runner\npu_graph_runner.py
@@ -202,6 +202,11 @@ flowchart TD
 | `hardware_backend` 下 `.py` 文件数 | **22**（Glob） |
 | 子目录级 **设备后端**（顶层子包） | **3**：`npu/`、`musa/`、`mlx/` |
 | `hardware_backend` 内 **`*GraphRunner` 子类**（显式 `class .*GraphRunner`） | **4** |
+
+## Increment 2026-08-18 (06f32bab → f7101b0a)
+
+- 高 churn 只登记不深核：子树 diff = **22 文件 / +3764 / -1775**（≈5539 行 churn）。**注意口径**：正文/Numbers 的「22 `.py`」是 2026-04-19 的 Glob 文件数，与本期 diff 的「22 文件」数字巧合同值但含义不同；`git ls-tree` 重计文件数 @06f32bab = **73** → HEAD = **79**（+6），2026-04-19 口径早已失效。
+- 新增文件（`git diff --name-status` 实测）：[`npu/dsv4/c128_sidecar_component.py`](d:\design\sglang\python\sglang\srt\hardware_backend\npu\dsv4\c128_sidecar_component.py)、[`npu/attention/ascend_kda_backend.py`](d:\design\sglang\python\sglang\srt\hardware_backend\npu\attention\ascend_kda_backend.py)、[`npu/extra_ops_loader.py`](d:\design\sglang\python\sglang\srt\hardware_backend\npu\extra_ops_loader.py)、[`npu/modules/minimax_m3_processor.py`](d:\design\sglang\python\sglang\srt\hardware_backend\npu\modules\minimax_m3_processor.py)、[`mlx/models/muse_glimmer_mlx.py`](d:\design\sglang\python\sglang\srt\hardware_backend\mlx\models\muse_glimmer_mlx.py)、[`mlx/remote_code_gate.py`](d:\design\sglang\python\sglang\srt\hardware_backend\mlx\remote_code_gate.py)。NPU 侧主题为 "[NPU] Support DeepSeek-V4 DSpark and refactor DSV4 cache management"（#33676）。本页标 `status: stale`。
 
 ## Notes / Caveats
 

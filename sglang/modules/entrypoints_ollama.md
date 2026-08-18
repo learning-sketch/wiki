@@ -41,8 +41,8 @@ flowchart LR
   TM --> ND["StreamingResponse<br/>application/x-ndjson<br/>orjson per line"]
 ```
 
-- Chat：[`handle_chat`](d:\design\sglang\python\sglang\srt\entrypoints\ollama\serving.py:68) 用 `apply_chat_template` 得到 `prompt_ids`，组装 `GenerateReqInput(input_ids=..., stream=...)`（[L74-94](d:\design\sglang\python\sglang\srt\entrypoints\ollama\serving.py)）。
-- Generate：[`handle_generate`](d:\design\sglang\python\sglang\srt\entrypoints\ollama\serving.py:173) 拼接 `system`+`prompt`，`GenerateReqInput(text=...)`（[L207-212](d:\design\sglang\python\sglang\srt\entrypoints\ollama\serving.py)）；空 prompt 早退（[L184-202](d:\design\sglang\python\sglang\srt\entrypoints\ollama\serving.py)）。
+- Chat：[`handle_chat`](d:\design\sglang\python\sglang\srt\entrypoints\ollama\serving.py) 用 `apply_chat_template` 得到 `prompt_ids`，组装 `GenerateReqInput(input_ids=..., stream=...)`（[L74-94](d:\design\sglang\python\sglang\srt\entrypoints\ollama\serving.py)）。
+- Generate：[`handle_generate`](d:\design\sglang\python\sglang\srt\entrypoints\ollama\serving.py) 拼接 `system`+`prompt`，`GenerateReqInput(text=...)`（[L207-212](d:\design\sglang\python\sglang\srt\entrypoints\ollama\serving.py)）；空 prompt 早退（[L184-202](d:\design\sglang\python\sglang\srt\entrypoints\ollama\serving.py)）。
 
 ## File inventory（4 文件）
 
@@ -97,15 +97,15 @@ flowchart LR
 | **路由** | 见上节；环境变量前缀 `SGLANG_OLLAMA_*` |
 | **CLI** | 无 `--ollama-*` 专用参数；路由可通过 **环境变量** 改写 |
 | **Tests** | 全仓库 `ollama` (case-insensitive) 文件名 grep **0 命中**于 `d:\design\sglang\test\`；仅 `python/sglang/srt/entrypoints/ollama/`、`docs/basic_usage/ollama_api.md`、`docs/index.rst` 含相关文本（**RESOLVED 2026-04-19**：确无注册测试） |
-| **Docs** | [docs/basic_usage/ollama_api.md](d:\design\sglang\docs\basic_usage\ollama_api.md)；[ollama/README.md](d:\design\sglang\python\sglang\srt\entrypoints\ollama\README.md)（文档内链） |
+| **Docs** | [docs/basic_usage/ollama_api.md](d:\design\sglang\docs\docs\basic_usage\ollama_api.mdx)；[ollama/README.md](d:\design\sglang\python\sglang\srt\entrypoints\ollama\README.md)（文档内链） |
 
 ## Notes / Caveats
 
 - **独立性**：`ollama/serving.py` 仅依赖 `protocol`、`GenerateReqInput`、`TokenizerManager` 路径；**确认**无 OpenAI serving import。
-- **根路径行为**：默认 `/` 非 Ollama 字符串，与 [ollama_api.md](d:\design\sglang\docs\basic_usage\ollama_api.md) 表格中「`/` Health check for Ollama CLI」并存时，应核对客户端是否依赖响应正文。
+- **根路径行为**：默认 `/` 非 Ollama 字符串，与 [ollama_api.md](d:\design\sglang\docs\docs\basic_usage\ollama_api.mdx) 表格中「`/` Health check for Ollama CLI」并存时，应核对客户端是否依赖响应正文。
 
 ## See also
 
-- [docs/basic_usage/ollama_api.md](d:\design\sglang\docs\basic_usage\ollama_api.md)
+- [docs/basic_usage/ollama_api.md](d:\design\sglang\docs\docs\basic_usage\ollama_api.mdx)
 - [entrypoints_openai.md](entrypoints_openai.md)（对比：OpenAI 走 `OpenAIServingChat`，Ollama 直连 `TokenizerManager`）
 - [entrypoints.md](entrypoints.md)

@@ -1,7 +1,7 @@
 ---
 type: module
 project: sglang
-status: verified
+status: stale
 confidence: high
 verified_against: 2026-04-19
 sources:
@@ -20,6 +20,8 @@ related:
   - sglang/modules/elastic_ep.md
   - sglang/topics/moe.md
 ---
+
+> [!todo] VERIFY: **lint 2026-08-18** — 本页正文存在 **5** 处源码死锚（多为 sglang 上游 test 树重组 / docs 站点 mdx 化 / 文件迁移所致，锚点写于 2026-04 快照），已按 §7 标 `status: stale`，待重校对。死锚清单见 log.md lint entry。
 
 # `srt/batch_overlap` — Two-batch overlap (TBO) / Single-batch overlap (SBO) MoE 前向交错
 
@@ -128,7 +130,7 @@ flowchart LR
 
 > [!todo] VERIFY: ~~`OperationsStrategy.init_new_tbo` 仅支持 `DeepseekV2DecoderLayer` / `Qwen3MoeDecoderLayer` / `MiMoV2DecoderLayer`（[operations_strategy.py:38-67](d:\design\sglang\python\sglang\srt\batch_overlap\operations_strategy.py)），其它架构需另证。~~
 >
-> > **RESOLVED 2026-04-19**: [`init_new_tbo`](d:\design\sglang\python\sglang\srt\batch_overlap\operations_strategy.py:34) 内 `if/elif` 分支精确为 [`DeepseekV2DecoderLayer`](d:\design\sglang\python\sglang\srt\batch_overlap\operations_strategy.py:39) / [`Qwen3MoeDecoderLayer`](d:\design\sglang\python\sglang\srt\batch_overlap\operations_strategy.py:48) / [`MiMoV2DecoderLayer`](d:\design\sglang\python\sglang\srt\batch_overlap\operations_strategy.py:57) 三类，其它架构落入 fallback 异常分支。
+> > **RESOLVED 2026-04-19**: [`init_new_tbo`](d:\design\sglang\python\sglang\srt\batch_overlap\operations_strategy.py) 内 `if/elif` 分支精确为 [`DeepseekV2DecoderLayer`](d:\design\sglang\python\sglang\srt\batch_overlap\operations_strategy.py) / [`Qwen3MoeDecoderLayer`](d:\design\sglang\python\sglang\srt\batch_overlap\operations_strategy.py) / [`MiMoV2DecoderLayer`](d:\design\sglang\python\sglang\srt\batch_overlap\operations_strategy.py) 三类，其它架构落入 fallback 异常分支。
 
 ## See also
 

@@ -3,7 +3,7 @@ type: module
 project: sglang
 status: stale
 confidence: high
-verified_against: 2026-04-19
+verified_against: 2026-08-18 (increment pass; 正文主体锚点为 2026-04-19 版)
 sources:
   - d:\design\sglang\python\sglang\srt\distributed
   - d:\design\sglang\python\sglang\srt\distributed\parallel_state.py
@@ -52,7 +52,7 @@ related:
 | Scheduler rank 维度 | [managers/scheduler.py:337-356](d:\design\sglang\python\sglang\srt\managers\scheduler.py) |
 | 配置 | [server_args.py:372-455, 527, 641](d:\design\sglang\python\sglang\srt\server_args.py) |
 | 姊妹模块 handoff | [layers/dp_attention.py:13-25](d:\design\sglang\python\sglang\srt\layers\dp_attention.py) |
-| C++ 算子绑定（CPU SHM allreduce） | [sgl-kernel/csrc/cpu/torch_extension_cpu.cpp:315, 582-583](d:\design\sglang\sgl-kernel\csrc\cpu\torch_extension_cpu.cpp) |
+| C++ 算子绑定（CPU SHM allreduce） | [sgl-kernel/csrc/cpu/torch_extension_cpu.cpp:315, 582-583](d:\design\sglang\python\sglang\kernels\aot\csrc\cpu\torch_extension_cpu.cpp) |
 
 ## Architecture / Data flow
 
@@ -183,8 +183,8 @@ flowchart LR
 
 ### 1. 跨语言绑定（C++ / sgl-kernel）
 
-- Python 符号 `parallel_state` / `init_distributed_environment` / `get_tp_group` / `get_pp_group` / `get_world_group`：**在 [`d:\design\sglang\sgl-kernel\`](d:\design\sglang\sgl-kernel) 全 C++ 树 grep 0 命中**
-- **算子级**绑定（**部分跨语言**）：`shm_allreduce` 在 [sgl-kernel/csrc/cpu/torch_extension_cpu.cpp:582-583](d:\design\sglang\sgl-kernel\csrc\cpu\torch_extension_cpu.cpp) 注册；调用点 [parallel_state.py:566](d:\design\sglang\python\sglang\srt\distributed\parallel_state.py) `torch.ops.sgl_kernel.shm_allreduce`。**这是本模块唯一的 C++ 算子绑定**——绑定关系是算子名 `sgl_kernel::shm_allreduce`，不是 Python 模块名。
+- Python 符号 `parallel_state` / `init_distributed_environment` / `get_tp_group` / `get_pp_group` / `get_world_group`：**在 [`d:\design\sglang\sgl-kernel\`](d:\design\sglang\python\sglang\kernels\aot) 全 C++ 树 grep 0 命中**
+- **算子级**绑定（**部分跨语言**）：`shm_allreduce` 在 [sgl-kernel/csrc/cpu/torch_extension_cpu.cpp:582-583](d:\design\sglang\python\sglang\kernels\aot\csrc\cpu\torch_extension_cpu.cpp) 注册；调用点 [parallel_state.py:566](d:\design\sglang\python\sglang\srt\distributed\parallel_state.py) `torch.ops.sgl_kernel.shm_allreduce`。**这是本模块唯一的 C++ 算子绑定**——绑定关系是算子名 `sgl_kernel::shm_allreduce`，不是 Python 模块名。
 
 > synthesis: **`shm_allreduce` 是 SGLang `distributed/` 唯一的 sgl-kernel C++ 算子依赖**——其余 communicator 全靠 PyTorch 原生 / 第三方 Python 库（pynccl / mooncake / nixl / mscclpp）。
 
@@ -227,6 +227,12 @@ flowchart LR
 
 详细 9 子维度对比（进程组抽象 / TP collectives / PP 完成度 / DP 双语义 / EP+EPLB+Elastic / scheduler rank 维度数 / CP-SP 链回 / 目录布局 / 与 PD 优化关联）见 [`comparison/topics/distributed.md`](../../comparison/topics/distributed.md)；维度索引见 [`comparison/dimensions.md §dim-distributed`](../../comparison/dimensions.md)。
 
+## Increment 2026-08-18 (06f32bab → f7101b0a)
+
+- **VMM 辅助迁出本模块**：`distributed/device_communicators/vmm_utils.py` → 顶层 [`srt/cuda_vmm_utils.py`](d:\design\sglang\python\sglang\srt\cuda_vmm_utils.py)（迁移 + 大幅扩展，`git diff -M` 记 +414 行；移动发生在 commit `df986c4d5e` "Consolidate CUDA VMM allocation helpers" #34199，import 修正在 commit `13aeb91b6e` "[Fix] Update multimodal CUDA VMM helper import" #34358）。synthesis: 迁出的动机是该 helper 的消费方已远超 distributed——全仓 grep `cuda_vmm_utils` 命中 [`multimodal/transport/memory_pool.py`](d:\design\sglang\python\sglang\srt\multimodal\transport\memory_pool.py)、[`mem_cache/kv_vmm_backing.py`](d:\design\sglang\python\sglang\srt\mem_cache\kv_vmm_backing.py)、`layers/moe/dwdp/` 4 文件、[`utils/cuda_vmm_transport_utils.py`](d:\design\sglang\python\sglang\srt\utils\cuda_vmm_transport_utils.py)，本模块内仍有 [`custom_all_reduce_utils.py`](d:\design\sglang\python\sglang\srt\distributed\device_communicators\custom_all_reduce_utils.py) / [`custom_all_reduce_v2.py`](d:\design\sglang\python\sglang\srt\distributed\device_communicators\custom_all_reduce_v2.py) 两个使用方。
+- **文件数重核**：`git ls-tree` @06f32bab = **29**（与 index 记录一致）→ HEAD = **28**（-1，即 vmm_utils 迁出）。正文「22 `.py` / 17 device_communicators」为 2026-04-19 旧口径。
+- 其余 churn：[`parallel_state.py`](d:\design\sglang\python\sglang\srt\distributed\parallel_state.py) +156 行、[`bootstrap.py`](d:\design\sglang\python\sglang\srt\distributed\bootstrap.py) +67 行（该文件 pin 时已存在，本期为扩展非新增；文件清单 diff 唯一变化即 vmm_utils 迁出）、custom allreduce 小改；正文 `GroupCoordinator` 主锚点未重核，保持 stale。
+
 ## Notes / Caveats
 
 > [!todo] VERIFY: pin 从 `34fef07a` → `06f32bab`（2026-08-10 increment）后本页未深 verify；文件数量/行号可能漂移。优先对照 [entities/Scheduler.md](../entities/Scheduler.md) / 新模块页。
@@ -241,7 +247,7 @@ flowchart LR
 > **RESOLVED 2026-04-19**: 函数定义于 [parallel_state.py:2033-2063](d:\design\sglang\python\sglang\srt\distributed\parallel_state.py)，仅 `tensor/expert/pipeline + backend` 4 形参；全树 grep 仅在两处 docstring（[parallel_state.py:12](d:\design\sglang\python\sglang\srt\distributed\parallel_state.py)、[multimodal_gen/runtime/distributed/parallel_state.py:21](d:\design\sglang\python\sglang\multimodal_gen\runtime\distributed\parallel_state.py)）出现，**没有任何运行时调用**——属遗留/示例代码，调用方实际全部走 `initialize_model_parallel`，不会漏配 attn_cp_size。
 
 > [!todo] VERIFY: ~~NPU 上 `init_process_group` 注入 HCCL 选项（[parallel_state.py:72-87](d:\design\sglang\python\sglang\srt\distributed\parallel_state.py)）的精确触发条件——MoE 相关？所有组都注入还是只 `tp` / `attention_tp` 注入？~~
-> **RESOLVED 2026-04-19**: [`get_torch_distributed_pg_options`](d:\design\sglang\python\sglang\srt\distributed\parallel_state.py:72-87) 仅在 `_is_npu` 为真时生效；`group_name is None`（默认组）或 `"moe" in group_name` 才返回 `ProcessGroupHCCL.Options`（buffer 大小由 `DEEPEP_HCCL_BUFFSIZE` / `HCCL_BUFFSIZE` 决定，默认 200）；普通 `tp` / `attention_tp` 等非 MoE 命名组返回 `None`，不注入 HCCL 选项。
+> **RESOLVED 2026-04-19**: [`get_torch_distributed_pg_options`](d:\design\sglang\python\sglang\srt\distributed\parallel_state.py) 仅在 `_is_npu` 为真时生效；`group_name is None`（默认组）或 `"moe" in group_name` 才返回 `ProcessGroupHCCL.Options`（buffer 大小由 `DEEPEP_HCCL_BUFFSIZE` / `HCCL_BUFFSIZE` 决定，默认 200）；普通 `tp` / `attention_tp` 等非 MoE 命名组返回 `None`，不注入 HCCL 选项。
 
 ## See also
 

@@ -75,10 +75,10 @@ flowchart TB
     B2 -.RDMA via Mooncake TE.-> B3
 ```
 
-- 启用 `elastic_ep_backend` 时 [`ModelRunner.__init__`](d:\design\sglang\python\sglang\srt\model_executor\model_runner.py:563-567) 调用 [`ElasticEPStateManager.init`](d:\design\sglang\python\sglang\srt\elastic_ep\elastic_ep.py:37-44)，构造全 1 的 `active_ranks`（[`healthy_rank_state`](d:\design\sglang\python\sglang\srt\elastic_ep\elastic_ep.py:66-73)）。
+- 启用 `elastic_ep_backend` 时 [`ModelRunner.__init__`](d:\design\sglang\python\sglang\srt\model_executor\model_runner.py) 调用 [`ElasticEPStateManager.init`](d:\design\sglang\python\sglang\srt\elastic_ep\elastic_ep.py)，构造全 1 的 `active_ranks`（[`healthy_rank_state`](d:\design\sglang\python\sglang\srt\elastic_ep\elastic_ep.py)）。
 - Mooncake EP dispatcher 在 [`_dispatch_core` / `_combine_core`](d:\design\sglang\python\sglang\srt\layers\moe\token_dispatcher\mooncake.py) 将 `ElasticEPStateManager.instance().active_ranks` 传入 Mooncake `Buffer.dispatch` / `combine`。
 - Nixl dispatcher 在构造时缓存 [`elastic_state.active_ranks`](d:\design\sglang\python\sglang\srt\layers\moe\token_dispatcher\nixl.py)（可为 `None` 则不走 elastic 掩码分支）。
-- 若 `enable_elastic_expert_backup` 且 `elastic_ep_backend` 非空，[`ModelRunner`](d:\design\sglang\python\sglang\srt\model_executor\model_runner.py:572-579) 构造 `ExpertBackupClient`；引擎入口 [`run_expert_backup_manager`](d:\design\sglang\python\sglang\srt\entrypoints\engine.py:683-687) 启动 `ExpertBackupManager` 子进程。
+- 若 `enable_elastic_expert_backup` 且 `elastic_ep_backend` 非空，[`ModelRunner`](d:\design\sglang\python\sglang\srt\model_executor\model_runner.py) 构造 `ExpertBackupClient`；引擎入口 [`run_expert_backup_manager`](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) 启动 `ExpertBackupManager` 子进程。
 
 ## Key classes / API
 
@@ -104,7 +104,7 @@ flowchart TB
 
 ## ModelRunner / MoE / EPLB 关系
 
-- **与 [`eplb/`](eplb.md)**：`enable_eplb` + `elastic_ep_backend` 时，[`_handle_elastic_ep`](d:\design\sglang\python\sglang\srt\server_args.py:2974-2982) 强制 `eplb_algorithm` 为 `elasticity_aware` 或 `elasticity_aware_hierarchical`。EPLB 算法入口 [eplb_algorithms/__init__.py:50-69](d:\design\sglang\python\sglang\srt\eplb\eplb_algorithms\__init__.py) 在该分支传入 `ElasticEPStateManager.instance().active_ranks`。[`ExpertLocationUpdater._filter_p2p_ops`](d:\design\sglang\python\sglang\srt\eplb\expert_location_updater.py:457-478) 用 `active_ranks_cpu` 过滤失效 peer 的 P2P。
+- **与 [`eplb/`](eplb.md)**：`enable_eplb` + `elastic_ep_backend` 时，[`_handle_elastic_ep`](d:\design\sglang\python\sglang\srt\server_args.py) 强制 `eplb_algorithm` 为 `elasticity_aware` 或 `elasticity_aware_hierarchical`。EPLB 算法入口 [eplb_algorithms/__init__.py:50-69](d:\design\sglang\python\sglang\srt\eplb\eplb_algorithms\__init__.py) 在该分支传入 `ElasticEPStateManager.instance().active_ranks`。[`ExpertLocationUpdater._filter_p2p_ops`](d:\design\sglang\python\sglang\srt\eplb\expert_location_updater.py) 用 `active_ranks_cpu` 过滤失效 peer 的 P2P。
 - **与 MoE**：[`mooncake.py`](d:\design\sglang\python\sglang\srt\layers\moe\token_dispatcher\mooncake.py) / [`nixl.py`](d:\design\sglang\python\sglang\srt\layers\moe\token_dispatcher\nixl.py) 引用 `ElasticEPStateManager`（见上 Architecture）。
 - **ModelRunner.forward**：[model_runner.py:2886-2893](d:\design\sglang\python\sglang\srt\model_executor\model_runner.py)：当 `elastic_ep_state` 存在且 `active_ranks` 相对 `last_active_ranks` 变化时，快照并同步 CPU，触发 `eplb_manager.rebalance()` 后再跑一轮 `_forward_raw`（[L2894-2905](d:\design\sglang\python\sglang\srt\model_executor\model_runner.py)）。
 
@@ -116,7 +116,7 @@ flowchart TB
 
 ### 1. 跨语言绑定（C++ / sgl-kernel）
 
-- **`elastic_ep` / `ElasticEPStateManager` / `ExpertBackupClient` / `ExpertBackupManager`**：**在 [`d:\design\sglang\sgl-kernel\`](d:\design\sglang\sgl-kernel) 全树 grep 0 命中**
+- **`elastic_ep` / `ElasticEPStateManager` / `ExpertBackupClient` / `ExpertBackupManager`**：**在 [`d:\design\sglang\sgl-kernel\`](d:\design\sglang\python\sglang\kernels\aot) 全树 grep 0 命中**
 
 ### 2. 协作伙伴跨子系统引用
 
@@ -140,8 +140,8 @@ flowchart TB
 
 ### 5. doc / config / yaml 反查
 
-- [docs/advanced_features/server_arguments.md](d:\design\sglang\docs\advanced_features\server_arguments.md) 表格含 `--elastic-ep-backend`
-- [docs/platforms/ascend/ascend_npu_support_features.md](d:\design\sglang\docs\platforms\ascend\ascend_npu_support_features.md) 列出该 flag
+- [docs/advanced_features/server_arguments.md](d:\design\sglang\docs\docs\advanced_features\server_arguments.mdx) 表格含 `--elastic-ep-backend`
+- [docs/platforms/ascend/ascend_npu_support_features.md](d:\design\sglang\docs\docs\hardware-platforms\ascend-npus\reference\support_features.mdx) 列出该 flag
 
 ## 跨项目对照（synthesis）
 
@@ -158,14 +158,14 @@ flowchart TB
 
 > [!warning] CONTRADICTION（数据可能误导）：若外部材料写「仅 SGLang 有 Elastic EP」而忽略 vLLM 的 [`distributed/elastic_ep/`](d:\design\vllm\vllm\distributed\elastic_ep)，会与 [comparison/topics/distributed.md](../../comparison/topics/distributed.md) 及 vLLM 源码**冲突**——应表述为「**实现不同**」。CLI 同样不同（vLLM `--enable-elastic-ep` ≠ SGLang `--elastic-ep-backend` + `--enable-elastic-expert-backup`）。
 
-> [!todo] VERIFY: ~~**`ElasticEPState.active_ranks` 在 Python 侧除初始化外无显式赋值**（本目录 3 文件 + 全仓库 grep `ElasticEPStateManager` 其余命中）。`ModelRunner.forward` 依赖 [`is_active_equal_last()`](d:\design\sglang\python\sglang\srt\elastic_ep\elastic_ep.py:18-19) 判断变化——**弱锚点**：活性张量是否由 Mooncake EP / 运行时原地改写，需结合 `mooncake-transfer-engine` Python 包或后续提交确认。~~
+> [!todo] VERIFY: ~~**`ElasticEPState.active_ranks` 在 Python 侧除初始化外无显式赋值**（本目录 3 文件 + 全仓库 grep `ElasticEPStateManager` 其余命中）。`ModelRunner.forward` 依赖 [`is_active_equal_last()`](d:\design\sglang\python\sglang\srt\elastic_ep\elastic_ep.py) 判断变化——**弱锚点**：活性张量是否由 Mooncake EP / 运行时原地改写，需结合 `mooncake-transfer-engine` Python 包或后续提交确认。~~
 > **RESOLVED 2026-04-19**: 活性张量由 **Nixl token dispatcher 原地改写**——[`layers/moe/token_dispatcher/nixl.py:153, 327`](d:\design\sglang\python\sglang\srt\layers\moe\token_dispatcher\nixl.py)：`self.active_ranks = ElasticEPStateManager.instance().active_ranks`（缓存引用），随后 `self.active_ranks.copy_(1 - self._mask_buffer)`（原地写入）。Mooncake 路径仅**读**该张量传给 Mooncake `Buffer.dispatch/combine`（[mooncake.py:212, 252](d:\design\sglang\python\sglang\srt\layers\moe\token_dispatcher\mooncake.py)）；写入由 NIXL 侧 mask buffer 触发。
 
-> [!todo] VERIFY: ~~[`ElasticEPStateManager.instance`](d:\design\sglang\python\sglang\srt\elastic_ep\elastic_ep.py:33-35) 标注返回 `ElasticEPState`，但实现返回 `cls._instance`（可为 `None`），与类型注解不一致。~~
+> [!todo] VERIFY: ~~[`ElasticEPStateManager.instance`](d:\design\sglang\python\sglang\srt\elastic_ep\elastic_ep.py) 标注返回 `ElasticEPState`，但实现返回 `cls._instance`（可为 `None`），与类型注解不一致。~~
 > **RESOLVED 2026-04-19**: 类型注解错误已确认——[`elastic_ep.py:33-35`](d:\design\sglang\python\sglang\srt\elastic_ep\elastic_ep.py)：`def instance(cls) -> ElasticEPState: return cls._instance`，但 `cls._instance: Optional[ElasticEPState] = None`（[L31](d:\design\sglang\python\sglang\srt\elastic_ep\elastic_ep.py)），且 `init` 仅在 `elastic_ep_backend is not None` 时设值（[L42-44](d:\design\sglang\python\sglang\srt\elastic_ep\elastic_ep.py)）；正确签名应为 `Optional[ElasticEPState]`，调用方需自行 None-check（属源码注解 bug）。
 
-> [!todo] VERIFY: ~~Ascend 文档将 `--elastic-ep-backend` 与 GPU 特性表并列 [docs/platforms/ascend/ascend_npu_support_features.md:267](d:\design\sglang\docs\platforms\ascend\ascend_npu_support_features.md)——但 `ExpertBackupManager` 在 [L167-171](d:\design\sglang\python\sglang\srt\elastic_ep\expert_backup_manager.py) 仅初始化 `gpu_id=0` 的 CUDA 子进程；NPU 适用边界需结合目标平台再 VERIFY。~~
-> **RESOLVED 2026-04-19**: **NPU 不被支持**——[`ElasticEPStateManager._select_device`](d:\design\sglang\python\sglang\srt\elastic_ep\elastic_ep.py:46-53) 显式 `raise NotImplementedError("Only CUDA and CPU support elastic ep now.")`；`ExpertBackupManager` 在 [L163-171](d:\design\sglang\python\sglang\srt\elastic_ep\expert_backup_manager.py) 硬编码 `gpu_id=0` 且 import `mooncake_transfer_engine`。Ascend 文档列出 `--elastic-ep-backend` 仅说明 flag 存在，与本模块的 CUDA-only 实现是矛盾，应在 Ascend 侧加 N/A 说明。
+> [!todo] VERIFY: ~~Ascend 文档将 `--elastic-ep-backend` 与 GPU 特性表并列 [docs/platforms/ascend/ascend_npu_support_features.md:267](d:\design\sglang\docs\docs\hardware-platforms\ascend-npus\reference\support_features.mdx)——但 `ExpertBackupManager` 在 [L167-171](d:\design\sglang\python\sglang\srt\elastic_ep\expert_backup_manager.py) 仅初始化 `gpu_id=0` 的 CUDA 子进程；NPU 适用边界需结合目标平台再 VERIFY。~~
+> **RESOLVED 2026-04-19**: **NPU 不被支持**——[`ElasticEPStateManager._select_device`](d:\design\sglang\python\sglang\srt\elastic_ep\elastic_ep.py) 显式 `raise NotImplementedError("Only CUDA and CPU support elastic ep now.")`；`ExpertBackupManager` 在 [L163-171](d:\design\sglang\python\sglang\srt\elastic_ep\expert_backup_manager.py) 硬编码 `gpu_id=0` 且 import `mooncake_transfer_engine`。Ascend 文档列出 `--elastic-ep-backend` 仅说明 flag 存在，与本模块的 CUDA-only 实现是矛盾，应在 Ascend 侧加 N/A 说明。
 
 ## See also
 

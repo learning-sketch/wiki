@@ -3,7 +3,7 @@ type: module
 project: sglang
 status: verified
 confidence: high
-verified_against: 2026-08-10
+verified_against: 2026-08-18 (verify pass, increment from 06f32bab)
 sources:
   - d:\design\sglang\python\sglang\srt\arg_groups\arg_utils.py:L1-L120
   - d:\design\sglang\python\sglang\srt\arg_groups\argparse_actions.py
@@ -87,6 +87,16 @@ flowchart TB
 3. **配置字段**：几乎所有 `ServerArgs` 字段经 `A[..., NS("...")]` 标注；本包不拥有独立配置文件格式。
 4. **测试**：`arg_groups`：在本 checkout 全树无独立 `test_arg_groups*`；覆盖主要靠 ServerArgs 集成路径。
 5. **doc**：`arg_groups`：在 `d:\design\sglang\docs\` 全树 grep 0 命中。
+
+## Increment 2026-08-18 (06f32bab → f7101b0a)
+
+本期 `arg_groups/` 5 文件 / 219 行 churn，**无结构性变化**；核心锚点已复核仍有效（`Arg` [arg_utils.py:L62](d:\design\sglang\python\sglang\srt\arg_groups\arg_utils.py)、`NS` [L86](d:\design\sglang\python\sglang\srt\arg_groups\arg_utils.py)、`namespace_of` [L102](d:\design\sglang\python\sglang\srt\arg_groups\arg_utils.py)、`MODEL_OVERRIDES` [overrides.py:L70](d:\design\sglang\python\sglang\srt\arg_groups\overrides.py)、`register_model_override` [L86](d:\design\sglang\python\sglang\srt\arg_groups\overrides.py)、`materialize_declarations` [L257](d:\design\sglang\python\sglang\srt\arg_groups\overrides.py)、`resolved_view` [L269](d:\design\sglang\python\sglang\srt\arg_groups\overrides.py)）。内容级增量：
+
+- **`_handle_dspark` 支持 NPU 设备 + MegaMoE**（上游 b83d507cd7 #33676 / 6eb941a34c #34844）：设备校验从仅 CUDA 放宽为 CUDA/NPU；dp attention 下 `moe_a2a_backend` 允许 `"megamoe"`，且非 `none` 时要求 `SGLANG_RAGGED_VERIFY_MODE=static`（[speculative_hook.py:L278-L315](d:\design\sglang\python\sglang\srt\arg_groups\speculative_hook.py)）。
+- **overrides 注册表随新模型扩表**（Muse Glimmer fde9ad2531、Kimi-K3 NPU 197832bcf5、GLM-4.7-Flash 确定性 FA4 2d76d537e5 等），`overrides.py` +102/-66；注册机制本身未变（`register_model_override_predicate` [overrides.py:L103](d:\design\sglang\python\sglang\srt\arg_groups\overrides.py) 在 pin 时已存在）。
+- `deepseek_v4_hook.py` / `hisparse_hook.py` 随 DSV4 环境变量清理（bc312d185d #34926）与 SM120 FP8 KV 放宽（2c07ca5e8d #33075）小幅调整。
+
+> 关联的跨子系统变化：本期 `server_args.py` +468/-149、[runtime_context.py](d:\design\sglang\python\sglang\srt\runtime_context.py) 引入 **config namespace bags**（`_ConfigBag` [runtime_context.py:L593](d:\design\sglang\python\sglang\srt\runtime_context.py)、`_build_config_bags` [L677](d:\design\sglang\python\sglang\srt\runtime_context.py)）：`server_args` 在 publish 时快照为只读命名空间 bag 树，下游进程改经 `get_exec().<ns>.<leaf>` 读取（上游 "config: ... read the bags" 系列 #35022-#35028）。本页描述的 `NS(path)` → RuntimeContext 树机制即该 bag 树的注解来源，语义未变。
 
 ## Notes / Caveats
 

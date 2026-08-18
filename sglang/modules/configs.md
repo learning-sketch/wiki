@@ -3,7 +3,7 @@ type: module
 project: sglang
 status: verified
 confidence: high
-verified_against: 2026-04-19
+verified_against: 2026-08-18 (increment pass; 正文主体锚点为 2026-04-19 版)
 sources:
   - d:\design\sglang\python\sglang\srt\configs\model_config.py
   - d:\design\sglang\python\sglang\srt\configs\load_config.py
@@ -58,9 +58,9 @@ flowchart TB
     LC --> ML
 ```
 
-- **CLI → HF 配置合并**：[`ModelConfig.__init__`](d:\design\sglang\python\sglang\srt\configs\model_config.py) 将 `model_override_args` 解析为 dict 后传入 [`get_config`](d:\design\sglang\python\sglang\srt\utils\hf_transformers\config.py:52-58)；最终在 [`get_config` 尾部](d:\design\sglang\python\sglang\srt\utils\hf_transformers\config.py:204-205) 对 `PretrainedConfig` 调用 `config.update(model_override_args)`。
-- **LoadConfig 分离**：[`LoadConfig`](d:\design\sglang\python\sglang\srt\configs\load_config.py:37-105) 为 `@dataclass`，管 `load_format`、`download_dir`、`ignore_patterns`、远端实例/ModelOpt 等；**不包含** `hf_config`。
-- **update_config.py 语义**：[`adjust_config_with_unaligned_cpu_tp`](d:\design\sglang\python\sglang\srt\configs\update_config.py:112-211) 在 TP 与 head 数不整除时改写 `hf_config` / `hf_text_config` 上的 head 与 intermediate 尺寸，**不是** JSON 覆盖合并逻辑。
+- **CLI → HF 配置合并**：[`ModelConfig.__init__`](d:\design\sglang\python\sglang\srt\configs\model_config.py) 将 `model_override_args` 解析为 dict 后传入 [`get_config`](d:\design\sglang\python\sglang\srt\utils\hf_transformers\config.py)；最终在 [`get_config` 尾部](d:\design\sglang\python\sglang\srt\utils\hf_transformers\config.py) 对 `PretrainedConfig` 调用 `config.update(model_override_args)`。
+- **LoadConfig 分离**：[`LoadConfig`](d:\design\sglang\python\sglang\srt\configs\load_config.py) 为 `@dataclass`，管 `load_format`、`download_dir`、`ignore_patterns`、远端实例/ModelOpt 等；**不包含** `hf_config`。
+- **update_config.py 语义**：[`adjust_config_with_unaligned_cpu_tp`](d:\design\sglang\python\sglang\srt\configs\update_config.py) 在 TP 与 head 数不整除时改写 `hf_config` / `hf_text_config` 上的 head 与 intermediate 尺寸，**不是** JSON 覆盖合并逻辑。
 
 ## File inventory
 
@@ -128,7 +128,7 @@ flowchart TB
 
 ## CLI 交叉引用
 
-- **字段级入口**：优先 [`ModelConfig.from_server_args`](d:\design\sglang\python\sglang\srt\configs\model_config.py:262-300)（将 `ServerArgs` 映射到 `ModelConfig` 构造参数）。
+- **字段级入口**：优先 [`ModelConfig.from_server_args`](d:\design\sglang\python\sglang\srt\configs\model_config.py)（将 `ServerArgs` 映射到 `ModelConfig` 构造参数）。
 - **JSON 覆盖**：`json_model_override_args` → `get_config` → `config.update`（[hf_transformers/config.py:204-205](d:\design\sglang\python\sglang\srt\utils\hf_transformers\config.py)）。
 - **未逐项枚举** `--model-path`、`--dtype`、`--quantization`、`--load-format` 等；完整 CLI 见 [`server_args.py`](d:\design\sglang\python\sglang\srt\server_args.py) 与 [model_loader.md](model_loader.md)。
 
@@ -141,6 +141,14 @@ flowchart TB
 | 3 | CLI | 见上节；锚点在 `ModelConfig.from_server_args` 与 `get_config` |
 | 4 | Tests | 例：[`test/registered/unit/configs/test_linear_attn_model_registry.py`](d:\design\sglang\test\registered\unit\configs\test_linear_attn_model_registry.py)；其余分散在 `test/registered/quant/`、`model_loader/` 等 |
 | 5 | Docs | 上游 per-model README 非本仓库事实来源；本页以源码为准 |
+
+## Increment 2026-08-18 (06f32bab → f7101b0a)
+
+- **新模型族 Muse Glimmer 配置**（commit `fde9ad2531` #34262）：新增 [`configs/muse_glimmer.py`](d:\design\sglang\python\sglang\srt\configs\muse_glimmer.py) 与 [`configs/muse_glimmer_processing.py`](d:\design\sglang\python\sglang\srt\configs\muse_glimmer_processing.py)。
+- **文件数重核**：`git ls-tree` @06f32bab = **61** 个 `.py` → HEAD = **63**（+2）。正文「44 个 `.py`」为 2026-04-19 旧口径，pin 时即已漂移。
+- **进程内配置读取改为 "config bag" 机制**（commit 系列 `2b278b4ac4`…`b3c8f0d923`，#35022-#35028，2026-08-15~17）：**机制落点不在 `configs/` 也不在 `server_args.py`，而在顶层 [`srt/runtime_context.py`](d:\design\sglang\python\sglang\srt\runtime_context.py)**（在 `configs/` 全树 grep `bag` 0 命中）。核心是 [`_ConfigBag`](d:\design\sglang\python\sglang\srt\runtime_context.py) 类（[runtime_context.py:L593-612](d:\design\sglang\python\sglang\srt\runtime_context.py)）：**publish 时从 `server_args` snapshot 出只读命名空间袋**，此后 bag 是其字段的单一事实来源，`server_args` 退化为 "pristine, READ-ONLY record that the config bags were projected from"（[server_args.py:L9023-9024](d:\design\sglang\python\sglang\srt\server_args.py) 注释原文）；读取用普通属性访问（叶子存 `__dict__` 以便 torch.compile/dynamo 可 trace，[runtime_context.py:L603-612](d:\design\sglang\python\sglang\srt\runtime_context.py)），写入仅经 `get_context().override(...)`。顶层访问器为 `get_device()` / `get_model()` / `get_exec()` / `get_schedule()` / `get_memory()` / `get_spec()` / `get_lora()` / `get_mm()` / `get_disagg()`（[runtime_context.py:L1107-1140](d:\design\sglang\python\sglang\srt\runtime_context.py)；`parallel` 由 `get_parallel()` live wrapper 单独承担）。synthesis: 该系列把散布各进程的 `self.server_args.xxx` 读取批量改写为 bag 读取（如 #35026 一个 commit 即触及 tokenizer_manager / scheduler / model_executor 等 19+ 文件），本页 `ModelConfig`/`LoadConfig` 结构未变，但「配置消费方式」叙述需注意此新分层。
+
+> [!todo] VERIFY: `runtime_context.py` 的 publish 时机（#35023 "publish before a process reads configuration"）与 `_ConfigBag` 和 `ModelConfig` 的字段划分边界未深读；bag 命名空间（device/model/exec/…）与 `configs/` 各 dataclass 的对应关系待单独 ingest。
 
 ## Notes / Caveats
 

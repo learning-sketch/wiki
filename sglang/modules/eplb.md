@@ -1,7 +1,7 @@
 ---
 type: module
 project: sglang
-status: verified
+status: stale
 confidence: high
 verified_against: 2026-04-19
 sources:
@@ -27,11 +27,13 @@ related:
   - comparison/dimensions.md
 ---
 
+> [!todo] VERIFY: **lint 2026-08-18** — 本页正文存在 **4** 处源码死锚（多为 sglang 上游 test 树重组 / docs 站点 mdx 化 / 文件迁移所致，锚点写于 2026-04 快照），已按 §7 标 `status: stale`，待重校对。死锚清单见 log.md lint entry。
+
 # `srt/eplb` — Expert Parallelism Load Balancing
 
 ## Summary
 
-`srt/eplb/`（**12** `.py` 文件 / ~117 KB）实现 **基于专家激活统计的 EP 负载均衡**：通过全局 [`ExpertDistributionRecorder`](d:\design\sglang\python\sglang\srt\eplb\expert_distribution.py) 累积 logical 层负载 → [`EPLBManager`](d:\design\sglang\python\sglang\srt\eplb\eplb_manager.py) 按迭代周期触发 [`rebalance()`](d:\design\sglang\python\sglang\srt\eplb\eplb_manager.py:52-84) → [`ExpertLocationMetadata.init_by_eplb`](d:\design\sglang\python\sglang\srt\eplb\expert_location.py:163-177) 调用 `eplb_algorithms.rebalance_experts` 计算新 `physical_to_logical_map` → [`ModelRunner.update_expert_location`](d:\design\sglang\python\sglang\srt\model_executor\model_runner.py:1399-1410) + [`ExpertLocationUpdater`](d:\design\sglang\python\sglang\srt\eplb\expert_location_updater.py) 更新 MoE 权重布局。
+`srt/eplb/`（**12** `.py` 文件 / ~117 KB）实现 **基于专家激活统计的 EP 负载均衡**：通过全局 [`ExpertDistributionRecorder`](d:\design\sglang\python\sglang\srt\eplb\expert_distribution.py) 累积 logical 层负载 → [`EPLBManager`](d:\design\sglang\python\sglang\srt\eplb\eplb_manager.py) 按迭代周期触发 [`rebalance()`](d:\design\sglang\python\sglang\srt\eplb\eplb_manager.py) → [`ExpertLocationMetadata.init_by_eplb`](d:\design\sglang\python\sglang\srt\eplb\expert_location.py) 调用 `eplb_algorithms.rebalance_experts` 计算新 `physical_to_logical_map` → [`ModelRunner.update_expert_location`](d:\design\sglang\python\sglang\srt\model_executor\model_runner.py) + [`ExpertLocationUpdater`](d:\design\sglang\python\sglang\srt\eplb\expert_location_updater.py) 更新 MoE 权重布局。
 
 > synthesis: 与 [comparison/topics/distributed.md](../../comparison/topics/distributed.md) 一致——**MindIE 无 EPLB**；vLLM 在 [`vllm/distributed/eplb/`](d:\design\vllm\vllm\distributed\eplb) + [`v1/worker/gpu/eplb_utils.py`](d:\design\vllm\vllm\v1\worker\gpu\eplb_utils.py)；SGLang 本模块 + 姊妹 [`srt/elastic_ep/`](elastic_ep.md) 协作（`elasticity_aware` 算法读 `ElasticEPStateManager.active_ranks`）。**算法实现**头注明拷贝自上游 [deepseek-ai/EPLB](https://github.com/deepseek-ai/EPLB)（[deepseek.py:1](d:\design\sglang\python\sglang\srt\eplb\eplb_algorithms\deepseek.py)）。
 
@@ -78,9 +80,9 @@ flowchart LR
     U --> Up
 ```
 
-- **周期推进**：[`EPLBManager._entrypoint`](d:\design\sglang\python\sglang\srt\eplb\eplb_manager.py:45-50) 在 `eplb_rebalance_num_iterations` 次 `yield` 后进入 [`rebalance()`](d:\design\sglang\python\sglang\srt\eplb\eplb_manager.py:52-84)；每步 forward 结束由 [`on_forward_pass_end`](d:\design\sglang\python\sglang\srt\eplb\eplb_manager.py:41-42) 驱动 generator（[model_runner.py:2916-2917](d:\design\sglang\python\sglang\srt\model_executor\model_runner.py)）。
+- **周期推进**：[`EPLBManager._entrypoint`](d:\design\sglang\python\sglang\srt\eplb\eplb_manager.py) 在 `eplb_rebalance_num_iterations` 次 `yield` 后进入 [`rebalance()`](d:\design\sglang\python\sglang\srt\eplb\eplb_manager.py)；每步 forward 结束由 [`on_forward_pass_end`](d:\design\sglang\python\sglang\srt\eplb\eplb_manager.py) 驱动 generator（[model_runner.py:2916-2917](d:\design\sglang\python\sglang\srt\model_executor\model_runner.py)）。
 - **统计 → logical 计数**：[`_StatAccumulator.dump`](d:\design\sglang\python\sglang\srt\eplb\expert_distribution.py) 输出 `logical_count` 等（[eplb_manager.py:61-67](d:\design\sglang\python\sglang\srt\eplb\eplb_manager.py)）。
-- **容错触发即时重平衡**：EP 活跃 rank 变化时 [`ModelRunner.forward`](d:\design\sglang\python\sglang\srt\model_executor\model_runner.py:2886-2894) 直接调用 `self.eplb_manager.rebalance()`。
+- **容错触发即时重平衡**：EP 活跃 rank 变化时 [`ModelRunner.forward`](d:\design\sglang\python\sglang\srt\model_executor\model_runner.py) 直接调用 `self.eplb_manager.rebalance()`。
 
 ## File inventory（12 文件）
 
@@ -116,11 +118,11 @@ flowchart LR
 | `deepseek_vec` / `deepseek_vec_hierarchical` | [deepseek_vec.rebalance_experts](d:\design\sglang\python\sglang\srt\eplb\eplb_algorithms\deepseek_vec.py) |
 | `elasticity_aware` / `elasticity_aware_hierarchical` | [elasticity_aware.rebalance_experts](d:\design\sglang\python\sglang\srt\eplb\eplb_algorithms\elasticity_aware.py)（传入 `ElasticEPStateManager.active_ranks`，[__init__.py:54-69](d:\design\sglang\python\sglang\srt\eplb\eplb_algorithms\__init__.py)） |
 
-[`ExpertLocationMetadata.init_by_eplb`](d:\design\sglang\python\sglang\srt\eplb\expert_location.py:163-177) 调用 `rebalance_experts` 与 `compute_algorithm(server_args.eplb_algorithm, ...)`。
+[`ExpertLocationMetadata.init_by_eplb`](d:\design\sglang\python\sglang\srt\eplb\expert_location.py) 调用 `rebalance_experts` 与 `compute_algorithm(server_args.eplb_algorithm, ...)`。
 
 ## Simulator
 
-[`eplb_simulator`](d:\design\sglang\python\sglang\srt\eplb\eplb_simulator) 并非独立仿真引擎，而是 **读盘工具**：[`reader.read_mode_per_pass`](d:\design\sglang\python\sglang\srt\eplb\eplb_simulator\reader.py:16-51) 扫描目录下 `*.pt`，聚合各 rank 的 `global_physical_count`，供离线分析。包 [`__init__.py`](d:\design\sglang\python\sglang\srt\eplb\eplb_simulator\__init__.py) 仅 `from . import reader`。
+[`eplb_simulator`](d:\design\sglang\python\sglang\srt\eplb\eplb_simulator) 并非独立仿真引擎，而是 **读盘工具**：[`reader.read_mode_per_pass`](d:\design\sglang\python\sglang\srt\eplb\eplb_simulator\reader.py) 扫描目录下 `*.pt`，聚合各 rank 的 `global_physical_count`，供离线分析。包 [`__init__.py`](d:\design\sglang\python\sglang\srt\eplb\eplb_simulator\__init__.py) 仅 `from . import reader`。
 
 > synthesis: dimensions.md "含 simulator + 多算法" 中的 simulator 实为 **dump 读取分析器**，不是 EPLB 在线仿真器；建议 cross-compare 不要把它当 vLLM EPLB-utils 的对偶物。
 
@@ -149,7 +151,7 @@ flowchart LR
 2. **Forward**：[model_runner.py:2875-2917](d:\design\sglang\python\sglang\srt\model_executor\model_runner.py)
    - `with get_global_expert_distribution_recorder().with_forward_pass(...)`
    - 结束时 `eplb_manager.on_forward_pass_end()`
-3. **应用新 metadata**：[`update_expert_location`](d:\design\sglang\python\sglang\srt\model_executor\model_runner.py:1399-1410) → `expert_location_updater.update(...)`
+3. **应用新 metadata**：[`update_expert_location`](d:\design\sglang\python\sglang\srt\model_executor\model_runner.py) → `expert_location_updater.update(...)`
 4. **MoE / dispatcher 钩子**：[`layers/moe/topk.py`](d:\design\sglang\python\sglang\srt\layers\moe\topk.py) `on_select_experts`；[`token_dispatcher/deepep.py`](d:\design\sglang\python\sglang\srt\layers\moe\token_dispatcher\deepep.py) `on_deepep_dispatch_*`
 
 ## §跨子系统引用（§5 step 3）
@@ -158,7 +160,7 @@ flowchart LR
 
 ### 1. 跨语言绑定（C++ / sgl-kernel）
 
-- **EPLB / `ExpertDistribution` / `EPLBManager` / `ExpertLocationMetadata`**：**在 [`d:\design\sglang\sgl-kernel\`](d:\design\sglang\sgl-kernel) 全树 grep 0 命中**
+- **EPLB / `ExpertDistribution` / `EPLBManager` / `ExpertLocationMetadata`**：**在 [`d:\design\sglang\sgl-kernel\`](d:\design\sglang\python\sglang\kernels\aot) 全树 grep 0 命中**
 
 ### 2. 协作伙伴跨子系统引用
 
@@ -202,10 +204,15 @@ flowchart LR
 
 详细 9 子维度对比见 [comparison/topics/distributed.md](../../comparison/topics/distributed.md)；维度索引 [comparison/dimensions.md §dim-distributed](../../comparison/dimensions.md)。
 
+## Increment 2026-08-18 (06f32bab → f7101b0a)
+
+- 本期 `eplb/` 仅 1 文件变更：[expert_distribution.py](d:\design\sglang\python\sglang\srt\eplb\expert_distribution.py) +43/-28（上游 f61f584347 #34998 "Add explicit EPLB balancedness reporting modes"——balancedness 上报模式显式化）。其余 11 文件 0 变更。
+- > [!todo] VERIFY: 本页正文锚点为 2026-04-19 快照，未随 2026-08-10 / 2026-08-18 两轮增量逐点复核；本期改动面小，但 4→8 月间该目录是否有其它漂移未确认。
+
 ## Notes / Caveats
 
 > [!todo] VERIFY: ~~`--eplb-rebalance-layers-per-chunk` 的 argparse 文案写"per forward pass"（[server_args.py:5360-5364](d:\design\sglang\python\sglang\srt\server_args.py)），而 [`EPLBManager._compute_update_layer_ids_chunks`](d:\design\sglang\python\sglang\srt\eplb\eplb_manager.py) 是在**单次 rebalance** 内按层分块并在块间 `yield`（可能跨多个 forward）。文案与实现是否一致需人工对照。~~
-> **RESOLVED 2026-04-19**: 文案与实现一致——[`EPLBManager.rebalance`](d:\design\sglang\python\sglang\srt\eplb\eplb_manager.py:78-83) 在 `len(chunks) > 1` 时每个 chunk 之间 `yield`，由 [`_entrypoint`](d:\design\sglang\python\sglang\srt\eplb\eplb_manager.py:45-50) `yield from` 转发；`on_forward_pass_end` ([L41-42](d:\design\sglang\python\sglang\srt\eplb\eplb_manager.py)) 在 ModelRunner 每次 forward 末尾 `next(generator)`，因此 1 个 chunk 处理跨越 1 次 forward，"per forward pass" 字面准确。
+> **RESOLVED 2026-04-19**: 文案与实现一致——[`EPLBManager.rebalance`](d:\design\sglang\python\sglang\srt\eplb\eplb_manager.py) 在 `len(chunks) > 1` 时每个 chunk 之间 `yield`，由 [`_entrypoint`](d:\design\sglang\python\sglang\srt\eplb\eplb_manager.py) `yield from` 转发；`on_forward_pass_end` ([L41-42](d:\design\sglang\python\sglang\srt\eplb\eplb_manager.py)) 在 ModelRunner 每次 forward 末尾 `next(generator)`，因此 1 个 chunk 处理跨越 1 次 forward，"per forward pass" 字面准确。
 
 > [!todo] VERIFY: ~~[`ExpertLocationDispatchInfo`](d:\design\sglang\python\sglang\srt\eplb\expert_location_dispatch.py) 标注的 `ep_dispatch_algorithm: Literal["static", "random"]` 与 [`transform_select_experts_inputs`](d:\design\sglang\python\sglang\srt\eplb\expert_location_dispatch.py) 中 `== "fake"` 分支并存；与 `ServerArgs.ep_dispatch_algorithm` 的 `fake` 语义关系需对照调用链确认。~~
 > **RESOLVED 2026-04-19**: **类型标注错误**——dataclass 字段 `Literal["static", "random"]` ([expert_location_dispatch.py:26](d:\design\sglang\python\sglang\srt\eplb\expert_location_dispatch.py)) 与运行时分支不符；运行时实际接受 `"static"` / `"dynamic"` / `"fake"` 三值（[L82, 84-86](d:\design\sglang\python\sglang\srt\eplb\expert_location_dispatch.py)），其中 `"fake"` 在 `transform_select_experts_inputs` 中触发桩值（[L69](d:\design\sglang\python\sglang\srt\eplb\expert_location_dispatch.py)）；`ServerArgs.ep_dispatch_algorithm` 的 choices 为 `static`/`dynamic`/`fake` 与运行时一致——**Literal 注解需修为 `Literal["static", "dynamic", "fake"]`**（属源码 typo，非运行时 bug）。

@@ -3,7 +3,7 @@ type: module
 project: sglang
 status: stale
 confidence: high
-verified_against: 2026-04-19
+verified_against: 2026-08-18 (仅文件数重计 + 增量注记；104 文件高 churn 未深核，status 保持 stale)
 sources:
   - d:\design\sglang\python\sglang\srt\layers\layernorm.py
   - d:\design\sglang\python\sglang\srt\layers\linear.py
@@ -204,6 +204,13 @@ flowchart TB
 5. **测试**：[`d:\design\sglang\test\registered\unit\layers\`](d:\design\sglang\test\registered\unit\layers)、[`d:\design\sglang\test\registered\layers\`](d:\design\sglang\test\registered\layers)（含 `mamba/`）、[`d:\design\sglang\test\manual\layers\`](d:\design\sglang\test\manual\layers)（MoE / NSA 手动测）。
 
 > **说明**：`srt/sampling/` 目录下 **未** grep 到 `from sglang.srt.layers`（本快照）；采样 wiki 仍应链至顶层 [`layers/sampler.py`](d:\design\sglang\python\sglang\srt\layers\sampler.py)。
+
+## Increment 2026-08-18 (06f32bab → f7101b0a)
+
+- 高 churn 只登记不深核：子树 diff = **104 文件 / +5576 / -1982**（≈7558 行 churn）。要点（`git diff --name-status` 实测）：
+  - **删除**：[`moe/dwdp/vmm.py`](d:\design\sglang\python\sglang\srt\layers\moe\dwdp)（VMM 逻辑并入顶层 `srt/cuda_vmm_utils.py`，见 [distributed.md](distributed.md) Increment）、`layers/torchao_utils.py`。
+  - **新增**：[`attention/linear/kernels/kda_helion.py`](d:\design\sglang\python\sglang\srt\layers\attention\linear\kernels\kda_helion.py)（KDA Helion kernel）、[`quantization/modelslim/schemes/modelslim_w4a8_mxfp4_moe.py`](d:\design\sglang\python\sglang\srt\layers\quantization\modelslim\schemes\modelslim_w4a8_mxfp4_moe.py)（modelslim 新 w4a8-mxfp4 MoE scheme）、多个 Triton tuning 配置 JSON（`moe/moe_runner/triton_utils/configs/triton_3_6_0|triton_3_7_1/`，非 `.py` 不计入文件数）。
+  - **文件数重计**：`git ls-tree` @06f32bab = **312**（与 index 记录一致）→ HEAD = **312**（净 0，新增与删除相抵）。正文「248 个 `.py`」为 2026-04-19 旧口径。本页保持 `status: stale`。
 
 ## Notes / Caveats
 

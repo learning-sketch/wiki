@@ -143,7 +143,7 @@ flowchart TB
 
 ### 1. sgl-kernel C++
 
-在 [`d:\design\sglang\sgl-kernel\`](d:\design\sglang\sgl-kernel) 对 `*.cpp`/`*.h`/`*.cu` 等使用词边界 **`[Rr]ay`** grep：**0 命中**（与「Ray 编排纯 Python」一致；偶发 `array` 等子串不计）。
+在 [`d:\design\sglang\sgl-kernel\`](d:\design\sglang\python\sglang\kernels\aot) 对 `*.cpp`/`*.h`/`*.cu` 等使用词边界 **`[Rr]ay`** grep：**0 命中**（与「Ray 编排纯 Python」一致；偶发 `array` 等子串不计）。
 
 ### 2. 协作 import
 
@@ -162,7 +162,12 @@ flowchart TB
 
 ### 5. 文档（`d:\design\sglang\docs\`）
 
-- 对 **`Ray` / `--use-ray` / `use_ray`** 的专门说明：**未**在顶层 `docs/**/*.md` 中发现（唯一命中为 **「Ray Less」** 论文链接，与 SGLang Ray 模式无关：[`docs/references/post_training_integration.md:26`](d:\design\sglang\docs\references\post_training_integration.md)）。
+- 对 **`Ray` / `--use-ray` / `use_ray`** 的专门说明：**未**在顶层 `docs/**/*.md` 中发现（唯一命中为 **「Ray Less」** 论文链接，与 SGLang Ray 模式无关：[`docs/references/post_training_integration.md:26`](d:\design\sglang\docs\docs\references\post_training_integration.mdx)）。
+
+## Increment 2026-08-18 (06f32bab → f7101b0a)
+
+- 本期 `ray/` 3 文件 / 73 行 churn，全部来自 **config bags 重构**系列（上游 "config: publish before a process reads configuration" 3d7ec00179 #35023、"the DP/EP topology reads come from the parallel bag" a97bc8db32 #35025、"the per-instance families read the bags" cba3c5d5ac #35026）：[ray/engine.py](d:\design\sglang\python\sglang\srt\ray\engine.py)、[ray/data_parallel_controller.py](d:\design\sglang\python\sglang\srt\ray\data_parallel_controller.py)、[ray/scheduler_actor.py](d:\design\sglang\python\sglang\srt\ray\scheduler_actor.py) 中的配置读取改为经 [runtime_context.py](d:\design\sglang\python\sglang\srt\runtime_context.py) 的 config bag（`_ConfigBag` [L593](d:\design\sglang\python\sglang\srt\runtime_context.py)）；子类化架构（`RayEngine` / `SchedulerActor` / `RayDataParallelController`）未变。
+- > [!todo] VERIFY: 本页正文锚点为 2026-04-19 快照，未随 2026-08-10 / 2026-08-18 两轮增量逐点复核。
 
 ## Notes / Caveats
 

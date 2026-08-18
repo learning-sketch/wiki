@@ -3,7 +3,7 @@ type: module
 project: sglang
 status: verified
 confidence: high
-verified_against: 2026-08-10
+verified_against: 2026-08-18
 sources:
   - d:\design\sglang\python\sglang\srt\managers
   - d:\design\sglang\python\sglang\srt\managers\scheduler.py
@@ -38,11 +38,11 @@ related:
 # `srt/managers` — Managers module (核心进程层)
 
 ## Summary
-synthesis: `srt/managers` 是 SGLang **进程级管理**的核心，定义了 `TokenizerManager` / `Scheduler` / `DetokenizerManager` / `TpModelWorker` / `DataParallelController` 等核心组件。HEAD `06f32bab` 上 `Scheduler` 为 **6 个职责 mixin + 条件性 `SchedulerMlxOverlapMixin`**，原先 Output/Weights/Profiler/Metrics/RuntimeChecker/DPAttn 等已迁到 [`scheduler_components/`](d:\design\sglang\python\sglang\srt\managers\scheduler_components) **组合对象**（权威页：[entities/Scheduler.md](../entities/Scheduler.md)）。目录下共 **49** 个 `.py`（含 `scheduler_components/` 内模块）。
+synthesis: `srt/managers` 是 SGLang **进程级管理**的核心，定义了 `TokenizerManager` / `Scheduler` / `DetokenizerManager` / `TpModelWorker` / `DataParallelController` 等核心组件。HEAD `f7101b0a` 上 `Scheduler` 为 **6 个职责 mixin + 条件性 `SchedulerMlxOverlapMixin`**，原先 Output/Weights/Profiler/Metrics/RuntimeChecker/DPAttn 等已迁到 [`scheduler_components/`](d:\design\sglang\python\sglang\srt\managers\scheduler_components) **组合对象**（权威页：[entities/Scheduler.md](../entities/Scheduler.md)）。目录下共 **49** 个 `.py`（含 `scheduler_components/` 内模块；@2026-08-18 复核数量不变）。
 
 ## Sources
 - 模块目录：[d:\design\sglang\python\sglang\srt\managers\](d:\design\sglang\python\sglang\srt\managers)（49 `.py`，含 `scheduler_components/`）
-- 关键文件：[scheduler.py](d:\design\sglang\python\sglang\srt\managers\scheduler.py)（~5046 行）、[scheduler_components/](d:\design\sglang\python\sglang\srt\managers\scheduler_components)、[tokenizer_manager.py](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)（~3644 行）、[detokenizer_manager.py](d:\design\sglang\python\sglang\srt\managers\detokenizer_manager.py)、[tp_worker.py](d:\design\sglang\python\sglang\srt\managers\tp_worker.py)、[schedule_policy.py](d:\design\sglang\python\sglang\srt\managers\schedule_policy.py)、[schedule_batch.py](d:\design\sglang\python\sglang\srt\managers\schedule_batch.py)、[data_parallel_controller.py](d:\design\sglang\python\sglang\srt\managers\data_parallel_controller.py)
+- 关键文件：[scheduler.py](d:\design\sglang\python\sglang\srt\managers\scheduler.py)（~5085 行）、[scheduler_components/](d:\design\sglang\python\sglang\srt\managers\scheduler_components)、[tokenizer_manager.py](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)（~3665 行）、[detokenizer_manager.py](d:\design\sglang\python\sglang\srt\managers\detokenizer_manager.py)、[tp_worker.py](d:\design\sglang\python\sglang\srt\managers\tp_worker.py)、[schedule_policy.py](d:\design\sglang\python\sglang\srt\managers\schedule_policy.py)、[schedule_batch.py](d:\design\sglang\python\sglang\srt\managers\schedule_batch.py)、[data_parallel_controller.py](d:\design\sglang\python\sglang\srt\managers\data_parallel_controller.py)
 
 ## 文件分组
 
@@ -60,7 +60,7 @@ synthesis: `srt/managers` 是 SGLang **进程级管理**的核心，定义了 `T
 > ~~[!warning] CONTRADICTION: 本节仍描述 **11 mixin** 与已删除的 `scheduler_*_mixin.py` / `scheduler_recv_skipper.py`。~~
 > **RESOLVED 2026-08-10**: 与 [entities/Scheduler.md](../entities/Scheduler.md) / [topics/scheduler-mixins.md](../topics/scheduler-mixins.md) 对齐——MRO 为 6 mixin + 条件性 `SchedulerMlxOverlapMixin`；`IdleSleeper` / `SchedulerRecvSkipper` / 原 Output/Weights/Profiler/Metrics/RuntimeChecker/DPAttn 职责迁入 [scheduler_components/](d:\design\sglang\python\sglang\srt\managers\scheduler_components)。topic 页已 re-ingest（不再 stale）。
 
-精确 class 定义来自 [scheduler.py:375-382](d:\design\sglang\python\sglang\srt\managers\scheduler.py)：
+精确 class 定义来自 [scheduler.py:383-390](d:\design\sglang\python\sglang\srt\managers\scheduler.py)：
 
 ```python
 class Scheduler(
@@ -150,7 +150,7 @@ class Scheduler(
 | `detokenizer_manager.py` | DetokenizerManager 进程主体 |
 | `scheduler_components/*.py` | Scheduler 组合组件（~19 模块 + `__init__.py`） |
 
-## TpModelWorker 类层次（[tp_worker.py:73-298](d:\design\sglang\python\sglang\srt\managers\tp_worker.py)）
+## TpModelWorker 类层次（[tp_worker.py:74-299](d:\design\sglang\python\sglang\srt\managers\tp_worker.py)）
 
 ```mermaid
 classDiagram
@@ -177,8 +177,8 @@ classDiagram
 
 要点：
 
-- `BaseTpWorker` 是 ABC（[tp_worker.py:73](d:\design\sglang\python\sglang\srt\managers\tp_worker.py)），抽象方法为 `forward_batch_generation` + `model_runner` property
-- `TpModelWorker` 内 `_init_model_runner()`（[tp_worker.py:450](d:\design\sglang\python\sglang\srt\managers\tp_worker.py)）创建 `ModelRunner`（来自 [srt/model_executor/](d:\design\sglang\python\sglang\srt\model_executor)；部分逻辑在 `model_runner_components/`）
+- `BaseTpWorker` 是 ABC（[tp_worker.py:74](d:\design\sglang\python\sglang\srt\managers\tp_worker.py)），抽象方法为 `forward_batch_generation` + `model_runner` property
+- `TpModelWorker` 内 `_init_model_runner()`（[tp_worker.py:463](d:\design\sglang\python\sglang\srt\managers\tp_worker.py)）创建 `ModelRunner`（来自 [srt/model_executor/](d:\design\sglang\python\sglang\srt\model_executor)；部分逻辑在 `model_runner_components/`）
 - **直接被 Scheduler 调用**——SGLang 没有独立的 Executor 层（vLLM 有 `Executor` 抽象，SGLang 没有）。这是架构上的关键差异
 
 ## 与 entrypoints 的关系
@@ -196,6 +196,21 @@ flowchart TB
     SchedProc -.->|"ZMQ"| DetokProc
     DetokProc -.->|"ZMQ"| TokMgr
 ```
+
+## Increment 2026-08-18 (06f32bab → f7101b0a)
+
+本期 `managers/` churn = **26 文件 / +1171/-484（≈1655 行）**（`git diff --stat 06f32bab..HEAD -- python/sglang/srt/managers`）。**骨架论断全部复核不变**：目录仍 49 个 `.py`（29 顶层 + `scheduler_components/` 20），文件清单无增删；`Scheduler` MRO 仍 6 mixin。逐项：
+
+- **scheduler.py +109/-70**（现 ~5085 行）：`class Scheduler(` L375 → [L383](d:\design\sglang\python\sglang\srt\managers\scheduler.py)；`dispatch_event_loop` → [L4902](d:\design\sglang\python\sglang\srt\managers\scheduler.py)（PP 判定改用 `configured_pp_size()`）；`init_metrics_reporter` 前移至 [L1198](d:\design\sglang\python\sglang\srt\managers\scheduler.py)。详细锚点映射见 [topics/scheduler-mixins.md](../topics/scheduler-mixins.md) §Increment。
+- **tokenizer_manager.py ±209**（现 ~3665 行）：主要是 config-bags 系列 commit（#35022-#35028，`get_*()` 配置袋替代散读 `server_args`）+ VLM content-addressed 预处理缓存基建（#34398）。
+- **cache_controller.py +116/-111**：HiCache L2 传输执行扁平化（#34793）——`HiCacheController` 改持 [`L2TransferEngine`](d:\design\sglang\python\sglang\srt\mem_cache\l2_transfer.py)（import @ [cache_controller.py:L40](d:\design\sglang\python\sglang\srt\managers\cache_controller.py)、实例化 @ [L321](d:\design\sglang\python\sglang\srt\managers\cache_controller.py)、`submit_device_to_host` @ [L719](d:\design\sglang\python\sglang\srt\managers\cache_controller.py)），传输原语移入 `mem_cache/l2_transfer.py`。
+- **hisparse_coordinator.py +214**：HiSparse shared-index（IndexShare）plan-then-IO swap-in prefetch（#34329）；`HiSparseCoordinator` 现 @ [L111](d:\design\sglang\python\sglang\srt\managers\hisparse_coordinator.py)，新增 `HiSparseAct` / `HiSparseTokenStats` NamedTuple（[L35/L41](d:\design\sglang\python\sglang\srt\managers\hisparse_coordinator.py)）。
+- **io_struct.py +92**：请求结构体增 `cache_salt` 字段并归一化（[io_struct.py:L337](d:\design\sglang\python\sglang\srt\managers\io_struct.py)、[L500](d:\design\sglang\python\sglang\srt\managers\io_struct.py)，#30827）+ VLM 预处理缓存相关消息（#34398）。
+- **prefill_delayer.py +65**：新增 `RecentPrefillBatchSizeTracker`（[prefill_delayer.py:L22](d:\design\sglang\python\sglang\srt\managers\prefill_delayer.py)，#34284——按近期真实 admission 跟踪 max prefill batch size）。
+- **overlap_utils.py +48**：`FutureMap`（[overlap_utils.py:L246](d:\design\sglang\python\sglang\srt\managers\overlap_utils.py)）扩展以中继 ngram accept tokens（#35198）与 confidence relay 结构（`ResolvedConfidence`/`ConfidenceRelay` @ [L123/L167](d:\design\sglang\python\sglang\srt\managers\overlap_utils.py)）。
+- **mm_schedule.py +42**：VLM 多模态 placeholder 计数去同步（#34995）+ 预处理缓存（#34398）；`init_mm_embedding_cache` 现 @ [mm_schedule.py:L23](d:\design\sglang\python\sglang\srt\managers\mm_schedule.py)。
+- **tp_worker.py +25 行内小改**：`BaseTpWorker` L73 → [L74](d:\design\sglang\python\sglang\srt\managers\tp_worker.py)、`TpModelWorker` @ [L299](d:\design\sglang\python\sglang\srt\managers\tp_worker.py)、`_init_model_runner` L450 → [L463](d:\design\sglang\python\sglang\srt\managers\tp_worker.py)。
+- synthesis: 本期 managers/ 无结构性重组（无文件增删、无 mixin/组件边界移动）；churn 集中在 config-bags 迁移、HiCache L2 重构的 controller 侧、HiSparse prefetch 与 spec/VLM 功能增强。
 
 ## See also
 - [modules/entrypoints.md](entrypoints.md)
