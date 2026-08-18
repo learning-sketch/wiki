@@ -3,7 +3,7 @@ type: module
 project: sglang
 status: verified
 confidence: high
-verified_against: 2026-04-19
+verified_against: 2026-08-18
 sources:
   - d:\design\sglang\python\sglang\srt\disaggregation
   - d:\design\sglang\python\sglang\srt\disaggregation\base\conn.py
@@ -12,6 +12,7 @@ sources:
   - d:\design\sglang\python\sglang\srt\disaggregation\decode.py
   - d:\design\sglang\python\sglang\srt\disaggregation\prefill.py
   - d:\design\sglang\python\sglang\srt\disaggregation\decode_kvcache_offload_manager.py
+  - d:\design\sglang\python\sglang\srt\disaggregation\decode_hicache_mixin.py
   - d:\design\sglang\python\sglang\srt\disaggregation\decode_schedule_batch_mixin.py
   - d:\design\sglang\python\sglang\srt\disaggregation\kv_events.py
   - d:\design\sglang\python\sglang\srt\disaggregation\encode_server.py
@@ -42,7 +43,7 @@ related:
 
 ## Summary
 
-`srt/disaggregation/`（**28** `.py` 文件 / ~556 KB）实现 SGLang 的 **PD (Prefill/Decode) 分离** 子系统：[`base/conn.py`](d:\design\sglang\python\sglang\srt\disaggregation\base\conn.py) 定义抽象基类（`BaseKVManager` / `BaseKVSender` / `BaseKVReceiver` / `BaseKVBootstrapServer` + `KVArgs` dataclass + `KVPoll` 状态机），[`utils.py`](d:\design\sglang\python\sglang\srt\disaggregation\utils.py) 中 `TransferBackend` 5 项枚举 + `get_kv_class` 工厂装配 5 套后端实现（**Mooncake / NIXL / Mori / Ascend / Fake**）。顶层 [`prefill.py`](d:\design\sglang\python\sglang\srt\disaggregation\prefill.py) / [`decode.py`](d:\design\sglang\python\sglang\srt\disaggregation\decode.py) 提供两个 mixin（`SchedulerDisaggregationPrefillMixin` / `SchedulerDisaggregationDecodeMixin`）混入 `Scheduler`，[`managers/disagg_service.py`](d:\design\sglang\python\sglang\srt\managers\disagg_service.py) 仅在 prefill 节点拉起 bootstrap HTTP 服务。
+`srt/disaggregation/`（**29** `.py` 文件；~~28~~ pin 前新增 `decode_hicache_mixin.py`，#26227）实现 SGLang 的 **PD (Prefill/Decode) 分离** 子系统：[`base/conn.py`](d:\design\sglang\python\sglang\srt\disaggregation\base\conn.py) 定义抽象基类（`BaseKVManager` / `BaseKVSender` / `BaseKVReceiver` / `BaseKVBootstrapServer` + `KVArgs` dataclass + `KVPoll` 状态机），[`utils.py`](d:\design\sglang\python\sglang\srt\disaggregation\utils.py) 中 `TransferBackend` 5 项枚举 + `get_kv_class` 工厂装配 5 套后端实现（**Mooncake / NIXL / Mori / Ascend / Fake**）。顶层 [`prefill.py`](d:\design\sglang\python\sglang\srt\disaggregation\prefill.py) / [`decode.py`](d:\design\sglang\python\sglang\srt\disaggregation\decode.py) 提供两个 mixin（`SchedulerDisaggregationPrefillMixin` / `SchedulerDisaggregationDecodeMixin`）混入 `Scheduler`，[`managers/disagg_service.py`](d:\design\sglang\python\sglang\srt\managers\disagg_service.py) 仅在 prefill 节点拉起 bootstrap HTTP 服务。
 
 > synthesis: 与 **MindIE** 独立 `connector` 子进程（`mindie/topics/connector.md`（已删））+ **vLLM** `kv_transfer/kv_connector/v1/` 14 backend 抽象（[`vllm/topics/kv-connector.md`](../../vllm/topics/kv-connector.md)）形成对比：SGLang 把 PD 传输与调度 **合并在同一 Python 运行时**，通过 `TransferBackend` 切换 5 套后端 + 共享 `CommonKVManager` 基类，并另设 `encode_*.py` 支持 **EPD（Encoder-Prefill-Decode 编码器分离）** —— 这是 vLLM/MindIE 当前都没有的设计点。深度对比详见 [`comparison/topics/pd-disaggregation.md`](../../comparison/topics/pd-disaggregation.md)（14 子维度）。
 

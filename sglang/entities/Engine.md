@@ -3,9 +3,9 @@ type: entity
 project: sglang
 status: verified
 confidence: high
-verified_against: 2026-08-10
+verified_against: 2026-08-18
 sources:
-  - d:\design\sglang\python\sglang\srt\entrypoints\engine.py:L137-L1228
+  - d:\design\sglang\python\sglang\srt\entrypoints\engine.py:L145-L1256
   - d:\design\sglang\python\sglang\srt\entrypoints\http_server_engine.py
   - d:\design\sglang\python\sglang\srt\entrypoints\EngineBase.py
   - d:\design\sglang\python\sglang\srt\entrypoints\engine_score_mixin.py
@@ -29,7 +29,7 @@ related:
 
 ## Sources
 
-- [`engine.py`](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)（`SchedulerInitResult` L137；`Engine` L199；`_launch_scheduler_processes` L832；`_launch_subprocesses` L1036；~1827 行）
+- [`engine.py`](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)（`SchedulerInitResult` L145；`Engine` L207；`_launch_scheduler_processes` L856；`_launch_subprocesses` L1060；~1877 行）
 - [`http_server_engine.py`](d:\design\sglang\python\sglang\srt\entrypoints\http_server_engine.py)
 - [`EngineBase.py`](d:\design\sglang\python\sglang\srt\entrypoints\EngineBase.py)
 - [`engine_score_mixin.py`](d:\design\sglang\python\sglang\srt\entrypoints\engine_score_mixin.py)
@@ -76,21 +76,21 @@ classDiagram
 
 ### 可覆盖类属性（fork 定制）
 
-`server_args_class`、`init_tokenizer_manager_func`、`run_scheduler_process_func`、`run_detokenizer_process_func` 允许子类替换 `ServerArgs` 与各进程入口（例如 `RayEngine` 覆盖 scheduler 启动）— [engine.py:215-218](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)。另有 `_placement_group`（Ray 用）— [222](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)。
+`server_args_class`、`init_tokenizer_manager_func`、`run_scheduler_process_func`、`run_detokenizer_process_func` 允许子类替换 `ServerArgs` 与各进程入口（例如 `RayEngine` 覆盖 scheduler 启动）— [engine.py:223-226](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)。另有 `_placement_group`（Ray 用）— [230](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)。
 
 ### 字段表
 
 | 字段 | 说明 | 锚点 |
 |------|------|------|
-| `server_args` | 解析自 kwargs 或外部传入 | [234-244](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
-| `tokenizer_manager` | 主进程 TM；多 tokenizer 时为 `MultiTokenizerRouter` | [257, 277-285](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
-| `template_manager` | 多 worker 时可为 `None` | [278](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
-| `port_args` | IPC 端口等 | [286](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
-| `_scheduler_init_result` | `SchedulerInitResult`：scheduler 信息、ready/wait 回调 | [279](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
-| `_weight_cache_daemon_procs` | `--weight-cache-mode daemon` 时本实例拥有的 daemon | [283](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
-| `tokenizer_manager._subprocess_watchdog` | 由 launcher 注入 | [284-285](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
-| `send_to_rpc` | `node_rank==0` 时 DEALER 连 RPC | [288-295](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
-| `loop` | 运行 async 的 event loop | [311-315](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
+| `server_args` | 解析自 kwargs 或外部传入 | [242-252](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
+| `tokenizer_manager` | 主进程 TM；多 tokenizer 时为 `MultiTokenizerRouter` | [265, 285-293](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
+| `template_manager` | 多 worker 时可为 `None` | [286](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
+| `port_args` | IPC 端口等 | [294](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
+| `_scheduler_init_result` | `SchedulerInitResult`：scheduler 信息、ready/wait 回调 | [287](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
+| `_weight_cache_daemon_procs` | `--weight-cache-mode daemon` 时本实例拥有的 daemon | [291](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
+| `tokenizer_manager._subprocess_watchdog` | 由 launcher 注入 | [292-293](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
+| `send_to_rpc` | `node_rank==0` 时 DEALER 连 RPC | [296-303](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
+| `loop` | 运行 async 的 event loop | [319-323](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
 
 ## Engine.__init__ 装配序列
 
@@ -115,38 +115,39 @@ sequenceDiagram
 
 步骤与锚点：
 
-1. `load_plugins()` 后解析 `server_args`（kwargs 或显式），默认 `log_level="error"` — [230-244](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)
-2. 拒绝 `SGLANG_RUST_SERVER` 用于 offline Engine — [247-253](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)
-3. `self.tokenizer_manager = None` 防止 atexit 路径异常 — [255-257](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)
-4. `atexit.register(self.shutdown)` — [259-260](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)
-5. `_launch_subprocesses` — [262-276](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)
-6. 赋值 TM / template / scheduler result / weight-cache daemons / watchdog — [277-286](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)
-7. ZMQ RPC socket（`node_rank == 0`）— [288-295](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)
-8. `enable_trace` 时 `process_tracing_init` — [297-309](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)
-9. `asyncio` 事件循环 — [311-315](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)
+1. `load_plugins()` 后解析 `server_args`（kwargs 或显式），默认 `log_level="error"` — [238-252](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)
+2. 拒绝 `SGLANG_RUST_SERVER` 用于 offline Engine — [255-261](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)
+3. `self.tokenizer_manager = None` 防止 atexit 路径异常 — [263-265](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)
+4. `atexit.register(self.shutdown)` — [267-268](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)
+5. `_launch_subprocesses` — [270-284](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)
+6. 赋值 TM / template / scheduler result / weight-cache daemons / watchdog — [285-294](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)
+7. ZMQ RPC socket（`node_rank == 0`）— [296-303](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)
+8. `enable_trace` 时 `process_tracing_init` — [305-317](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)
+9. `asyncio` 事件循环 — [319-323](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)
 
 ## _launch_subprocesses 完整流程
 
-入口：`_launch_subprocesses` [1036-1228](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)。
+入口：`_launch_subprocesses` [1060-1256](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)。
 
 | 阶段 | 行为 | 锚点 |
 |------|------|------|
-| 全局环境 | `configure_logger`、`_set_envs_and_config`、`load_plugins`、`check_server_args` | [1058-1066](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
-| 端口 | `PortArgs.init_new(server_args)`（若未传入 `port_args`） | [1068-1071](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
-| Bootstrap | 条件满足时 `EngineInfoBootstrapServer`，端口占用检查 | [1073-1088](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
-| auto parsers | `resolve_auto_parsers`（reasoning/tool_call = auto） | [1090-1094](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
-| Weight cache daemon | `weight_cache_mode == "daemon"` 时 `_launch_weight_cache_daemons` | [1096-1101](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
-| Scheduler | `_launch_scheduler_processes`，结果写入 bootstrap server | [1103-1114](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
-| Elastic EP backup | `run_expert_backup_manager` 条件调用 | [1116-1120](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
-| 多节点 `node_rank >= 1` | 仅 scheduler：`wait_for_ready`，可选阻塞或提前 `return (None, None, ...)` | [1122-1149](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
-| Rust server | `SGLANG_RUST_SERVER` 时跳过 Python detokenizer/TM | [1151-1172](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
-| Detokenizer | `_launch_detokenizer_subprocesses`（可多 worker + router） | [1174-1182](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
-| Tokenizer | `init_tokenizer_manager_func` 或 `MultiTokenizerRouter` | [1184-1192](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
-| Ready | `scheduler_init_result.wait_for_ready()` + `_set_startup_time` | [1196-1199](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
-| 回传 max_len | `tokenizer_manager.max_req_input_len` 来自 scheduler info | [1201-1204](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
-| Watchdog | `SubprocessWatchdog` 监控 scheduler + detokenizer | [1206-1215](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
+| 全局环境 | `configure_logger`、`_set_envs_and_config`、`load_plugins`、`check_server_args` | [1082-1090](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
+| 端口 | `PortArgs.init_new(server_args)`（若未传入 `port_args`） | [1092-1095](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
+| Bootstrap | 条件满足时 `EngineInfoBootstrapServer`，端口占用检查 | [1097-1112](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
+| auto parsers | `resolve_auto_parsers`（reasoning/tool_call = auto） | [1114-1118](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
+| **Publish（本期新增）** | `publish(server_args, role="tokenizer")`：解析完成后、任何子进程 fork 前发布 config bags | [1120-1123](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
+| Weight cache daemon | `weight_cache_mode == "daemon"` 时 `_launch_weight_cache_daemons` | [1125-1129](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
+| Scheduler | `_launch_scheduler_processes`，结果写入 bootstrap server | [1131-1142](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
+| Elastic EP backup | `run_expert_backup_manager` 条件调用 | [1144-1148](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
+| 多节点 `node_rank >= 1` | 仅 scheduler：`wait_for_ready`，可选阻塞或提前 `return (None, None, ...)` | [1150-1177](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
+| Rust server | `SGLANG_RUST_SERVER` 时跳过 Python detokenizer/TM | [1179-1200](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
+| Detokenizer | `_launch_detokenizer_subprocesses`（可多 worker + router） | [1202-1210](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
+| Tokenizer | `init_tokenizer_manager_func` 或 `MultiTokenizerRouter` | [1212-1220](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
+| Ready | `scheduler_init_result.wait_for_ready()` + `_set_startup_time` | [1222-1227](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
+| 回传 max_len | `tokenizer_manager.max_req_input_len` 来自 scheduler info | [1229-1232](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
+| Watchdog | `SubprocessWatchdog` 监控 scheduler + detokenizer | [1234-1243](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) |
 
-`SchedulerInitResult` 数据结构 — [137-144](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)。
+`SchedulerInitResult` 数据结构 — [145-152](d:\design\sglang\python\sglang\srt\entrypoints\engine.py)。
 
 ## _launch_scheduler_processes
 

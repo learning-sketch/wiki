@@ -965,3 +965,20 @@
 - 未整页 re-ingest `modules/mem_cache.md`（仍 stale）
 - 未批量更新 `comparison/topics/{kv-cache,prefix-cache}.md` 单元格
 
+
+## [2026-08-18] increment | sglang | module 页批量增量 (06f32bab → f7101b0a) + 新页 rust_extensions
+
+13 页轻量增量 + 1 新页（重点结构 3 / 轻量注记 7 / 高 churn 标 stale 3）：
+
+- **[grpc.md](sglang/modules/grpc.md)**：`srt/grpc/` 占位包已被上游删除（`67e12131df` #34994）；实现仍在 `entrypoints/grpc_server.py`（行号漂移 L66→L156）+ `grpc_bridge.py`（Rust 原生桥，新记）。
+- **[rust_extensions.md](sglang/modules/rust_extensions.md)**（新页）：`load_rust_extension` bundled→cache→cargo 三级回退按需构建 PyO3 扩展；缓存 `~/.cache/sglang/rust_extensions`；消费方 `_grpc`/`_server`/`_multimodal`。
+- **[multimodal.md](sglang/modules/multimodal.md)**：+3 子包 `cache/`(#34398) `transport/`(#33949) `media_artifacts/`(#34404) + `encoder_preprocessing.py` + `processors/muse_glimmer.py`；70→**81 .py**。
+- **[observability.md](sglang/modules/observability.md)**：+`trace_async.py`（ZMQ→独立 exporter 进程，#30023）；13→**14 .py**。
+- **[model_loader.md](sglang/modules/model_loader.md)**：GGUF 原生加载（`gguf_name_maps.py`+`gguf_native.py`，随 #34262）+ startup weight load overlap #32017；7→**8 .py**。
+- **[model_executor.md](sglang/modules/model_executor.md)**：+`step_span_utils.py`、`startup_weight_load.py`；`war_event.py`→`shared_read_event.py` (#34916)；54→**56 .py**；保持 stale。
+- **[function_call.md](sglang/modules/function_call.md)**：+Muse Glimmer detector（键 `"muse"`）；37→**39 .py**、注册表 33→**34 键**。
+- **[configs.md](sglang/modules/configs.md)**：+muse_glimmer 配置 ×2（61→**63 .py**）；config bag 机制（#35022-#35028）确认落在 **`srt/runtime_context.py` `_ConfigBag`**（非 configs/、非 server_args）。
+- **[entrypoints_openai.md](sglang/modules/entrypoints_openai.md)**：+`audio_chunking.py` 等音频转写扩展 #33604；路由/serving 类数不变；29→**30 .py**。
+- **[distributed.md](sglang/modules/distributed.md)**：`vmm_utils.py` 迁出为顶层 `srt/cuda_vmm_utils.py`（#34199/#34358）；29→**28 .py**。
+- **stale 3 页**：[models.md](sglang/modules/models.md)（244→245，+muse_glimmer.py 1027 行）、[layers.md](sglang/modules/layers.md)（312→312 净不变，104 文件 churn）、[hardware_backend.md](sglang/modules/hardware_backend.md)（73→79，DSV4 DSpark #33676 等；旧「22」系 2026-04-19 口径）。
+- [sglang/index.md](sglang/index.md) 13 行条目同步更新。

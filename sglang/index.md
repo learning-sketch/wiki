@@ -26,10 +26,11 @@ related:
 | 模块 | wiki 页 | 状态 |
 |---|---|---|
 | `entrypoints` | [modules/entrypoints.md](modules/entrypoints.md) | **DONE** / **stale@06f32bab**（56 `.py`；待深 verify） |
-| `entrypoints/openai` | [modules/entrypoints_openai.md](modules/entrypoints_openai.md) | **DONE** (P4)（20 .py + `OpenAIServingBase` + 10 `OpenAIServing*` 子类 + `protocol.py` 77 BaseModel + 11 `/v1/*` 路由 + `MCPToolServer` / `DemoToolServer` + Reasoning + function_call + constrained 集成）|
+| `entrypoints/openai` | [modules/entrypoints_openai.md](modules/entrypoints_openai.md) | **DONE** (P4)（`OpenAIServingBase` + 10 `OpenAIServing*` 子类 + `protocol.py` 77 BaseModel + 11 `/v1/*` 路由 + `MCPToolServer` / `DemoToolServer` + Reasoning + function_call + constrained 集成） ；**file count @f7101b0a = 30.py**（@06f32bab = 29；「20」为旧口径；increment 2026-08-18：+`audio_chunking.py`，音频转写扩展 #33604） |
 | `entrypoints/anthropic` | [modules/entrypoints_anthropic.md](modules/entrypoints_anthropic.md) | **DONE** (P6)（**2 .py**：`AnthropicServing` 转 `ChatCompletionRequest` 复用 `OpenAIServingChat`；Anthropic SSE 事件 `message_start` / `content_block_*` / `message_delta` / `message_stop`；`/v1/messages` + `/v1/messages/count_tokens`） |
 | `entrypoints/ollama` | [modules/entrypoints_ollama.md](modules/entrypoints_ollama.md) | **DONE** (P6)（4 .py + `OllamaServing` 直连 `TokenizerManager`（**不**依赖 OpenAI 包）+ NDJSON 流式 + `/api/chat` / `/api/generate` / `/api/tags` / `/api/show` 4 路由 + `SGLANG_OLLAMA_*` env 覆盖路径） |
-| `grpc` | [modules/grpc.md](modules/grpc.md) | **DONE** (P6)（**1 .py / 22 字节占位** — 实际实现在外部包 `smg-grpc-servicer` + [`entrypoints/grpc_server.py`](modules/grpc.md)；命名陷阱） |
+| `grpc` | [modules/grpc.md](modules/grpc.md) | **DONE** (P6)（~~1 .py 占位~~ **@f7101b0a：`srt/grpc/` 目录已删**（commit `67e12131df` #34994）；实现仍在外部包 `smg-grpc-servicer` + `entrypoints/grpc_server.py` + `grpc_bridge.py`（Rust 原生桥）；increment 2026-08-18） |
+| `rust_extensions` | [modules/rust_extensions.md](modules/rust_extensions.md) | **DONE** (increment 2026-08-18 新页)（**2 .py / 417 行**：`load_rust_extension` 按需 Cargo 构建 PyO3 扩展（bundled→cache→build 三级回退）+ `~/.cache/sglang/rust_extensions` 指纹缓存；消费方 `_grpc` / `_server` / `_multimodal`） |
 
 ### 调度与请求生命周期
 | 模块 | wiki 页 | 状态 |
@@ -38,16 +39,16 @@ related:
 | **`disaggregation`** | [modules/disaggregation.md](modules/disaggregation.md) | **DONE** (P0)（5 backend + EPD encode_*.py + 2 Scheduler mixin） |
 | `multiplex` | [modules/multiplex.md](modules/multiplex.md) | **DONE** (P5)（2 .py + PD-Multiplexing：同一 GPU 上 Prefill/Decode SM 分区 + green context streams + `SchedulerMultiplexMixin.event_loop_pdmux` + `--enable-pdmux` / `--pdmux-config-path` / `--sm-group-num`；与 disaggregation **互斥**） |
 | `session` | [modules/session.md](modules/session.md) | **DONE** (P2)（3 .py + `SessionController` open/close/reap + `StreamingSession` KV/Mamba slot 保活；Scheduler 持有 controller） |
-| `function_call` | [modules/function_call.md](modules/function_call.md) | **DONE** (P3)（26 .py + `FunctionCallParser` 注册表 24 字符串键 / 21 detector + `BaseFormatDetector` 流式状态机 + `structural_tag` / `json_schema` 约束分支；产出**约束元组**交 `constrained/` 编译） ；**file count @06f32bab = 37.py**（待深 verify） |
+| `function_call` | [modules/function_call.md](modules/function_call.md) | **DONE** (P3)（26 .py + `FunctionCallParser` 注册表 24 字符串键 / 21 detector + `BaseFormatDetector` 流式状态机 + `structural_tag` / `json_schema` 约束分支；产出**约束元组**交 `constrained/` 编译） ；**file count @f7101b0a = 39.py / 注册表 34 键**（increment 2026-08-18：+Muse Glimmer `"muse"` detector） |
 | `constrained` | [modules/constrained.md](modules/constrained.md) | **DONE** (P3)（9 .py + 4 backend xgrammar/outlines/llguidance/none + Reasoner wrap + outlines jump-forward FSM + sgl-kernel `apply_token_bitmask_inplace_cuda` + Triton fallback） |
 
 ### 模型执行层
 | 模块 | wiki 页 | 状态 |
 |---|---|---|
-| `model_executor` | [modules/model_executor.md](modules/model_executor.md) | **DONE** (P0)（13 .py + 命名陷阱：≠ vLLM Executor 抽象；ModelRunner / ForwardBatch / CudaGraphRunner / Attention 注册表） ；**file count @06f32bab = 54.py**（待深 verify） |
-| `model_loader` | [modules/model_loader.md](modules/model_loader.md) | **DONE** (P4)（6 .py + `LoadFormat` 含 `IPC_CACHE` + `BaseModelLoader` 子类 + `get_model_loader` 工厂；权重通道：connector / weight_sync / checkpoint_engine / **weight_cache**） |
-| `models` | [modules/models.md](modules/models.md) | **DONE** (Turn 4)（**185 .py**（实测；既有 wiki 推断 186）+ ~22 模型族矩阵 + `ModelRegistry.register("sglang.srt.models")` 自动发现 + `EntryClass` 注册 + 共 **54** 文件 `Adapted from vllm-project/vllm` URL + Llama 模板 / DeepSeek MLA+MoE / Qwen3-VL / LLaDA2 DLLM / Llama embedding 等代表实现） ；**file count @06f32bab = 244.py**（待深 verify） |
-| `layers` | [modules/layers.md](modules/layers.md) | **DONE** (Turn 5)（**248 .py**（实测；既有 wiki 推断 252）+ 5 子系统 attention(94)/quantization(66)/moe(42)/rotary_embedding(9)/utils(6) + 顶层 31 + `ATTENTION_BACKENDS` **17** 注册名 + `moe_a2a_backend` 7 取值 + Triton `@triton.jit` ≥71 文件 + `from sgl_kernel import` 33 文件） ；**file count @06f32bab = 312.py**（待深 verify） |
+| `model_executor` | [modules/model_executor.md](modules/model_executor.md) | **DONE** (P0)（13 .py + 命名陷阱：≠ vLLM Executor 抽象；ModelRunner / ForwardBatch / CudaGraphRunner / Attention 注册表） ；**file count @f7101b0a = 56.py**（increment 2026-08-18：+`step_span_utils.py`、`model_runner_components/startup_weight_load.py`；`war_event.py`→`shared_read_event.py`） |
+| `model_loader` | [modules/model_loader.md](modules/model_loader.md) | **DONE** (P4)（`LoadFormat` 含 `IPC_CACHE` + `BaseModelLoader` 子类 + `get_model_loader` 工厂；权重通道：connector / weight_sync / checkpoint_engine / **weight_cache**） ；**file count @f7101b0a = 8.py**（@06f32bab = 7；「6」为旧口径；increment 2026-08-18：+`gguf_name_maps.py` GGUF 原生加载 + startup weight load overlap #32017） |
+| `models` | [modules/models.md](modules/models.md) | **DONE** (Turn 4)（**185 .py**（实测；既有 wiki 推断 186）+ ~22 模型族矩阵 + `ModelRegistry.register("sglang.srt.models")` 自动发现 + `EntryClass` 注册 + 共 **54** 文件 `Adapted from vllm-project/vllm` URL + Llama 模板 / DeepSeek MLA+MoE / Qwen3-VL / LLaDA2 DLLM / Llama embedding 等代表实现） ；**file count @f7101b0a = 245.py**（increment 2026-08-18：+`muse_glimmer.py`；38 文件高 churn，页面 stale） |
+| `layers` | [modules/layers.md](modules/layers.md) | **DONE** (Turn 5)（**248 .py**（实测；既有 wiki 推断 252）+ 5 子系统 attention(94)/quantization(66)/moe(42)/rotary_embedding(9)/utils(6) + 顶层 31 + `ATTENTION_BACKENDS` **17** 注册名 + `moe_a2a_backend` 7 取值 + Triton `@triton.jit` ≥71 文件 + `from sgl_kernel import` 33 文件） ；**file count @f7101b0a = 312.py**（净不变；increment 2026-08-18：104 文件高 churn——`dwdp/vmm.py`、`torchao_utils.py` 删，`kda_helion.py`、modelslim w4a8-mxfp4 增；页面 stale） |
 | `lora` | [modules/lora.md](modules/lora.md) | **DONE** (P4)（33 .py + `LoRAManager` + 4 backend triton/csgmv/ascend/torch_native + `LoRAMemoryPool` 槽位池 + 13 Triton kernel + S-LoRA/Punica 谱系；CUDA adapter LoRA = 0） ；**file count @06f32bab = 45.py**（待深 verify） |
 | `sampling` | [modules/sampling.md](modules/sampling.md) | **DONE** (P3)（9 .py + `SamplingParams` 25 字段 + `SamplingBatchInfo` 批张量 / merge / filter + `BatchedPenalizerOrchestrator` 4 子类 + custom logits dill 序列化 + sgl-kernel `top_k_renorm_probs` / `top_p_renorm_probs` / `apply_token_bitmask_inplace_cuda` 3 算子 + FlashInfer 采样核 delegate） |
 | `speculative` | [modules/speculative.md](modules/speculative.md) | **DONE** (P1)（27 .py + 6 算法 enum + EAGLE/MultiLayer/Standalone/DFlash/NGRAM 多家族 + sgl-kernel `verify_tree_greedy` CUDA 绑定） ；**file count @06f32bab = 47.py**（待深 verify） |
@@ -65,12 +66,12 @@ related:
 ### 分布式与硬件
 | 模块 | wiki 页 | 状态 |
 |---|---|---|
-| `distributed` | [modules/distributed.md](modules/distributed.md) | **DONE** (P0)（22 .py = 5 顶层 + 17 device_communicators / 13 逻辑后端；GroupCoordinator + 7 子组；Scheduler 6 rank 形参；唯一 sgl-kernel 算子 `shm_allreduce`） ；**file count @06f32bab = 29.py**（待深 verify） |
+| `distributed` | [modules/distributed.md](modules/distributed.md) | **DONE** (P0)（22 .py = 5 顶层 + 17 device_communicators / 13 逻辑后端；GroupCoordinator + 7 子组；Scheduler 6 rank 形参；唯一 sgl-kernel 算子 `shm_allreduce`） ；**file count @f7101b0a = 28.py**（increment 2026-08-18：`vmm_utils.py` 迁出为顶层 `srt/cuda_vmm_utils.py`，#34199/#34358） |
 | `eplb` | [modules/eplb.md](modules/eplb.md) | **DONE** (P1)（12 .py + `EPLBManager` 周期重平衡 + 3 套算法 DeepSeek/DeepSeek-vec/Elasticity-aware + simulator 离线 reader） |
 | `elastic_ep` | [modules/elastic_ep.md](modules/elastic_ep.md) | **DONE** (P1)（3 .py + `ElasticEPStateManager` rank 活性 + `ExpertBackup{Manager,Client}` 子进程 Mooncake TE RDMA；**vLLM 有但实现不同**） |
 | `ray` | [modules/ray.md](modules/ray.md) | **DONE** (P5)（5 .py + `RayEngine(Engine)` 子类化 + `SchedulerActor` Ray actor + `RayDataParallelController` 子类化 + Placement Group + `--use-ray`；**比 vLLM `RayDistributedExecutor` 更轻**：仅替换 scheduler 进程） |
 | `platforms` | [modules/platforms.md](modules/platforms.md) | **DONE** (P1)（7 .py + 惰性 `current_platform` + `SRTPlatform` 工厂/能力；CUDA/ROCm/CPU/XPU + OOT entry_points `sglang.srt.platforms`） |
-| `hardware_backend` | [modules/hardware_backend.md](modules/hardware_backend.md) | **DONE** (P4)（22 .py + 3 设备子包 npu/musa/mlx + `NPUGraphRunner` 子类化 `CudaGraphRunner` + 4 个 `*GraphRunner` 子类 + `sgl_kernel_npu` import + `_handle_npu_backends` 默认参数注入） |
+| `hardware_backend` | [modules/hardware_backend.md](modules/hardware_backend.md) | **DONE** (P4)（22 .py + 3 设备子包 npu/musa/mlx + `NPUGraphRunner` 子类化 `CudaGraphRunner` + 4 个 `*GraphRunner` 子类 + `sgl_kernel_npu` import + `_handle_npu_backends` 默认参数注入） ；**file count @f7101b0a = 79.py**（@06f32bab = 73；「22」为 2026-04-19 旧口径；increment 2026-08-18：DSV4 DSpark / ascend_kda / muse_glimmer_mlx 等 +6，页面 stale） |
 | `compilation` | [modules/compilation.md](modules/compilation.md) | **DONE** (P1)（13 .py + `SGLangBackend` torch.compile + Inductor 适配 + PCG 子图 CUDAGraph；唯一 sgl-kernel 算子 `weak_ref_tensor`） |
 | `connector` | [modules/connector.md](modules/connector.md) | **DONE** (P2)（**命名陷阱**：≠ KV connector，是远程**权重**加载；9 .py + Redis/S3/RemoteInstance + serde） |
 | `plugins` | [modules/plugins.md](modules/plugins.md) | **DONE** (P2)（2 .py + `load_plugins` / `HookRegistry` BEFORE/AFTER/AROUND/REPLACE；groups `sglang.srt.plugins` + platforms） |
@@ -79,15 +80,15 @@ related:
 | 模块 | wiki 页 | 状态 |
 |---|---|---|
 | `tokenizer` | [modules/tokenizer.md](modules/tokenizer.md) | **DONE** (P5)（**1 .py**：`TiktokenTokenizer` 加载 xtok JSON + HF 兼容 API；`get_tokenizer` 在 `tokenizer_name.endswith(".json")` 时分发；**4 个同名"tokenizer"对象消歧**） |
-| `multimodal` | [modules/multimodal.md](modules/multimodal.md) | **DONE** (P4)（46 .py + 36 模型族处理器 + `MultimodalSpecialTokens` + `import_processors` 启动注册 + EPD encode_server 单向依赖 + 3 模态 IMAGE/VIDEO/AUDIO + `vit_cuda_graph_runner` ViT 图） ；**file count @06f32bab = 70.py**（待深 verify） |
+| `multimodal` | [modules/multimodal.md](modules/multimodal.md) | **DONE** (P4)（46 .py + 36 模型族处理器 + `MultimodalSpecialTokens` + `import_processors` 启动注册 + EPD encode_server 单向依赖 + 3 模态 IMAGE/VIDEO/AUDIO + `vit_cuda_graph_runner` ViT 图） ；**file count @f7101b0a = 81.py**（increment 2026-08-18：+`cache/`、`transport/`、`media_artifacts/` 3 子包 + `encoder_preprocessing.py` + `processors/muse_glimmer.py`） |
 | `parser` | [modules/parser.md](modules/parser.md) | **DONE** (P3)（5 .py + `ReasoningParser.DetectorMap` 17 键 / 10 detector 子类 + `HarmonyParser` GPT-OSS channel + `Conversation` 28 内置模板（FastChat 谱系）+ Jinja AST format 检测 + 3 套 FIM 模板） |
 | `dllm` | [modules/dllm.md](modules/dllm.md) | **DONE** (P5)（7 .py + Diffusion LLM 调度：`DllmConfig` + `SchedulerDllmMixin` + 2 算法 `LowConfidence` / `JointThreshold` 迭代 mask 填充 + 3 HF 架构（LLaDA2/SDAR/SDARMoe）；**SGLang-unique** 设计点） |
 | `batch_invariant_ops` | [modules/batch_invariant_ops.md](modules/batch_invariant_ops.md) | **DONE** (P5)（2 .py + Triton GEMM/log-softmax/mean/BMM/RMSNorm 确定性算子 + `torch.library.Library` ATen 注册 + `--enable-deterministic-inference` 触发；改编自 thinking-machines-lab） |
 | `batch_overlap` | [modules/batch_overlap.md](modules/batch_overlap.md) | **DONE** (P5)（4 .py + TBO 双 micro-batch 前向交错 + SBO 单 batch MoE combine/down-gemm CUDA stream/event + `--enable-two-batch-overlap`；与 `--disable-overlap-schedule` 是不同层概念） |
 | `debug_utils` | [modules/debug_utils.md](modules/debug_utils.md) | **DONE** (Turn 3)（**82 .py**（实测；既有 wiki 推断 89）+ 3 子包 comparator/schedule_simulator/source_patcher + 5 子系统：tensor dump（DUMPER_*）/ comparator / text_comparator / schedule_simulator / 辅助 cuda_coredump+log_parser+model_truncator） |
-| `observability` | [modules/observability.md](modules/observability.md) | **DONE** (Turn 3)（10 .py 无 `__init__.py` + `SchedulerMetricsCollector` 70+ 指标 + `TokenizerMetricsCollector` + OTel `process_tracing_init` + KV events 发布 + multiprocess Prometheus + Grafana JSON dashboard） |
+| `observability` | [modules/observability.md](modules/observability.md) | **DONE** (Turn 3)（`SchedulerMetricsCollector` 70+ 指标 + `TokenizerMetricsCollector` + OTel `process_tracing_init` + KV events 发布 + multiprocess Prometheus + Grafana JSON dashboard） ；**file count @f7101b0a = 14.py**（@06f32bab = 13；「10」为旧口径；increment 2026-08-18：+`trace_async.py` tracing v2 异步导出 #30023） |
 | `metrics` | — | **(N/A)** 路径不存在；指标系统在 `observability/` |
-| `configs` | [modules/configs.md](modules/configs.md) | **DONE** (Turn 3)（44 .py + `ModelConfig` 主类（25 字段）+ `LoadConfig` 正交 + `update_config.py` TP 对齐补丁 + ~95 个 srt 文件消费 + 多文件 Adapted from vLLM/HF transformers） |
+| `configs` | [modules/configs.md](modules/configs.md) | **DONE** (Turn 3)（`ModelConfig` 主类（25 字段）+ `LoadConfig` 正交 + `update_config.py` TP 对齐补丁 + ~95 个 srt 文件消费 + 多文件 Adapted from vLLM/HF transformers） ；**file count @f7101b0a = 63.py**（@06f32bab = 61；「44」为旧口径；increment 2026-08-18：+muse_glimmer 配置 ×2；config bag 机制在 `srt/runtime_context.py` #35022-#35028） |
 | `arg_groups` | [modules/arg_groups.md](modules/arg_groups.md) | **DONE** (P1)（9 .py + `A`/`Arg`/`NS` CLI 派生 + `overrides.py` 声明式 arch override + speculative/PD/DeepSeekV4/HiSparse/KimiK3 hooks） |
 | `utils` | — | 未 ingest（横切工具包；非本批） |
 

@@ -3,7 +3,7 @@ type: module
 project: sglang
 status: stale
 confidence: high
-verified_against: 2026-04-19
+verified_against: 2026-08-18 (仅文件数重计 + 增量一句话；高 churn 未深核，status 保持 stale)
 sources:
   - d:\design\sglang\python\sglang\srt\models\registry.py
   - d:\design\sglang\python\sglang\srt\models\llama.py
@@ -181,6 +181,10 @@ flowchart TD
 | 内容级 `FusedMoE` / `get_moe_impl_class` | **~57** | `files_with_matches`（含 `transformers.py` 包装） |
 | `Adapted from` 头注释 | **~90** 文件 | `files_with_matches` |
 | `vllm-project/vllm` URL | **54** 文件 | `files_with_matches` |
+
+## Increment 2026-08-18 (06f32bab → f7101b0a)
+
+- 高 churn 只登记不深核：子树 diff = **38 文件 / +2995 / -400**。主要为新增 **Muse Glimmer 模型族**（commit `fde9ad2531` #34262，[`models/muse_glimmer.py`](d:\design\sglang\python\sglang\srt\models\muse_glimmer.py) 1027 行），另有 [`dspark.py`](d:\design\sglang\python\sglang\srt\models\dspark.py)（+118）、[`minimax_m3_vl.py`](d:\design\sglang\python\sglang\srt\models\minimax_m3_vl.py)（+41）等扩展。文件数重计：`git ls-tree` @06f32bab = **244**（与 index 记录一致）→ HEAD = **245**（净 +1，本期新增文件仅 `muse_glimmer.py`，无删除）。正文「185 个 `.py`」为 2026-04-19 旧口径。本页保持 `status: stale`。
 
 ## Notes / caveats
 

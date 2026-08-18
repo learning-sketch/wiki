@@ -231,57 +231,79 @@ if self.enable_pdmux:
 
 ## CLI 参数全表
 
-字段定义集中在 [`ServerArgs` L706-718`](d:\design\sglang\python\sglang\srt\server_args.py)，argparse 在 [L6138-6215](d:\design\sglang\python\sglang\srt\server_args.py)。
+字段定义集中在 [`ServerArgs` L3101-L3196](d:\design\sglang\python\sglang\srt\server_args.py)（**注意**：server_args 已重构为 `A[..., Arg(...)]` **注解式字段**，argparse 由注解自动生成，旧 L6138-6215 手写 argparse 段不复存在）；PD 专属规范化 / 校验逻辑抽到 [`arg_groups/pd_disaggregation_hook.py`](d:\design\sglang\python\sglang\srt\arg_groups\pd_disaggregation_hook.py)（`handle_pd_disaggregation` L16）。
 
 ### PD 主字段
 
 | 字段 | 默认 | 说明（锚点统一指 [server_args.py](d:\design\sglang\python\sglang\srt\server_args.py)） |
 |---|---|---|
-| `--disaggregation-mode` | `"null"` | `null`/`prefill`/`decode`（field L706, argparse L6139） |
-| `--disaggregation-transfer-backend` | `"mooncake"` | choices = `[mooncake,nixl,ascend,fake,mori]`（field L707 / argparse L6146 / choices L160；与 `TransferBackend` 枚举一一对应） |
-| `--disaggregation-bootstrap-port` | `8998` | prefill bootstrap HTTP 端口（field L708 / argparse L6153） |
-| `--disaggregation-ib-device` | `None` | IB 设备名（可逗号分隔多个）；mooncake 时可自动探测（field L709 / argparse L6159 / 校验 L3580-3587） |
-| `--disaggregation-decode-enable-offload-kvcache` | `False` | decode KV cache 异步 offload（field L710 / argparse L6167） |
-| `--num-reserved-decode-tokens` | `512` | decode 新 req 入 batch 预留 token 数（field L711 / argparse L6172） |
-| `--disaggregation-decode-polling-interval` | `1` | decode 轮询 receiver 间隔（field L713 / argparse L6178） |
+| `--disaggregation-mode` | `"null"` | `null`/`prefill`/`decode`（field L3101-3105） |
+| `--disaggregation-transfer-backend` | `"mooncake"` | choices = `[mooncake,nixl,ascend,fake,mori,mooncake_tcp]`（field L3106-3113 / choices L236-243；`mooncake_tcp` 是 CLI 别名，枚举仍 5 项） |
+| `--disaggregation-bootstrap-port` | `8998` | prefill bootstrap HTTP 端口（field L3114-3118） |
+| `--disaggregation-ib-device` | `None` | IB 设备名（可逗号分隔多个）；mooncake 时可自动探测（field L3119-3123） |
+| `--disaggregation-decode-enable-radix-cache` | `False` | **pin 前新增**：decode server 开 radix cache 缓存 KV 前缀（field L3124-3128；与 fake backend / 投机解码不兼容） |
+| `--disaggregation-decode-enable-offload-kvcache` | `False` | decode KV cache 异步 offload（field L3129-3133） |
+| `--disaggregation-decode-retraction-backup` | `None` | **新增**：decode 侧 retraction 时 KV 备份策略（field L3134-3146；与 #34801 HiCache retraction 保留相关） |
+| `--num-reserved-decode-tokens` | `512` | decode 新 req 入 batch 预留 token 数（field L3147-3151） |
+| `--disaggregation-decode-extra-slots` | `None` | **新增**：为 in-transfer 请求预分配的额外 decode req_to_token slots（field L3152-3156） |
+| `--disaggregation-decode-polling-interval` | `1` | decode 轮询 receiver 间隔（field L3157-3161） |
 
 ### EPD 字段
 
 | 字段 | 默认 | 说明 |
 |---|---|---|
-| `--encoder-only` | `False` | encoder-only 服务（与 `--language-only` / `--disaggregation-mode != null` 互斥；argparse L6186 / 校验 L3568-3573） |
-| `--language-only` | `False` | VLM 仅装语言模型（field L717 / argparse L6191 / 校验 L3575-3578） |
-| `--encoder-transfer-backend` | `"zmq_to_scheduler"` | choices = `[zmq_to_scheduler, zmq_to_tokenizer, mooncake]`（field L718 / argparse L6196 / choices L212） |
-| `--encoder-urls` | `[]` | encoder server URL 列表（argparse L6203） |
-| `--enable-adaptive-dispatch-to-encoder` | `False` | 多图走 encoder，单图本地处理（argparse L6210） |
+| `--encoder-only` | `False` | encoder-only 服务（field L3171-3173） |
+| `--language-only` | `False` | VLM 仅装语言模型（field L3174-3177；与 encoder_only 互斥校验 L7694） |
+| `--encoder-transfer-backend` | `"auto"` | choices = `[auto, zmq_to_scheduler, zmq_to_tokenizer, mooncake]`（field L3185-3192 / choices L324-329；默认已从 `zmq_to_scheduler` 改为 `auto`） |
+| `--encoder-urls` | `[]` | encoder server URL 列表（field L3193-3195） |
+| `--encoder-bootstrap-port` | `8997` | **新增**：encoder bootstrap 端口（field L3196-3200） |
 
 ### 第三方扩展点
 
-[`add_disagg_transfer_backend_choices(choices)` L258-259](d:\design\sglang\python\sglang\srt\server_args.py) 允许外部扩展 `DISAGG_TRANSFER_BACKEND_CHOICES`，但 **`TransferBackend` 枚举是闭集 5 项**——外部 backend 名传进来会在 [`utils.py:431`](d:\design\sglang\python\sglang\srt\disaggregation\utils.py) `raise ValueError`。扩展 choices 只让 argparse 通过，运行时仍需 patch `get_kv_class`。
+[`add_disagg_transfer_backend_choices(choices)` L411-412](d:\design\sglang\python\sglang\srt\server_args.py) 允许外部扩展 `DISAGG_TRANSFER_BACKEND_CHOICES`，但 **`TransferBackend` 枚举是闭集 5 项**——外部 backend 名传进来会在 [`utils.py:721`](d:\design\sglang\python\sglang\srt\disaggregation\utils.py) `raise ValueError`。扩展 choices 只让 argparse 通过，运行时仍需 patch `get_kv_class`。
 
 ### 关联校验
 
 | 校验 | 内容与锚点 |
 |---|---|
-| `disaggregation_mode` 取值 | 必须 ∈ `{"null","prefill","decode"}`（[L890-892](d:\design\sglang\python\sglang\srt\server_args.py)） |
-| decode 强制 chunk cache | [L3537-3539](d:\design\sglang\python\sglang\srt\server_args.py)：decode → `disable_radix_cache=True` |
-| prefill 禁止 fake | [L3541-3544](d:\design\sglang\python\sglang\srt\server_args.py)：`prefill + fake` → `AssertionError` |
-| `SGLANG_DISAGG_STAGING_BUFFER` 仅 mooncake | env 启用时强制 backend = mooncake（[L3552-3561](d:\design\sglang\python\sglang\srt\server_args.py)） |
-| chunked prefill | `size > 0` 且非 decode 时需 `% page_size == 0`（[L6505-6508](d:\design\sglang\python\sglang\srt\server_args.py)） |
-| **PD-Mux ↔ PD-Disagg 互斥** | [L6510-6523](d:\design\sglang\python\sglang\srt\server_args.py)（详见 §「PD-Disagg vs PD-Multiplex 互斥」） |
-| EPD 模型族白名单 | 11 个 Qwen / Kimi 架构（[L3592-3604](d:\design\sglang\python\sglang\srt\server_args.py)） |
+| prefill 禁止 fake | [`pd_disaggregation_hook.py:101-103`](d:\design\sglang\python\sglang\srt\arg_groups\pd_disaggregation_hook.py)：`prefill + fake` → `AssertionError`（已从 server_args.py 迁出） |
+| `mooncake_tcp` 规范化 | [`pd_disaggregation_hook.py:18-26`](d:\design\sglang\python\sglang\srt\arg_groups\pd_disaggregation_hook.py)：改写为 `mooncake` + `MC_FORCE_TCP` |
+| `SGLANG_DISAGG_STAGING_BUFFER` 仅 mooncake | env 启用时强制 backend = mooncake（[`pd_disaggregation_hook.py:110-116`](d:\design\sglang\python\sglang\srt\arg_groups\pd_disaggregation_hook.py)） |
+| decode radix cache 与 fake 不兼容 | [`server_args.py:3126`](d:\design\sglang\python\sglang\srt\server_args.py) help 明示 |
+| chunked prefill | `size > 0` 且非 decode 时需 `% page_size == 0`（[L9200-9204](d:\design\sglang\python\sglang\srt\server_args.py)） |
+| **PD-Mux ↔ PD-Disagg 互斥** | [L9206-9219](d:\design\sglang\python\sglang\srt\server_args.py)（详见 §「PD-Disagg vs PD-Multiplex 互斥」） |
+| EPD 模型族白名单 | Qwen / Kimi / InternS2 / MiMoV2 系架构（[L7731-7749](d:\design\sglang\python\sglang\srt\server_args.py)） |
+
+## Increment 2026-08-18 (06f32bab → f7101b0a)
+
+本期 `disaggregation/` 14 文件 / ~1085 行 churn（`git diff 06f32bab..HEAD --stat`），另有 `speculative/dflash_disaggregation.py` 新文件与 PD 相关。**计数类论断复核结论**：5 backend ✅（`TransferBackend` 仍 5 项，[utils.py:592-597](d:\design\sglang\python\sglang\srt\disaggregation\utils.py)）；decode mixin **6 方法** ✅（pin 与 HEAD 均 6）；prefill mixin ~~9 方法~~ → **18 方法** ❌（pin 时已 17，为 pin 前漂移；本期 +1）；`KVPoll` 5 状态 ✅；CLI choices 5→**6**（`mooncake_tcp` 别名，pin 前加入）。
+
+- **HiCache retraction KV 保留**（#34801 "[PD] Preserve decode KV across retraction in HiCache"）：decode 侧引入 [`retraction_discard` / `retraction_restore` import](d:\design\sglang\python\sglang\srt\disaggregation\decode.py) [L78-79]、[`retracted_queue: List[Req]` L346](d:\design\sglang\python\sglang\srt\disaggregation\decode.py) 与 [`is_rebootstrap` 参数 L527-541](d:\design\sglang\python\sglang\srt\disaggregation\decode.py)（标记 PD true-retraction 请求，prefix KV 在 retract 后新权重下重算）；`decode_kvcache_offload_manager.py` 相应精简（-26 行）。配套新 CLI 字段 `--disaggregation-decode-retraction-backup`（[server_args.py:3134](d:\design\sglang\python\sglang\srt\server_args.py)）。
+- **unified memory 与 PD 兼容**（#33362 "Support --enable-unified-memory with PD disaggregation"，kimi-linear MLA hybrid-Mamba）：新增 [`unified_memory_disagg_move_gate` utils.py:114](d:\design\sglang\python\sglang\srt\disaggregation\utils.py)（PD 节点上 unified memory pool 的 compaction move gate）；`enable_unified_memory` 字段见 [server_args.py:949](d:\design\sglang\python\sglang\srt\server_args.py)。
+- **PP prefill + Mooncake staging buffer**（#33807）：staging 请求带 `requester_pp_rank`（[common/staging_handler.py:724, 807, 834](d:\design\sglang\python\sglang\srt\disaggregation\common\staging_handler.py)），staging_handler 本期 +23/-39。
+- **mooncake/conn.py +148/-45**：主要来自 #33807（staging PP）与传输管线适配；`MooncakeKVManager` 等 4 类行号整体下移（L195/L2240/L2357/L2544）。
+- **ZMQ socket 上限可调**（#34450）：新 env `SGLANG_DISAGGREGATION_ZMQ_MAX_SOCKETS`（[common/conn.py:204, 1252](d:\design\sglang\python\sglang\srt\disaggregation\common\conn.py)）。
+- **NIXL prefill bootstrap timeout 补齐**（#34692，nixl/conn.py +22/-11）。
+- **KV events 加 cache salt**（#30827）：[`kv_events.py:92` `cache_salt: str`](d:\design\sglang\python\sglang\srt\disaggregation\kv_events.py)（kv_events.py +20 行）。
+- **EPD encode 侧大改**（encode_server.py +243/-105、encode_receiver.py +68/-43）：#34206 "pipeline owner-only multimodal preprocessing"（owner rank 独占 batched dispatch 顺序，[encode_server.py:2907](d:\design\sglang\python\sglang\srt\disaggregation\encode_server.py) 注释）+ #30392 "Decouple multimodal global cache from Mooncake" + #34892 远程媒体 URL 安全防护 + #34404 kimi-k3 per-image processor 缓存。`MMEncoder`/`MMReceiver*` 等类行号大幅下移（见正文表）。
+- **省略无用 PREBUILT prompt tensor 传输**（#35070）：prefill mixin 本期唯一新方法 [`clear_pending_chunk_send` L984](d:\design\sglang\python\sglang\srt\disaggregation\prefill.py)。
+- **NPU DSpark + DSV4 缓存重构**（#33676）：ascend/conn.py +32/-8（新增 [`AscendStateType` L23](d:\design\sglang\python\sglang\srt\disaggregation\ascend\conn.py)），utils.py 新增 CP 分页工具 [`_get_cp_rank_page_bounds` L722](d:\design\sglang\python\sglang\srt\disaggregation\utils.py)；**新文件** [`speculative/dflash_disaggregation.py`](d:\design\sglang\python\sglang\srt\speculative\dflash_disaggregation.py)（32 行，`build_dflash_family_disagg_draft_input`：DFlash 家族在 PD-decode prebuilt batch 上构造 draft input 并经 `FutureMap` relay bonus tokens）。
+- **config-bag 系列重构**（#35023-#35026）：`init_disaggregation` 等处的配置读取改经 [`get_disagg()`](d:\design\sglang\python\sglang\srt\managers\scheduler.py) config-bag（[scheduler.py:1293-1296](d:\design\sglang\python\sglang\srt\managers\scheduler.py)），不再直接读 `self.server_args.disaggregation_*`。
+- synthesis: 本期 PD 侧主线是**可靠性与平台面扩展**（retraction 保留 / bootstrap timeout / socket 上限 / NPU DSpark / unified memory），核心抽象（5 backend 继承树、2 mixin、EPD 三件套、PD-Mux 互斥）**全部未动**——骨架论断除 prefill 方法计数外均在 HEAD 复核通过。
+
+> [!todo] VERIFY: `speculative/dflash_disaggregation.py` 的 `build_dflash_family_disagg_draft_input` 在 `d:\design\sglang\python\` 全树 grep **0 个树内调用方**（`spec_info.build_disagg_draft_input` [L173-193](d:\design\sglang\python\sglang\srt\speculative\spec_info.py) 仅分发 EAGLE / DSPARK，DFlash 家族落 `return None`）——疑为 #33676 预留接线或供 NPU 平台仓（sgl_kernel_npu 侧）调用，待后续 commit 观察。
 
 ## Notes / Caveats
 
-> [!todo] VERIFY: pin 从 `34fef07a` → `06f32bab`（2026-08-10 increment）后本页未深 verify；文件数量/行号可能漂移。优先对照 [entities/Scheduler.md](../entities/Scheduler.md) / 新模块页。
+> ~~[!todo] VERIFY: pin 从 `34fef07a` → `06f32bab`（2026-08-10 increment）后本页未深 verify；文件数量/行号可能漂移。~~ **RESOLVED 2026-08-18**：本页已按 HEAD `f7101b0a` 全量 verify——正文所有行号锚点已校正（scheduler MRO / init_disaggregation / dispatch_event_loop / 5 backend conn.py 类 / 2 mixin / EPD 类 / server_args 注解式字段），失效计数论断（prefill mixin 9→18、CLI choices 5→6、encoder 默认 auto）已划线修正。
 
 > [!warning] CONTRADICTION（命名陷阱）：**SGLang `srt/disaggregation/` ≠ vLLM `kv_transfer/kv_connector/`**——前者把「PD 角色判定 + KV 传输 + bootstrap 服务 + scheduler mixin + EPD encoder 分离」**全打包**；后者仅「KV 传输 backend」，PD 角色靠 [`vllm/entrypoints/serve/disagg/`](d:\design\vllm\vllm\entrypoints\serve\disagg) 前端 + scheduler `_update_waiting_for_remote_kv` 分摊。MindIE 又是另一种切分：**独立 `connector/` 子进程仅做 KV transfer**（`mindie/topics/connector.md`（已删））。三家「PD 子模块」内容范围都不同，对比时不可只按目录名套等价（详见 [`comparison/topics/pd-disaggregation.md`](../../comparison/topics/pd-disaggregation.md)）。
 
 > [!warning] CONTRADICTION（命名陷阱 2）：**`srt/multiplex/` ≠ HTTP 多路复用 ≠ 请求多租户**——见 [`sglang/modules/multiplex.md` Summary](../modules/multiplex.md) 同名警告。本页关心的是 **PD-Mux 与 PD-Disagg 互斥**这一具体语义。
 
-> [!todo] VERIFY: PP + PD 复合循环 [`scheduler_pp_mixin.py:148, 324`](d:\design\sglang\python\sglang\srt\managers\scheduler_pp_mixin.py)（`event_loop_pp_disagg_prefill` / `event_loop_pp_disagg_decode`）**不在 `disaggregation/` 包内** 而在 `scheduler_pp_mixin.py`，跨包定义；wiki 中尚未单独整理 PP+PD 协同。后续若 ingest `topics/scheduler-mixins.md` 应特别注明。
+> [!todo] VERIFY: PP + PD 复合循环 [`scheduler_pp_mixin.py:178, 364`](d:\design\sglang\python\sglang\srt\managers\scheduler_pp_mixin.py)（`event_loop_pp_disagg_prefill` / `event_loop_pp_disagg_decode`）**不在 `disaggregation/` 包内** 而在 `scheduler_pp_mixin.py`，跨包定义；wiki 中尚未单独整理 PP+PD 协同。后续若 ingest `topics/scheduler-mixins.md` 应特别注明。
 
-> [!todo] VERIFY: `--disaggregation-decode-polling-interval` 默认 `1`（[`server_args.py:713`](d:\design\sglang\python\sglang\srt\server_args.py)），未追到 `decode.py` 中具体生效点（应在 `process_decode_queue` 或 `DecodeTransferQueue` 内）。
+> [!todo] VERIFY: `--disaggregation-decode-polling-interval` 默认 `1`（[`server_args.py:3157`](d:\design\sglang\python\sglang\srt\server_args.py)），未追到 `decode.py` 中具体生效点（应在 `process_decode_queue` 或 `DecodeTransferQueue` 内）。
 
 > [!todo] VERIFY: 第三方 backend 扩展能力——`add_disagg_transfer_backend_choices` 与闭集 `TransferBackend` / `get_kv_class` 之间的鸿沟，是否有 examples/docs 演示完整扩展路径？需在 `docs/` / `tests/` 反查。
 
