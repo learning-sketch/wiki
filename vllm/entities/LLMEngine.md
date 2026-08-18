@@ -3,13 +3,13 @@ type: entity
 project: vllm
 status: verified
 confidence: high
-verified_against: 2026-04-18 (verify pass: 2026-04-18)
+verified_against: 2026-08-18 (vLLM d29dc3ab, increment from 5f7fab88)
 sources:
-  - d:\design\vllm\vllm\v1\engine\llm_engine.py:1-425
-  - d:\design\vllm\vllm\v1\engine\core_client.py:69-103
-  - d:\design\vllm\vllm\v1\engine\output_processor.py:572-620
+  - d:\design\vllm\vllm\v1\engine\llm_engine.py:1-457
+  - d:\design\vllm\vllm\v1\engine\core_client.py:89-139
+  - d:\design\vllm\vllm\v1\engine\output_processor.py:598-724
   - d:\design\vllm\vllm\v1\engine\input_processor.py
-  - d:\design\vllm\vllm\v1\engine\async_llm.py:134-155
+  - d:\design\vllm\vllm\v1\engine\async_llm.py:135-156
   - d:\design\vllm\vllm\engine\llm_engine.py:1-7
   - d:\design\vllm\vllm\__init__.py:16-20
 related:
@@ -26,25 +26,25 @@ related:
 
 ## Summary
 
-[`LLMEngine`](d:\design\vllm\vllm\v1\engine\llm_engine.py) 是 v1 的**同步**顶层引擎入口：把 [`InputProcessor`](d:\design\vllm\vllm\v1\engine\input_processor.py)（`EngineInput` → [`EngineCoreRequest`](d:\design\vllm\vllm\v1\engine\__init__.py)）、[`EngineCoreClient`](d:\design\vllm\vllm\v1\engine\core_client.py)（与 [`EngineCore`](d:\design\vllm\vllm\v1\engine\core.py) 通信）与 [`OutputProcessor`](d:\design\vllm\vllm\v1\engine\output_processor.py)（[`EngineCoreOutputs`](d:\design\vllm\vllm\v1\engine\__init__.py) → `RequestOutput`）串在同一进程 API 中；公开文档称保留与旧版 API 兼容（[docstring 47-48](d:\design\vllm\vllm\v1\engine\llm_engine.py)）。公开包名 [`vllm.LLMEngine`](d:\design\vllm\vllm\__init__.py) 经 [`vllm/engine/llm_engine.py`](d:\design\vllm\vllm\engine\llm_engine.py) **别名**指向本类（[4-6](d:\design\vllm\vllm\engine\llm_engine.py)），与异步入口 [`AsyncLLM`](d:\design\vllm\vllm\v1\engine\async_llm.py)（[`AsyncLLMEngine`](d:\design\vllm\vllm\engine\async_llm_engine.py) 别名）并列。
+[`LLMEngine`](d:\design\vllm\vllm\v1\engine\llm_engine.py) 是 v1 的**同步**顶层引擎入口：把 [`InputProcessor`](d:\design\vllm\vllm\v1\engine\input_processor.py)（`EngineInput` → [`EngineCoreRequest`](d:\design\vllm\vllm\v1\engine\__init__.py)）、[`EngineCoreClient`](d:\design\vllm\vllm\v1\engine\core_client.py)（与 [`EngineCore`](d:\design\vllm\vllm\v1\engine\core.py) 通信）与 [`OutputProcessor`](d:\design\vllm\vllm\v1\engine\output_processor.py)（[`EngineCoreOutputs`](d:\design\vllm\vllm\v1\engine\__init__.py) → `RequestOutput`）串在同一进程 API 中；类 docstring 现直接标注 "Legacy LLMEngine for backwards compatibility"（[49](d:\design\vllm\vllm\v1\engine\llm_engine.py)）。公开包名 [`vllm.LLMEngine`](d:\design\vllm\vllm\__init__.py) 经 [`vllm/engine/llm_engine.py`](d:\design\vllm\vllm\engine\llm_engine.py) **别名**指向本类（[4-6](d:\design\vllm\vllm\engine\llm_engine.py)），与异步入口 [`AsyncLLM`](d:\design\vllm\vllm\v1\engine\async_llm.py)（[`AsyncLLMEngine`](d:\design\vllm\vllm\engine\async_llm_engine.py) 别名）并列。
 
 ## Sources
 
 | 文件 | 区间 | 用途 |
 |------|------|------|
-| [d:\design\vllm\vllm\v1\engine\llm_engine.py](d:\design\vllm\vllm\v1\engine\llm_engine.py) | 全文 `1-425` | 本实体主源 |
-| [d:\design\vllm\vllm\v1\engine\core_client.py](d:\design\vllm\vllm\v1\engine\core_client.py) | `69-103`（`EngineCoreClient` / `make_client`） | 与 core 的客户端抽象及 `asyncio_mode=False` 分支 |
-| [d:\design\vllm\vllm\v1\engine\output_processor.py](d:\design\vllm\vllm\v1\engine\output_processor.py) | `572+`（`process_outputs` 定义行起） | 输出侧 detokenize / 组装 `RequestOutput` |
+| [d:\design\vllm\vllm\v1\engine\llm_engine.py](d:\design\vllm\vllm\v1\engine\llm_engine.py) | 全文 `1-457`（增量前 425 行） | 本实体主源 |
+| [d:\design\vllm\vllm\v1\engine\core_client.py](d:\design\vllm\vllm\v1\engine\core_client.py) | `89-139`（`EngineCoreClient.make_client` / `make_async_mp_client`） | 与 core 的客户端抽象及 `asyncio_mode=False` 分支 |
+| [d:\design\vllm\vllm\v1\engine\output_processor.py](d:\design\vllm\vllm\v1\engine\output_processor.py) | `598+`（`process_outputs` 定义行起） | 输出侧 detokenize / 组装 `RequestOutput` |
 | [d:\design\vllm\vllm\v1\engine\input_processor.py](d:\design\vllm\vllm\v1\engine\input_processor.py) | 全文 | 输入侧 `process_inputs` |
-| [d:\design\vllm\vllm\v1\engine\async_llm.py](d:\design\vllm\vllm\v1\engine\async_llm.py) | `134-155` | 与 `AsyncLLM` 的构造与同构字段对比 |
+| [d:\design\vllm\vllm\v1\engine\async_llm.py](d:\design\vllm\vllm\v1\engine\async_llm.py) | `135-156` | 与 `AsyncLLM` 的构造与同构字段对比 |
 | [d:\design\vllm\vllm\engine\llm_engine.py](d:\design\vllm\vllm\engine\llm_engine.py) | `1-7` | 公开 `LLMEngine` 符号 → v1 别名 |
 | [d:\design\vllm\vllm\__init__.py](d:\design\vllm\vllm\__init__.py) | `16-20` | `LLMEngine` 懒加载导出 |
 
 ## 类层次 / 与 v0 `LLMEngine` 的关系
 
-- **继承**：[`LLMEngine`](d:\design\vllm\vllm\v1\engine\llm_engine.py) 无基类（`class LLMEngine:`，[47](d:\design\vllm\vllm\v1\engine\llm_engine.py)）。
+- **继承**：[`LLMEngine`](d:\design\vllm\vllm\v1\engine\llm_engine.py) 无基类（`class LLMEngine:`，[48](d:\design\vllm\vllm\v1\engine\llm_engine.py)）。
 - **v0 路径**：历史路径 `vllm.engine.llm_engine:LLMEngine` 现为 v1 类的别名（[4-6](d:\design\vllm\vllm\engine\llm_engine.py)），并非独立实现。
-- **工厂**：[`from_vllm_config`](d:\design\vllm\vllm\v1\engine\llm_engine.py)（[136-150](d:\design\vllm\vllm\v1\engine\llm_engine.py)）、[`from_engine_args`](d:\design\vllm\vllm\v1\engine\llm_engine.py)（[152-178](d:\design\vllm\vllm\v1\engine\llm_engine.py)）。
+- **工厂**：[`from_vllm_config`](d:\design\vllm\vllm\v1\engine\llm_engine.py)（[143-158](d:\design\vllm\vllm\v1\engine\llm_engine.py)）、[`from_engine_args`](d:\design\vllm\vllm\v1\engine\llm_engine.py)（[160-186](d:\design\vllm\vllm\v1\engine\llm_engine.py)）。
 
 ```mermaid
 classDiagram
@@ -81,24 +81,25 @@ classDiagram
 
 | API | 行号 | 作用 |
 |-----|------|------|
-| `__init__(vllm_config, executor_class, log_stats, …)` | [50-133](d:\design\vllm\vllm\v1\engine\llm_engine.py) | 初始化 renderer、`InputProcessor`、`OutputProcessor`、[`EngineCoreClient.make_client(asyncio_mode=False)`](d:\design\vllm\vllm\v1\engine\llm_engine.py)、可选 `StatLoggerManager`、DP / `model_executor` 暴露 |
-| `from_vllm_config` | [136-150](d:\design\vllm\vllm\v1\engine\llm_engine.py) | 由 `VllmConfig` + 默认 `Executor.get_class` 构造 |
-| `from_engine_args` | [152-178](d:\design\vllm\vllm\v1\engine\llm_engine.py) | `EngineArgs.create_engine_config` 后构造；多进程由 `envs.VLLM_ENABLE_V1_MULTIPROCESSING` 与参数共同决定 |
-| `get_num_unfinished_requests` | [180-181](d:\design\vllm\vllm\v1\engine\llm_engine.py) | 委托 `output_processor` |
-| `has_unfinished_requests` / `has_unfinished_requests_dp` | [183-195](d:\design\vllm\vllm\v1\engine\llm_engine.py) | 结合 DP 与 `dp_engines_running`、`should_execute_dummy_batch` |
-| `get_supported_tasks` | [197-202](d:\design\vllm\vllm\v1\engine\llm_engine.py) | 缓存 `engine_core.get_supported_tasks` |
-| `abort_request` | [204-208](d:\design\vllm\vllm\v1\engine\llm_engine.py) | 先 `output_processor.abort_requests`，再 `engine_core.abort_requests` |
-| `add_request` | [210-286](d:\design\vllm\vllm\v1\engine\llm_engine.py) | 输入处理、`n>1` 时 `ParentRequest` 扇出；`output_processor.add_request` + `engine_core.add_request` |
-| `step` | [288-326](d:\design\vllm\vllm\v1\engine\llm_engine.py) | 同步一步：`get_output` → `process_outputs` → 可选 abort / 统计 → 返回 `request_outputs` |
-| `start_profile` / `stop_profile` | [328-332](d:\design\vllm\vllm\v1\engine\llm_engine.py) | 委托 `engine_core.profile` |
-| `reset_mm_cache` / `reset_prefix_cache` / `reset_encoder_cache` | [334-351](d:\design\vllm\vllm\v1\engine\llm_engine.py) | 委托 `renderer` / `engine_core` |
-| `sleep` / `wake_up` / `is_sleeping` | [353-366](d:\design\vllm\vllm\v1\engine\llm_engine.py) | 委托 `engine_core`；sleep 时记录 logger |
-| `get_metrics` | [368-370](d:\design\vllm\vllm\v1\engine\llm_engine.py) | 要求 `log_stats`；`get_metrics_snapshot` |
-| `tokenizer` / `get_tokenizer` | [372-377](d:\design\vllm\vllm\v1\engine\llm_engine.py) | 来自 `renderer` |
-| `do_log_stats` / `do_log_stats_with_interval` | [379-391](d:\design\vllm\vllm\v1\engine\llm_engine.py) | 与 `VLLM_LOG_STATS_INTERVAL` 配合 |
-| LoRA：`add_lora` / `remove_lora` / `list_loras` / `pin_lora` | [393-407](d:\design\vllm\vllm\v1\engine\llm_engine.py) | 委托 `engine_core` |
-| `collective_rpc` / `apply_model` | [409-419](d:\design\vllm\vllm\v1\engine\llm_engine.py) | 委托 `engine_core` |
-| `__del__` | [421-425](d:\design\vllm\vllm\v1\engine\llm_engine.py) | 非 external_launcher DP 时销毁 `dp_group` |
+| `__init__(vllm_config, executor_class, log_stats, …)` | [51-141](d:\design\vllm\vllm\v1\engine\llm_engine.py) | 初始化 renderer、`InputProcessor`、`OutputProcessor`、[`EngineCoreClient.make_client(asyncio_mode=False)`](d:\design\vllm\vllm\v1\engine\llm_engine.py)、可选 `StatLoggerManager`、DP / `model_executor` 暴露；本期新增：in-process 模式下用 `weakref.finalize` 注册编译模型 bytecode hook 清理（防 GPU 内存泄漏，[127-133](d:\design\vllm\vllm\v1\engine\llm_engine.py)）、构造尾 `reset_mm_cache()`（清 dummy data，[140-141](d:\design\vllm\vllm\v1\engine\llm_engine.py)） |
+| `from_vllm_config` | [143-158](d:\design\vllm\vllm\v1\engine\llm_engine.py) | 由 `VllmConfig` + 默认 `Executor.get_class` 构造 |
+| `from_engine_args` | [160-186](d:\design\vllm\vllm\v1\engine\llm_engine.py) | `EngineArgs.create_engine_config` 后构造；多进程由 `envs.VLLM_ENABLE_V1_MULTIPROCESSING` 与参数共同决定 |
+| `get_num_unfinished_requests` | [188-189](d:\design\vllm\vllm\v1\engine\llm_engine.py) | 委托 `output_processor` |
+| `has_unfinished_requests` / `has_unfinished_requests_dp` | [191-203](d:\design\vllm\vllm\v1\engine\llm_engine.py) | 结合 DP 与 `dp_engines_running`、`should_execute_dummy_batch` |
+| `get_supported_tasks` | [205-210](d:\design\vllm\vllm\v1\engine\llm_engine.py) | 缓存 `engine_core.get_supported_tasks` |
+| `abort_request` | [212-216](d:\design\vllm\vllm\v1\engine\llm_engine.py) | 先 `output_processor.abort_requests`，再 `engine_core.abort_requests`；本期新增 `internal` 参数 |
+| `add_request` | [218-296](d:\design\vllm\vllm\v1\engine\llm_engine.py) | 输入处理、`n>1` 时 `ParentRequest` 扇出；`output_processor.add_request` + `engine_core.add_request`；本期新增 `session_id` / `prompt_text` 参数（[228-229](d:\design\vllm\vllm\v1\engine\llm_engine.py)） |
+| `step` | [298-336](d:\design\vllm\vllm\v1\engine\llm_engine.py) | 同步一步：`get_output` → `process_outputs` → 可选 abort / 统计 → 返回 `request_outputs`；本期各阶段包 `record_function_or_nullcontext` profiling 区段 |
+| `start_profile` / `stop_profile` | [338-342](d:\design\vllm\vllm\v1\engine\llm_engine.py) | 委托 `engine_core.profile`；`start_profile` 本期新增 `profile_prefix` 参数 |
+| `reset_mm_cache` / `reset_prefix_cache` / `reset_encoder_cache` | [344-361](d:\design\vllm\vllm\v1\engine\llm_engine.py) | 委托 `renderer` / `engine_core`；`reset_prefix_cache` 本期新增 `reset_running_requests` / `reset_connector` 参数 |
+| `sleep` / `wake_up` / `is_sleeping` | [363-378](d:\design\vllm\vllm\v1\engine\llm_engine.py) | 委托 `engine_core`；`sleep` 本期新增 `mode: PauseMode` 参数（对齐引擎两阶段 pause） |
+| `get_metrics` | [380-382](d:\design\vllm\vllm\v1\engine\llm_engine.py) | 要求 `log_stats`；`get_metrics_snapshot` |
+| `tokenizer` / `get_tokenizer` | [384-389](d:\design\vllm\vllm\v1\engine\llm_engine.py) | 来自 `renderer` |
+| `do_log_stats` / `do_log_stats_with_interval` | [391-403](d:\design\vllm\vllm\v1\engine\llm_engine.py) | 与 `VLLM_LOG_STATS_INTERVAL` 配合 |
+| LoRA：`add_lora` / `remove_lora` / `list_loras` / `pin_lora` | [405-419](d:\design\vllm\vllm\v1\engine\llm_engine.py) | 委托 `engine_core` |
+| `collective_rpc` / `apply_model` | [421-438](d:\design\vllm\vllm\v1\engine\llm_engine.py) | 委托 `engine_core` |
+| `set_weight_version` / `get_weight_version` | [430-435](d:\design\vllm\vllm\v1\engine\llm_engine.py) | **本期新增**：RL 权重版本标签（委托 `engine_core`） |
+| `__del__` | [454-457](d:\design\vllm\vllm\v1\engine\llm_engine.py) | 非 external_launcher DP 时销毁 `dp_group` |
 
 ## 调用链：单步 `step()`
 
@@ -110,67 +111,78 @@ sequenceDiagram
     participant OP as output_processor
     U->>L: step()
     alt should_execute_dummy_batch
-        L->>L: execute_dummy_batch [289-292]
+        L->>L: execute_dummy_batch [299-302]
         L-->>U: []
     else 正常路径
-        L->>EC: get_output() [295-296]
+        L->>EC: get_output() [304-306]
         EC-->>L: outputs (含 .outputs / .timestamp / .scheduler_stats)
-        L->>OP: process_outputs(outputs.outputs, ...) [299-305]
+        L->>OP: process_outputs(outputs.outputs, ...) [308-317]
         OP-->>L: processed_outputs
-        L->>OP: update_scheduler_stats(outputs.scheduler_stats) [306]
-        L->>EC: abort_requests(processed_outputs.reqs_to_abort) [309-310]
-        opt log_stats 且 有输出
-            L->>L: logger_manager.record(...) [314-323]
-            L->>L: do_log_stats_with_interval [324]
+        L->>OP: update_scheduler_stats(outputs.scheduler_stats) [318]
+        L->>EC: abort_requests(processed_outputs.reqs_to_abort) [320-322]
+        opt logger_manager 且 scheduler_stats 非空
+            L->>L: logger_manager.record(...) [324-332]
+            L->>L: do_log_stats_with_interval [333-334]
         end
-        L-->>U: processed_outputs.request_outputs [326]
+        L-->>U: processed_outputs.request_outputs [336]
     end
 ```
 
-锚点：[`step`](d:\design\vllm\vllm\v1\engine\llm_engine.py) [288-326](d:\design\vllm\vllm\v1\engine\llm_engine.py)；dummy batch [289-292](d:\design\vllm\vllm\v1\engine\llm_engine.py)；`get_output` [295-296](d:\design\vllm\vllm\v1\engine\llm_engine.py)；`process_outputs` [301-305](d:\design\vllm\vllm\v1\engine\llm_engine.py)。
+锚点：[`step`](d:\design\vllm\vllm\v1\engine\llm_engine.py) [298-336](d:\design\vllm\vllm\v1\engine\llm_engine.py)；dummy batch [299-302](d:\design\vllm\vllm\v1\engine\llm_engine.py)；`get_output` [304-306](d:\design\vllm\vllm\v1\engine\llm_engine.py)；`process_outputs` [308-317](d:\design\vllm\vllm\v1\engine\llm_engine.py)。本期统计记录条件从「有输出」改为「`scheduler_stats is not None`」——零输出 step 也保留 prefix-cache 统计（[326-334](d:\design\vllm\vllm\v1\engine\llm_engine.py)，上游 commit `dedbf6be8b`）。
 
 ## 调用链：`add_request()`
 
-1. **校验** `request_id` 为 `str`（[222-224](d:\design\vllm\vllm\v1\engine\llm_engine.py)）。
-2. **输入**：若已是 `EngineCoreRequest`，走废弃路径并可能改 ID（[227-240](d:\design\vllm\vllm\v1\engine\llm_engine.py)）；否则 `input_processor.process_inputs`（[242-252](d:\design\vllm\vllm\v1\engine\llm_engine.py)）与 `extract_prompt_components`（[253](d:\design\vllm\vllm\v1\engine\llm_engine.py)）。
-3. `assign_request_id`（[255](d:\design\vllm\vllm\v1\engine\llm_engine.py)）。
-4. **`n==1`**：`output_processor.add_request` → `engine_core.add_request`（[264-268](d:\design\vllm\vllm\v1\engine\llm_engine.py)）。
-5. **`n>1`**：`ParentRequest` 循环子请求，各自 `output_processor.add_request` + `engine_core.add_request`（[271-284](d:\design\vllm\vllm\v1\engine\llm_engine.py)）。
+1. **校验** `request_id` 为 `str`（[231-233](d:\design\vllm\vllm\v1\engine\llm_engine.py)）。
+2. **输入**：若已是 `EngineCoreRequest`，走废弃路径（本期明确标注 deprecated、v0.18 移除，[236-249](d:\design\vllm\vllm\v1\engine\llm_engine.py)）；否则 `input_processor.process_inputs`（[250-262](d:\design\vllm\vllm\v1\engine\llm_engine.py)）与 `extract_prompt_components`（[263](d:\design\vllm\vllm\v1\engine\llm_engine.py)）。
+3. `assign_request_id`（[265](d:\design\vllm\vllm\v1\engine\llm_engine.py)）。
+4. **`n==1`**：`output_processor.add_request` → `engine_core.add_request`（[274-279](d:\design\vllm\vllm\v1\engine\llm_engine.py)）。
+5. **`n>1`**：`ParentRequest` 循环子请求，各自 `output_processor.add_request` + `engine_core.add_request`（[281-296](d:\design\vllm\vllm\v1\engine\llm_engine.py)）。
 
 ## 与 `AsyncLLM` 的对比表
 
 | 维度 | `LLMEngine`（sync） | `AsyncLLM`（async） |
 |------|---------------------|---------------------|
-| 核心客户端构造 | [`EngineCoreClient.make_client(..., asyncio_mode=False)`](d:\design\vllm\vllm\v1\engine\llm_engine.py) [105-108](d:\design\vllm\vllm\v1\engine\llm_engine.py) | [`EngineCoreClient.make_async_mp_client`](d:\design\vllm\vllm\v1\engine\async_llm.py) [147-155](d:\design\vllm\vllm\v1\engine\async_llm.py) |
-| 主循环 | 调用方驱动 [`step()`](d:\design\vllm\vllm\v1\engine\llm_engine.py) [288](d:\design\vllm\vllm\v1\engine\llm_engine.py) | `get_output_async` 等 async API + 内部 `output_handler`（见 `async_llm.py:657+`） |
-| 输入/输出处理对象 | 同样 `InputProcessor` / `OutputProcessor` [136-145](d:\design\vllm\vllm\v1\engine\async_llm.py) | 同左 |
-| 多进程 | 构造参数 `multiprocess_mode` + `make_client` 分支 | 文档语义为后台进程 + async 客户端（[`async_llm.py:147` 注释](d:\design\vllm\vllm\v1\engine\async_llm.py)） |
+| 核心客户端构造 | [`EngineCoreClient.make_client(..., asyncio_mode=False)`](d:\design\vllm\vllm\v1\engine\llm_engine.py) [105-111](d:\design\vllm\vllm\v1\engine\llm_engine.py) | [`EngineCoreClient.make_async_mp_client`](d:\design\vllm\vllm\v1\engine\async_llm.py) [149-156](d:\design\vllm\vllm\v1\engine\async_llm.py) |
+| 主循环 | 调用方驱动 [`step()`](d:\design\vllm\vllm\v1\engine\llm_engine.py) [298](d:\design\vllm\vllm\v1\engine\llm_engine.py) | `get_output_async` 等 async API + 内部 `output_handler`（见 `async_llm.py:686+`） |
+| 输入/输出处理对象 | 同样 `InputProcessor` / `OutputProcessor` [94-102](d:\design\vllm\vllm\v1\engine\llm_engine.py) | 同左（[async_llm.py:138-146](d:\design\vllm\vllm\v1\engine\async_llm.py)） |
+| 多进程 | 构造参数 `multiprocess_mode` + `make_client` 分支 | 文档语义为后台进程 + async 客户端（[`async_llm.py:148` 注释](d:\design\vllm\vllm\v1\engine\async_llm.py)） |
 
-`synthesis:` 二者在前后端数据类（`EngineCoreRequest` / `EngineCoreOutputs`）上对齐，差异主要在 **同步轮询 `step` vs 异步 `await` 管道** 与 **EngineCoreClient 具体子类**（[`make_client` 文档 74-77](d:\design\vllm\vllm\v1\engine\core_client.py)）。
+`synthesis:` 二者在前后端数据类（`EngineCoreRequest` / `EngineCoreOutputs`）上对齐，差异主要在 **同步轮询 `step` vs 异步 `await` 管道** 与 **EngineCoreClient 具体子类**（`make_client` 子类清单见 [core_client.py:83-87](d:\design\vllm\vllm\v1\engine\core_client.py)）。
+
+## Increment 2026-08-18 (vLLM 5f7fab88 → d29dc3ab)
+
+本文件本期 +41/-8（6 commits），425 → 457 行；类结构与调用链不变，全部行号锚点已重校。要点：
+
+- **dead parameter 清理**：`use_cached_outputs` 参数已被上游**整体删除**（commit `1842447c09` "Remove unused param"）——原 RESOLVED 结论（dead parameter）由上游落实，见下方 Notes。
+- **编译模型清理 finalizer**：in-process 模式注册 `weakref.finalize(self, _cleanup_instance_caches, model)` 拆除 `TorchCompileWithNoGuardsWrapper` bytecode hook（[127-133, 440-452](d:\design\vllm\vllm\v1\engine\llm_engine.py)，commit `7b5d60cc37`）。
+- **session id 贯通**：`add_request(session_id=...)` 透传 `input_processor.process_inputs`（[228, 261](d:\design\vllm\vllm\v1\engine\llm_engine.py)，commit `f57123aa2d`）。
+- **RL 权重版本**：`set_weight_version` / `get_weight_version`（[430-435](d:\design\vllm\vllm\v1\engine\llm_engine.py)，commit `9069a57139`）。
+- **零输出 step 统计保留**（[326-334](d:\design\vllm\vllm\v1\engine\llm_engine.py)，commit `dedbf6be8b`）。
+- synthesis: 本页 §5 hidden cross-reference 表的 grep 计数为 2026-04-18 结果，本期未重跑；别名链（`vllm.LLMEngine` → `vllm/engine/llm_engine.py` → v1）已按 HEAD 重验仍成立。
 
 ## §5 step 3 hidden cross-reference grep 结果
 
-以下为在 `d:\design\vllm\` 上执行的 **强论断**（路径按用户表格）。
+> 计数快照日期 2026-04-18（增量 2026-08-18 未重跑计数）。以下为在 `d:\design\vllm\` 上执行的 **强论断**（路径按用户表格）。
 
 | # | 类别 | 强论断 |
 |---|------|--------|
 | 1 | 跨语言绑定 | `LLMEngine`：在 `d:\design\vllm\csrc\` 全 C++/CUDA 树 grep **0 命中**。`EngineClass`：在 `d:\design\vllm\csrc\` 全树 grep **0 命中**。`synthesis:` vLLM 该实体为纯 Python 编排层，与 `csrc` 无直接符号绑定。 |
 | 2 | 协作伙伴（`entrypoints/` / `examples/` / `benchmarks/` / `tests/`） | **`LLMEngine`**：`d:\design\vllm\vllm\entrypoints\` 全树 `*.py` **6 处**命中（3 文件：`run_batch.py`、`llm.py`、`cli/run_batch.py`）；`d:\design\vllm\examples\` **24 处**命中（4 文件，均为 `offline_inference/*`）；`d:\design\vllm\benchmarks\` 根目录 **0 命中**；`d:\design\vllm\vllm\benchmarks\` **4 处**命中（`mm_processor.py`）；`d:\design\vllm\tests\` **14 处**命中（7 文件）。**`EngineCoreClient`**：`entrypoints/` **0**、`examples/` **0**、`benchmarks/`（根与 `vllm\benchmarks`）**0**、`tests/` **13 处**（仅 `tests\v1\engine\test_engine_core_client.py`）。**`OutputProcessor`**：`entrypoints/` **0**、`examples/` **0**、`vllm\benchmarks` **0**、`tests/` **12 处**（`test_output_processor.py`、`test_nixl_connector.py`）。**`InputProcessor`**：`entrypoints/` **1 处**（`serve/disagg/protocol.py`）；`examples/` **0**；`tests/` **0**。 |
-| 3 | 配置 / IPC 共享数据结构 | `EngineArgs` / `VllmConfig` / `EngineCoreRequest` / `EngineCoreOutputs` 在仓库 `*.py` 中**大量**跨模块出现：`EngineArgs` 单次列举 **≥80 文件**（检索分页截断）；`VllmConfig` 同理 **≥80 文件**；`EngineCoreRequest` **24 文件**有命中；`EngineCoreOutputs` **12 文件**有命中。`LLMEngine` 内直接耦合点：`VllmConfig` 构造与字段 [62-64](d:\design\vllm\vllm\v1\engine\llm_engine.py)；`from_engine_args` + `create_engine_config` [163](d:\design\vllm\vllm\v1\engine\llm_engine.py)；`step` 消费含 `EngineCoreOutputs` 语义的 `outputs`（[294-306](d:\design\vllm\vllm\v1\engine\llm_engine.py)）。 |
+| 3 | 配置 / IPC 共享数据结构 | `EngineArgs` / `VllmConfig` / `EngineCoreRequest` / `EngineCoreOutputs` 在仓库 `*.py` 中**大量**跨模块出现：`EngineArgs` 单次列举 **≥80 文件**（检索分页截断）；`VllmConfig` 同理 **≥80 文件**；`EngineCoreRequest` **24 文件**有命中；`EngineCoreOutputs` **12 文件**有命中。`LLMEngine` 内直接耦合点：`VllmConfig` 构造与字段 [62-64](d:\design\vllm\vllm\v1\engine\llm_engine.py)；`from_engine_args` + `create_engine_config` [171](d:\design\vllm\vllm\v1\engine\llm_engine.py)；`step` 消费含 `EngineCoreOutputs` 语义的 `outputs`（[304-318](d:\design\vllm\vllm\v1\engine\llm_engine.py)）。 |
 | 4 | 测试覆盖反查 | 在 `d:\design\vllm\tests\v1\engine\` 全树 `*.py` grep 符号 `\bLLMEngine\b`：**0 命中**（含 `test_llm_engine.py`：该文件通过 `from vllm import LLM` 间接测引擎，**不**直接引用 `LLMEngine` 类名）。其它目录直接引用 `LLMEngine` 的测试见上表（如 `tests\v1\executor\test_executor.py` 等）。 |
-| 5 | doc / config 反查 | `docs/`：`LLMEngine` **20 处**命中（**7** 个文件：`arch_overview.md`、`api/README.md`、`contributing/README.md`、`design/metrics.md`、`design/multiprocessing.md`、`serving/offline_inference.md`、`training/async_rl.md`）。`examples/*.py`：见上表 **24 处**（**4** 文件）。`*.yaml` / `*.yml` / `*.json` / `*.toml` 全树 grep `LLMEngine`：**0 命中**。`synthesis:` [`docs/design/arch_overview.md`](d:\design\vllm\docs\design\arch_overview.md) 仍将源码链接写到 `vllm/engine/llm_engine.py`（[171](d:\design\vllm\docs\design\arch_overview.md) 一带），与当前「薄别名 → v1 实现」并存，见下方 **CONTRADICTION**。 |
+| 5 | doc / config 反查 | `docs/`：`LLMEngine` **20 处**命中（**7** 个文件：`arch_overview.md`、`api/README.md`、`contributing/README.md`、`design/metrics.md`、`design/multiprocessing.md`、`serving/offline_inference.md`、`training/async_rl.md`）。`examples/*.py`：见上表 **24 处**（**4** 文件）。`*.yaml` / `*.yml` / `*.json` / `*.toml` 全树 grep `LLMEngine`：**0 命中**。`synthesis:` [`docs/design/arch_overview.md`](d:\design\vllm\docs\design\arch_overview.md) 仍将源码链接写到 `vllm/engine/llm_engine.py`（[171](d:\design\vllm\docs\design\arch_overview.md)），与当前「薄别名 → v1 实现」并存，见下方 **CONTRADICTION**。 |
 
 ## Notes / Caveats
 
-> ~~[!todo] VERIFY: `usage_context` 传入 `__init__` [56](d:\design\vllm\vllm\v1\engine\llm_engine.py) 但实例体内未见 `self.usage_context`；仅 `from_engine_args` 中用于 `create_engine_config(usage_context)` [163](d:\design\vllm\vllm\v1\engine\llm_engine.py)。~~
+> ~~[!todo] VERIFY: `usage_context` 传入 `__init__` 但实例体内未见 `self.usage_context`；仅 `from_engine_args` 中用于 `create_engine_config(usage_context)`。~~
 >
-> **RESOLVED 2026-04-18**：`usage_context` 在 [llm_engine.py:56](d:\design\vllm\vllm\v1\engine\llm_engine.py) 为形参但 `__init__` 未写入实例；`from_engine_args` 在 [llm_engine.py:163](d:\design\vllm\vllm\v1\engine\llm_engine.py) 用于 `create_engine_config` 后再传入 `cls`；`from_vllm_config` 传入见 [llm_engine.py:143-149](d:\design\vllm\vllm\v1\engine\llm_engine.py) 但构造体内仍不消费——**API 兼容占位**（dead parameter on the instance level；config 构建期已消费）。
+> **RESOLVED 2026-04-18（2026-08-18 重验仍成立）**：`usage_context` 在 [llm_engine.py:57](d:\design\vllm\vllm\v1\engine\llm_engine.py) 为形参但 `__init__` 未写入实例；`from_engine_args` 在 [llm_engine.py:171](d:\design\vllm\vllm\v1\engine\llm_engine.py) 用于 `create_engine_config` 后再传入 `cls`；`from_vllm_config` 传入见 [llm_engine.py:151-157](d:\design\vllm\vllm\v1\engine\llm_engine.py) 但构造体内仍不消费——**API 兼容占位**（dead parameter on the instance level；config 构建期已消费）。
 
-> ~~[!todo] VERIFY: 构造参数 `use_cached_outputs` [59](d:\design\vllm\vllm\v1\engine\llm_engine.py) 在 `__init__` 体内未见使用。~~
+> ~~[!todo] VERIFY: 构造参数 `use_cached_outputs` 在 `__init__` 体内未见使用。~~
 >
-> **RESOLVED 2026-04-18**：全仓库仅 [llm_engine.py:59](d:\design\vllm\vllm\v1\engine\llm_engine.py) 与 [async_llm.py:80](d:\design\vllm\vllm\v1\engine\async_llm.py) 签名/docstring 出现 `use_cached_outputs`，**无任何读取**；当前为 dead parameter（v0 兼容签名占位）。
+> **RESOLVED 2026-04-18；2026-08-18 增量更新**：`use_cached_outputs` 参数已被上游从 `LLMEngine.__init__` 签名中**删除**（commit `1842447c09`；HEAD 的签名见 [llm_engine.py:51-61](d:\design\vllm\vllm\v1\engine\llm_engine.py)，在 `d:\design\vllm\vllm\v1\engine\` 全树 grep `use_cached_outputs` 0 命中）。原「dead parameter」结论由上游清理落实。
 
-> [!warning] CONTRADICTION: 上游文档 [`docs/design/arch_overview.md`](d:\design\vllm\docs\design\arch_overview.md) 描述「`LLMEngine` 代码位于 `vllm/engine/llm_engine.py`」（[arch_overview.md:171](d:\design\vllm\docs\design\arch_overview.md)，**verify 2026-04-18 仍为旧表述**）；该文件现为 v1 的别名（[engine/llm_engine.py:4-6](d:\design\vllm\vllm\engine\llm_engine.py)），主实现位于 [`vllm/v1/engine/llm_engine.py`](d:\design\vllm\vllm\v1\engine\llm_engine.py)。以源码为准；待上游 docs 修订后改 RESOLVED。
+> [!warning] CONTRADICTION: 上游文档 [`docs/design/arch_overview.md`](d:\design\vllm\docs\design\arch_overview.md) 描述「`LLMEngine` 代码位于 `vllm/engine/llm_engine.py`」（[arch_overview.md:171](d:\design\vllm\docs\design\arch_overview.md)，**verify 2026-08-18 仍为旧表述**）；该文件现为 v1 的别名（[engine/llm_engine.py:4-6](d:\design\vllm\vllm\engine\llm_engine.py)），主实现位于 [`vllm/v1/engine/llm_engine.py`](d:\design\vllm\vllm\v1\engine\llm_engine.py)。以源码为准；待上游 docs 修订后改 RESOLVED。
 
 ## See also
 
