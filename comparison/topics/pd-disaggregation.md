@@ -70,7 +70,7 @@ related:
   - sglang/modules/disaggregation.md
 ---
 
-> [!todo] VERIFY: **vLLM pin 滞后提示（2026-08-18）**——本页 vLLM 列锚点最后核对于旧 pin `5f7fab88`；同日晚些时候 vLLM pin 已推进至 `d29dc3ab`（4273 commits，含 P2P connector 删除、`serve/disagg`→`scale_out` 迁移、fused_moe runner 重构、spec_decode 目录重组）。vLLM 列需按 [source-versions.md](../../source-versions.md) 新 pin 做一轮 verify pass；SGLang 列（f7101b0a）与 MindIE 列（f032cd3f）不受影响。
+> [!todo] VERIFY: **vLLM pin 滞后提示（2026-08-18）**——本页 vLLM 列锚点最后核对于旧 pin `5f7fab88`；同日晚些时候 vLLM pin 已推进至 `d29dc3ab`（4273 commits，含 P2P connector 删除、`serve/disagg`→`scale_out` 迁移、fused_moe runner 重构、spec_decode 目录重组、`v1/kv_offload/` 内部重组（abstract/spec/mediums/worker → base/config/cpu/factory，另新增 `v1/simple_kv_offload/`）——本页相应文件级锚点已暂时收敛为目录级）。vLLM 列需按 [source-versions.md](../../source-versions.md) 新 pin 做一轮 verify pass；SGLang 列（f7101b0a）与 MindIE 列（f032cd3f）不受影响。
 
 # Cross-project Comparison: PD-Disaggregation (Prefill/Decode 分离)
 
@@ -259,7 +259,7 @@ flowchart TB
 | MoriIO | [kv_connector/v1/moriio/](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\moriio) | AMD 的 IO 库 |
 | LMCache | `lmcache_integration/` + `lmcache_connector.py` + `lmcache_mp_connector.py` | LMCache 的多种集成方式 |
 | HF3FS | [kv_connector/v1/hf3fs/](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\hf3fs) | HuggingFace 3FS 文件存储 |
-| P2P | [kv_connector/v1/p2p/](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\p2p) | 点对点直传 |
+| P2P | ~~kv_connector/v1/p2p/~~（P2P connector 已在 vLLM d29dc3ab 前删除，详见 [vllm/topics/kv-connector.md](../../vllm/topics/kv-connector.md)） | 点对点直传 |
 | Offloading | [kv_connector/v1/offloading_connector.py](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\offloading_connector.py) | 把 KV offload 到 CPU/远端 |
 | **MultiConnector** | [multi_connector.py](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\multi_connector.py) | **同一进程同时跑多个 connector** |
 | FlexKV | [flexkv_connector.py](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\flexkv_connector.py) | 灵活 KV |
@@ -268,10 +268,10 @@ flowchart TB
 | Example / ExampleHidden | [example_connector.py](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\example_connector.py), [example_hidden_states_connector.py](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\example_hidden_states_connector.py) | 教学样例 |
 
 **worker 侧的 KV offload 子系统**（独立于 connector，可被 connector 复用）：
-- `OffloadingManager`（scheduler 端，跟踪哪些块 offloaded）：[v1/kv_offload/abstract.py:87-184](d:\design\vllm\vllm\v1\kv_offload\abstract.py)
-- `OffloadingSpec`（factory 注册）：[v1/kv_offload/spec.py:71-143](d:\design\vllm\vllm\v1\kv_offload\spec.py)
-- `LoadStoreSpec` 抽象 + `GPULoadStoreSpec` / `CPULoadStoreSpec`：[v1/kv_offload/mediums.py:23-71](d:\design\vllm\vllm\v1\kv_offload\mediums.py)
-- worker 端 handler：[v1/kv_offload/worker/](d:\design\vllm\vllm\v1\kv_offload\worker)
+- `OffloadingManager`（scheduler 端，跟踪哪些块 offloaded）：[v1/kv_offload/abstract.py:87-184](d:\design\vllm\vllm\v1\kv_offload)
+- `OffloadingSpec`（factory 注册）：[v1/kv_offload/spec.py:71-143](d:\design\vllm\vllm\v1\kv_offload)
+- `LoadStoreSpec` 抽象 + `GPULoadStoreSpec` / `CPULoadStoreSpec`：[v1/kv_offload/mediums.py:23-71](d:\design\vllm\vllm\v1\kv_offload)
+- worker 端 handler：[v1/kv_offload/worker/](d:\design\vllm\vllm\v1\kv_offload)
 
 **NIXL 与 SGLang 的关系**（verify pass 确认）：vLLM 与 SGLang 都依赖**同一个底层 NVIDIA NIXL library**，import 路径都是 `nixl._api.nixl_agent`：
 - vLLM：`from nixl._api import nixl_agent as NixlWrapper`（[utils.py:38](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\nixl\utils.py)）；ROCm 平台 fallback 到 `rixl._api.nixl_agent`（[utils.py:41](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\nixl\utils.py)）
@@ -469,7 +469,7 @@ Bootstrapping → WaitingForInput → Transferring → Success
 |---|---|---|---|
 | MindIE | **D pull from P** | **同步** —— `PDInterface.pull_kv` 顺序循环每个 `(remote_id, src_blocks, dst_blocks)` 调 `separate_deployment_worker.pull_blocks`，逐个等返回；失败立即 return | [generator.py:153-175](d:\design\MindIE-LLM\mindie_llm\text_generator\generator.py)（`for x in p_d_infos: rt = ...pull_blocks(...); if rt != SUCCESS: return rt`），[separate_deployment_engine.py:374-383](d:\design\MindIE-LLM\mindie_llm\text_generator\utils\separate_deployment_engine.py)（LLMDataDist `cache_manager.pull_blocks` 同步调用） |
 | vLLM (NIXL/Mooncake) | **D pull from P** | **异步** —— scheduler 在 `get_num_new_matched_tokens` 返 `(count, async=True)` → req 进入 `WAITING_FOR_REMOTE_KVS` 状态 → worker 端 `_read_blocks_for_req` 触发 non-blocking `nixl_xfer` → 完成后 `send_notif` 通知 P 释放，scheduler 下一步 `_try_promote_blocked_waiting_request` 提升 | NIXL: [scheduler.py:264-302](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\nixl\scheduler.py), [worker.py:1849, 1904, 1988-2049](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\nixl\worker.py)（注释明示 "Start loading by triggering non-blocking nixl_xfer" 与 "D pulls the whole kv cache from corresponding [P]"）；Mooncake 同模式：[mooncake_connector.py:280-330](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\mooncake\mooncake_connector.py)（`PullReqMeta` / `reqs_to_recv` 命名） |
-| vLLM (Offloading/LMCache) | **store-fetch (push 到 store, 然后 fetch)** | **异步** —— 由 `OffloadingManager.prepare_load/store` + worker 异步 handler | [v1/kv_offload/abstract.py:87-184](d:\design\vllm\vllm\v1\kv_offload\abstract.py) |
+| vLLM (Offloading/LMCache) | **store-fetch (push 到 store, 然后 fetch)** | **异步** —— 由 `OffloadingManager.prepare_load/store` + worker 异步 handler | [v1/kv_offload/abstract.py:87-184](d:\design\vllm\vllm\v1\kv_offload) |
 | SGLang | **P push to D** | **异步** —— P 端 `disagg_kv_sender.send(page_indices, state_indices, num_kv_tokens=...)`；D 端预先 `kv_receiver.send_metadata(...)` 反向通知 indices；scheduler 主循环用 `KVPoll` 5 态机轮询；本期新增 `should_send_kv_chunk` 发送闸门（空 page / staging 分段跳过） | [base/conn.py:115, 149, 184](d:\design\sglang\python\sglang\srt\disaggregation\base\conn.py), [prefill.py:1311-1319](d:\design\sglang\python\sglang\srt\disaggregation\prefill.py)（`send_kv_chunk` 内按 staging grid 分段逐段 fire，@f7101b0a 校正；~~prefill.py:828 一次性 fire~~） |
 
 vLLM `kv_transfer_params` 的语义（[scheduler.py:282-302](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\nixl\scheduler.py)）：
