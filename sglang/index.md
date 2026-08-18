@@ -3,7 +3,7 @@ type: index
 project: sglang
 status: verified
 confidence: high
-verified_against: 2026-08-10
+verified_against: 2026-08-18
 sources:
   - d:\design\sglang\python\sglang\srt
 related:
@@ -35,8 +35,8 @@ related:
 ### 调度与请求生命周期
 | 模块 | wiki 页 | 状态 |
 |---|---|---|
-| `managers` | [modules/managers.md](modules/managers.md) | **DONE**（verify 2026-08-10：49 `.py`；Scheduler 6 mixin + `scheduler_components/`；`TokenizerControlMixin`） |
-| **`disaggregation`** | [modules/disaggregation.md](modules/disaggregation.md) | **DONE** (P0)（5 backend + EPD encode_*.py + 2 Scheduler mixin） |
+| `managers` | [modules/managers.md](modules/managers.md) | **DONE**（verify 2026-08-18：仍 49 `.py`；Scheduler 6 mixin + `scheduler_components/` 不变；本期 cache_controller L2Transfer 接入 #34793、prefill_delayer `RecentPrefillBatchSizeTracker` #34284、io_struct +cache_salt #30827） |
+| **`disaggregation`** | [modules/disaggregation.md](modules/disaggregation.md) | **DONE** (P0；verify 2026-08-18：**29 .py**（原记 28，pin 前 +decode_hicache_mixin.py）；5 backend + EPD encode_*.py + 2 Scheduler mixin 骨架不变；本期 HiCache retraction 保 KV #34801、unified-memory PD #33362） |
 | `multiplex` | [modules/multiplex.md](modules/multiplex.md) | **DONE** (P5)（2 .py + PD-Multiplexing：同一 GPU 上 Prefill/Decode SM 分区 + green context streams + `SchedulerMultiplexMixin.event_loop_pdmux` + `--enable-pdmux` / `--pdmux-config-path` / `--sm-group-num`；与 disaggregation **互斥**） |
 | `session` | [modules/session.md](modules/session.md) | **DONE** (P2)（3 .py + `SessionController` open/close/reap + `StreamingSession` KV/Mamba slot 保活；Scheduler 持有 controller） |
 | `function_call` | [modules/function_call.md](modules/function_call.md) | **DONE** (P3)（26 .py + `FunctionCallParser` 注册表 24 字符串键 / 21 detector + `BaseFormatDetector` 流式状态机 + `structural_tag` / `json_schema` 约束分支；产出**约束元组**交 `constrained/` 编译） ；**file count @f7101b0a = 39.py / 注册表 34 键**（increment 2026-08-18：+Muse Glimmer `"muse"` detector） |
@@ -51,13 +51,13 @@ related:
 | `layers` | [modules/layers.md](modules/layers.md) | **DONE** (Turn 5)（**248 .py**（实测；既有 wiki 推断 252）+ 5 子系统 attention(94)/quantization(66)/moe(42)/rotary_embedding(9)/utils(6) + 顶层 31 + `ATTENTION_BACKENDS` **17** 注册名 + `moe_a2a_backend` 7 取值 + Triton `@triton.jit` ≥71 文件 + `from sgl_kernel import` 33 文件） ；**file count @f7101b0a = 312.py**（净不变；increment 2026-08-18：104 文件高 churn——`dwdp/vmm.py`、`torchao_utils.py` 删，`kda_helion.py`、modelslim w4a8-mxfp4 增；页面 stale） |
 | `lora` | [modules/lora.md](modules/lora.md) | **DONE** (P4)（33 .py + `LoRAManager` + 4 backend triton/csgmv/ascend/torch_native + `LoRAMemoryPool` 槽位池 + 13 Triton kernel + S-LoRA/Punica 谱系；CUDA adapter LoRA = 0） ；**file count @06f32bab = 45.py**（待深 verify） |
 | `sampling` | [modules/sampling.md](modules/sampling.md) | **DONE** (P3)（9 .py + `SamplingParams` 25 字段 + `SamplingBatchInfo` 批张量 / merge / filter + `BatchedPenalizerOrchestrator` 4 子类 + custom logits dill 序列化 + sgl-kernel `top_k_renorm_probs` / `top_p_renorm_probs` / `apply_token_bitmask_inplace_cuda` 3 算子 + FlashInfer 采样核 delegate） |
-| `speculative` | [modules/speculative.md](modules/speculative.md) | **DONE** (P1)（27 .py + 6 算法 enum + EAGLE/MultiLayer/Standalone/DFlash/NGRAM 多家族 + sgl-kernel `verify_tree_greedy` CUDA 绑定） ；**file count @06f32bab = 47.py**（待深 verify） |
+| `speculative` | [modules/speculative.md](modules/speculative.md) | **DONE**（verify 2026-08-18：**48 .py** 实测（34 根 + 12 dspark_components + 2 cpp_ngram）；`SpeculativeAlgorithm` enum **8 成员** + `CustomSpecAlgo` 插件；V1 worker 已删、`create_worker` 一维分发；sgl-kernel 树已移出仓库改外部包 + Triton fallback；本期 dflash_utils +217 行、DSpark logprobs #34696） |
 | `state_capturer` | [modules/state_capturer.md](modules/state_capturer.md) | **DONE** (P2)（4 .py + `RoutedExpertsCapturer` / `IndexerTopkCapturer` + host pin_memory + `meta_info` base64；门控 `enable_return_*`） |
 
 ### 内存与缓存
 | 模块 | wiki 页 | 状态 |
 |---|---|---|
-| `mem_cache` | [modules/mem_cache.md](modules/mem_cache.md) | **DONE** / **stale@06f32bab**（116 `.py`，原 62；待深 verify；与 `session`/`kv_canary` 协作） |
+| `mem_cache` | [modules/mem_cache.md](modules/mem_cache.md) | **DONE** / **stale@f7101b0a**（**119 `.py`**（@06f32bab 116、原 62）；9 子目录（+pool_host/cpp_utils/layout）；本期 MambaPoolHost 迁出 #31180、+embedding_store/l2_transfer、增量小节已补；待深 verify） |
 | `kv_canary` | [modules/kv_canary.md](modules/kv_canary.md) | **DONE** (P0)（~50 .py + `install_canary` patch `model.forward` + pool_patcher MHA/SWA/DSV4 + runner/perturb/token_oracle；`--kv-canary {none,log,raise}`） |
 | `checkpoint_engine` | [modules/checkpoint_engine.md](modules/checkpoint_engine.md) | **DONE** (P3)（3 .py + Moonshot **checkpoint-engine==0.1.2** ParameterServer + ZMQ IPC + `/update_weights_from_ipc` HTTP；与 `weight_sync` 并列正交通道） |
 | `weight_sync` | [modules/weight_sync.md](modules/weight_sync.md) | **DONE** (P3)（2 .py 无 `__init__` + `FlattenedTensorBucket` `uint8` flatten + `update_weights` 训练 SPMD 桥接；NCCL broadcast 主体在 `model_runner`；与 `connector`/`checkpoint_engine`/`weight_cache` 形成**4 条正交权重通道**） |
@@ -81,7 +81,7 @@ related:
 |---|---|---|
 | `tokenizer` | [modules/tokenizer.md](modules/tokenizer.md) | **DONE** (P5)（**1 .py**：`TiktokenTokenizer` 加载 xtok JSON + HF 兼容 API；`get_tokenizer` 在 `tokenizer_name.endswith(".json")` 时分发；**4 个同名"tokenizer"对象消歧**） |
 | `multimodal` | [modules/multimodal.md](modules/multimodal.md) | **DONE** (P4)（46 .py + 36 模型族处理器 + `MultimodalSpecialTokens` + `import_processors` 启动注册 + EPD encode_server 单向依赖 + 3 模态 IMAGE/VIDEO/AUDIO + `vit_cuda_graph_runner` ViT 图） ；**file count @f7101b0a = 81.py**（increment 2026-08-18：+`cache/`、`transport/`、`media_artifacts/` 3 子包 + `encoder_preprocessing.py` + `processors/muse_glimmer.py`） |
-| `parser` | [modules/parser.md](modules/parser.md) | **DONE** (P3)（5 .py + `ReasoningParser.DetectorMap` 17 键 / 10 detector 子类 + `HarmonyParser` GPT-OSS channel + `Conversation` 28 内置模板（FastChat 谱系）+ Jinja AST format 检测 + 3 套 FIM 模板） |
+| `parser` | [modules/parser.md](modules/parser.md) | **DONE** / **stale@f7101b0a**（**重大补漏** 2026-08-18：实为 **9 .py**（+inkling_renderer/inkling_tokenizer/template_detection，且 template_manager 已迁入本目录）/ `DetectorMap` **26 键** / **22** detector 子类（旧记 5/17/10 为 4 月快照）；本期 +MuseGlimmerDetector fde9ad2531；正文 reasoning_parser 小节待重 ingest） |
 | `dllm` | [modules/dllm.md](modules/dllm.md) | **DONE** (P5)（7 .py + Diffusion LLM 调度：`DllmConfig` + `SchedulerDllmMixin` + 2 算法 `LowConfidence` / `JointThreshold` 迭代 mask 填充 + 3 HF 架构（LLaDA2/SDAR/SDARMoe）；**SGLang-unique** 设计点） |
 | `batch_invariant_ops` | [modules/batch_invariant_ops.md](modules/batch_invariant_ops.md) | **DONE** (P5)（2 .py + Triton GEMM/log-softmax/mean/BMM/RMSNorm 确定性算子 + `torch.library.Library` ATen 注册 + `--enable-deterministic-inference` 触发；改编自 thinking-machines-lab） |
 | `batch_overlap` | [modules/batch_overlap.md](modules/batch_overlap.md) | **DONE** (P5)（4 .py + TBO 双 micro-batch 前向交错 + SBO 单 batch MoE combine/down-gemm CUDA stream/event + `--enable-two-batch-overlap`；与 `--disable-overlap-schedule` 是不同层概念） |
@@ -98,12 +98,12 @@ related:
 
 | 实体 | 源文件 | wiki 页 | 状态 |
 |---|---|---|---|
-| `Engine` | [entrypoints/engine.py](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) (~1827 行) | [entities/Engine.md](entities/Engine.md) | **DONE** (P0；verify 2026-08-10 / HEAD `06f32bab`：`Engine` L199；`_launch_scheduler_processes` L832；`_launch_subprocesses` L1036；含 `HttpServerEngineAdapter`) |
-| `TokenizerManager` | [managers/tokenizer_manager.py](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) (~3644 行) | [entities/TokenizerManager.md](entities/TokenizerManager.md) | **DONE**（re-ingest 2026-08-10：`TokenizerControlMixin` 取代已删 `TokenizerCommunicatorMixin`；`ReqState` L200；`TokenizerManager` L373；含 `DetokenizerManager` L91） |
-| `Scheduler` | [managers/scheduler.py](d:\design\sglang\python\sglang\srt\managers\scheduler.py) (~5046 行) + [scheduler_components/](d:\design\sglang\python\sglang\srt\managers\scheduler_components) | [entities/Scheduler.md](entities/Scheduler.md) | **DONE**（re-ingest 2026-08-10 / HEAD `06f32bab`：MRO **6 mixin + MlxOverlap**；前 Output/Weights/Profiler/Metrics/RuntimeChecker/DPAttn mixin → composition；`IdleSleeper`/`SenderWrapper` 已迁出；TpModelWorker 见独立页；mixin/composition 拆解见 [topics/scheduler-mixins.md](topics/scheduler-mixins.md)） |
-| `DetokenizerManager` | [managers/detokenizer_manager.py](d:\design\sglang\python\sglang\srt\managers\detokenizer_manager.py) | 见 [entities/TokenizerManager.md](entities/TokenizerManager.md) | DONE（合并；verify 2026-08-10） |
-| `TpModelWorker` | [managers/tp_worker.py](d:\design\sglang\python\sglang\srt\managers\tp_worker.py) | [entities/TpModelWorker.md](entities/TpModelWorker.md) | **DONE** (P0；verify 2026-08-10：`BaseTpWorker` L73；`TpModelWorker` L298；`forward_batch_generation` L561；`ModelRunner` ~2056 行 + `model_runner_components/`；pool 经 `alloc_memory_pool` 共享) |
-| `DataParallelController` | [managers/data_parallel_controller.py](d:\design\sglang\python\sglang\srt\managers\data_parallel_controller.py) | [entities/DataParallelController.md](entities/DataParallelController.md) | **DONE** (P0；verify 2026-08-10：`DataParallelController` L132；`LoadBalanceMethod` L79；`DPBudget` L96；`run_...` L812；负载经 `load_snapshot`；doc → `dp_dpa_smg_guide.mdx`) |
+| `Engine` | [entrypoints/engine.py](d:\design\sglang\python\sglang\srt\entrypoints\engine.py) (~1877 行) | [entities/Engine.md](entities/Engine.md) | **DONE** (P0；verify 2026-08-18 / HEAD `f7101b0a`：`Engine` L207；`_launch_scheduler_processes` L856；`_launch_subprocesses` L1060（新增 `publish(role="tokenizer")` 步骤）；+`get_model_info` API、`cache_salt`/`mm_content_hashes` 参数) |
+| `TokenizerManager` | [managers/tokenizer_manager.py](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) (~3665 行) | [entities/TokenizerManager.md](entities/TokenizerManager.md) | **DONE**（verify 2026-08-18：`ReqState` L215；`TokenizerManager` L386（`TokenizerControlMixin` + `TokenizerManagerScoreMixin`）；含 `DetokenizerManager` L92；本期 config bags 迁移 + VLM 预处理缓存/cache_salt 透传） |
+| `Scheduler` | [managers/scheduler.py](d:\design\sglang\python\sglang\srt\managers\scheduler.py) (~5085 行) + [scheduler_components/](d:\design\sglang\python\sglang\srt\managers\scheduler_components) | [entities/Scheduler.md](entities/Scheduler.md) | **DONE**（verify 2026-08-18 / HEAD `f7101b0a`：`class Scheduler` L383，MRO **6 mixin 不变**；本期 config bags getter 化、`RecentPrefillBatchSizeTracker` #34284、ngram accept tokens 走 FutureMap #35198；拆解见 [topics/scheduler-mixins.md](topics/scheduler-mixins.md)） |
+| `DetokenizerManager` | [managers/detokenizer_manager.py](d:\design\sglang\python\sglang\srt\managers\detokenizer_manager.py) | 见 [entities/TokenizerManager.md](entities/TokenizerManager.md) | DONE（合并；verify 2026-08-18：L92，+`publish(role="detokenizer")`） |
+| `TpModelWorker` | [managers/tp_worker.py](d:\design\sglang\python\sglang\srt\managers\tp_worker.py) | [entities/TpModelWorker.md](entities/TpModelWorker.md) | **DONE** (P0；verify 2026-08-18：`BaseTpWorker` L74；`TpModelWorker` L299；`forward_batch_generation` L574；本期 +`start/finalize_startup_weight_load` #32017、delay-sample 条件扩展 #32637、WAR→shared-read 更名 #34916) |
+| `DataParallelController` | [managers/data_parallel_controller.py](d:\design\sglang\python\sglang\srt\managers\data_parallel_controller.py) | [entities/DataParallelController.md](entities/DataParallelController.md) | **DONE** (P0；verify 2026-08-18：`DataParallelController` L132；`LoadBalanceMethod` L79；`DPBudget` L96；`run_...` L811；本期 DP/EP 拓扑读取改走 `get_parallel()` bag；构造签名与进程拓扑不变) |
 | `SchedulePolicy` | [managers/schedule_policy.py](d:\design\sglang\python\sglang\srt\managers\schedule_policy.py) | `entities/SchedulePolicy.md` | TODO (P1) |
 | `ScheduleBatch` | [managers/schedule_batch.py](d:\design\sglang\python\sglang\srt\managers\schedule_batch.py) | `entities/ScheduleBatch.md` | TODO (P1，110 KB 最大单文件) |
 | `CacheController` | [managers/cache_controller.py](d:\design\sglang\python\sglang\srt\managers\cache_controller.py) | `entities/CacheController.md` | TODO (P2) |
@@ -118,13 +118,13 @@ related:
 |---|---|---|
 | **Request lifecycle** | [topics/request-lifecycle.md](topics/request-lifecycle.md) | **DONE** |
 | **Manager 模式 + ZMQ pipeline** | [topics/manager-pipeline.md](topics/manager-pipeline.md) | **DONE** |
-| **Scheduler mixin / composition 拆解** | [topics/scheduler-mixins.md](topics/scheduler-mixins.md) | **DONE**（re-ingest 2026-08-10 / HEAD `06f32bab`：MRO **6 mixin**（Decode/Prefill/Multiplex/PP/Dllm/MlxOverlap）+ `scheduler_components/` 19 模块 composition；前 Output/Weights/Profiler/Metrics/RuntimeChecker/DPAttn → 组合对象） |
-| **PD 分离 多后端**（NIXL/Mooncake/MORI/Ascend/Fake） | [topics/pd-disaggregation.md](topics/pd-disaggregation.md) | **DONE** (P1)（5 backend 3 层继承树 `Base*→Common*→具体` + 2 mixin（prefill 9 方法 / decode 6 方法 不对称）+ EPD encode 三段 + PD-Disagg vs PD-Mux 互斥本质 + 4 维度对偶矩阵） |
-| **KV cache**（unified / paged / radix / sparsity / hierarchical / mamba / SWA / LMC） | [topics/kv-cache.md](topics/kv-cache.md) | **DONE**（re-ingest 2026-08-10 / HEAD `06f32bab`：工厂迁至 `kv_cache_builder`+`registry`；hybrid/DSA+Hi → `UnifiedRadixCache`；`HiMamba`/`session_aware` 已删；HiCache storage **9** 注册名；FlexKV；`StreamingSession`；allocator 分包；与 `kv_canary` attach） |
+| **Scheduler mixin / composition 拆解** | [topics/scheduler-mixins.md](topics/scheduler-mixins.md) | **DONE**（verify 2026-08-18 / HEAD `f7101b0a`：MRO **6 mixin** 不变 + `scheduler_components/` 仍 19 模块；`init_metrics_reporter` 前移 L1198；`dispatch_event_loop` PP 判定改 `configured_pp_size()`） |
+| **PD 分离 多后端**（NIXL/Mooncake/MORI/Ascend/Fake） | [topics/pd-disaggregation.md](topics/pd-disaggregation.md) | **DONE**（verify 2026-08-18：5 backend 3 层继承树仍成立（枚举移至 utils.py:L592）；2 mixin 方法数修正为 **prefill 18 / decode 6**（旧记 9 系 4 月口径）；本期 HiCache retraction 保 KV #34801、unified-memory PD #33362、mooncake/conn +148 行） |
+| **KV cache**（unified / paged / radix / sparsity / hierarchical / mamba / SWA / LMC） | [topics/kv-cache.md](topics/kv-cache.md) | **DONE**（verify 2026-08-18 / HEAD `f7101b0a`：工厂 `kv_cache_builder`+`registry` 叙事成立，HiCache storage 仍 **9** 注册名；工厂矩阵 +分支 0.5（disable_radix ∧ host_pool retraction → Unified+HiCache #34801）；本期 MambaPoolHost 迁出 pool_host/、+embedding_store/l2_transfer、cache salt #30827） |
 | Continuous batching / chunked prefill | `topics/continuous-batching.md` | TODO |
 | **MoE**（dispatch/combine, EPLB, Elastic EP, TBO/SBO, sgl-kernel 绑定） | [topics/moe.md](topics/moe.md) | **DONE** |
 | DP attention | `topics/dp-attention.md` | TODO |
-| Speculative decoding | [topics/speculative.md](topics/speculative.md) | **DONE** (P1)（5 算法族 EAGLE/MultiLayer/Standalone/DFlash/NGRAM × V1/V2 + 2 worker 接入协议 subclass vs duck-typed + sgl-kernel 2 CUDA 算子 `verify_tree_greedy` / `tree_speculative_sampling_target_only` + `model_runner_list` MTP 多 ModelRunner + 完整 CLI 表 + cross-page lint 待修：comparison 24→27 / 12→11） |
+| Speculative decoding | [topics/speculative.md](topics/speculative.md) | **DONE** / **stale@f7101b0a**（verify 2026-08-18 大幅修正：算法族 ~~5~~ → **7 内建 + 插件**（+DSPARK/FROZEN_KV_MTP，pin 前漂移）；~~V1/V2 双轨~~ → V1 已删、全 worker 统一继承 `BaseSpecWorker`；sgl-kernel 树已移出仓库（2 CUDA 算子锚点失效，+Triton fallback）；正文架构小节待重 ingest；cross-page：comparison/speculative-decoding.md 已再标过期） |
 | Constrained / structured output | `topics/constrained.md` | TODO |
 | Function calling / tool use | `topics/function-call.md` | TODO |
 | Multi-API 兼容（OpenAI / Anthropic / Ollama） | `topics/multi-api.md` | TODO |
