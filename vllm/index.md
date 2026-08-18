@@ -3,7 +3,7 @@ type: index
 project: vllm
 status: verified
 confidence: high
-verified_against: 2026-04-18
+verified_against: 2026-08-18 (vLLM d29dc3ab, increment from 5f7fab88)
 sources:
   - d:\design\vllm\vllm
 related:
@@ -94,8 +94,8 @@ related:
 | Paged attention / KV block | `topics/paged-attention.md` | TODO |
 | Prefix caching | [topics/prefix-cache.md](topics/prefix-cache.md) | **DONE**（含 `BlockHashToBlockMap` / 3 Coordinator / `find_longest_cache_hit` 多态 / KV connector 协作） |
 | PD 分离（disaggregated serving） | `topics/pd-disaggregation.md` | TODO |
-| KV connector / KV offload | [topics/kv-connector.md](topics/kv-connector.md) | **DONE**（14 backend + v1/kv_offload/ 块管理层 + entrypoints/serve/disagg/） |
-| Speculative decoding (Eagle) | [topics/spec-decode-eagle.md](topics/spec-decode-eagle.md) | **DONE**（含 12 .py 文件分类、SpecDecodeBaseProposer 类层次、双 EAGLE 路径并存、3 模式 RejectionSampler、ngram CPU/GPU 对比） |
+| KV connector / KV offload | [topics/kv-connector.md](topics/kv-connector.md) | **STALE**（increment 2026-08-18 已写骨架：16 backend（P2P 删、NIXL pull/push 拆分、MooncakeStore 增）+ v1/kv_offload/ 块管理层 + entrypoints/scale_out/ 前端；backend 内部行号待 verify pass） |
+| Speculative decoding (Eagle) | [topics/spec-decode-eagle.md](topics/spec-decode-eagle.md) | **STALE**（increment 2026-08-18 已写新架构主干：SpecDecodeBaseProposer 迁至 llm_base_proposer.py、worker/gpu/spec_decode Speculator 家族（BaseSpeculator→DraftModelSpeculator→AutoRegressiveSpeculator + dflash/dspark/gemma4/mtp）、RejectionSampler 换血为 standard/synthetic/block；正文旧锚点待 verify pass） |
 | torch.compile / cuda graph | `topics/compilation.md` | TODO |
 | Distributed parallel (TP/PP/DP/EP) | [comparison/topics/distributed.md](../comparison/topics/distributed.md) | **DONE**（跨项目对比） |
 | Multi-modal | `topics/multimodal.md` | TODO |

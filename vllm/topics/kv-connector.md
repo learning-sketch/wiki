@@ -1,21 +1,29 @@
 ---
 type: topic
 project: vllm
-status: verified
-confidence: high
-verified_against: 2026-04-18
+status: stale
+confidence: medium
+verified_against: 2026-08-18 (vLLM d29dc3ab, increment from 5f7fab88)
 sources:
   - d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\base.py
   - d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\__init__.py
   - d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\factory.py
   - d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\multi_connector.py
   - d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\nixl\connector.py
+  - d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\nixl\__init__.py
+  - d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\nixl\base_scheduler.py
+  - d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\nixl\base_worker.py
+  - d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\nixl\pull_scheduler.py
+  - d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\nixl\pull_worker.py
+  - d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\nixl\push_scheduler.py
+  - d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\nixl\push_worker.py
   - d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\nixl\scheduler.py
   - d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\nixl\worker.py
   - d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\nixl\utils.py
   - d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\nixl\metadata.py
   - d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\nixl\stats.py
   - d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\mooncake\mooncake_connector.py
+  - d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\mooncake\store\connector.py
   - d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\mooncake\mooncake_utils.py
   - d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\moriio\moriio_connector.py
   - d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\moriio\moriio_engine.py
@@ -31,8 +39,9 @@ sources:
   - d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\offloading\scheduler.py
   - d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\offloading\worker.py
   - d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\offloading\common.py
-  - d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\p2p\p2p_nccl_connector.py
-  - d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\p2p\p2p_nccl_engine.py
+  - d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\offloading\config.py
+  - d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\offloading\events.py
+  - d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\offloading\canonical_mapping.py
   - d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\flexkv_connector.py
   - d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\simple_cpu_offload_connector.py
   - d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\decode_bench_connector.py
@@ -51,9 +60,9 @@ sources:
   - d:\design\vllm\vllm\v1\kv_offload\worker\cpu_gpu.py
   - d:\design\vllm\vllm\v1\kv_offload\cpu\manager.py
   - d:\design\vllm\vllm\v1\kv_offload\cpu\spec.py
-  - d:\design\vllm\vllm\entrypoints\serve\disagg\api_router.py
-  - d:\design\vllm\vllm\entrypoints\serve\disagg\serving.py
-  - d:\design\vllm\vllm\entrypoints\serve\disagg\protocol.py
+  - d:\design\vllm\vllm\entrypoints\scale_out\token_in_token_out\api_router.py
+  - d:\design\vllm\vllm\entrypoints\scale_out\token_in_token_out\serving.py
+  - d:\design\vllm\vllm\entrypoints\scale_out\token_in_token_out\protocol.py
 related:
   - vllm/index.md
   - vllm/entities/Scheduler.md
@@ -67,9 +76,11 @@ related:
 
 # vLLM KV Connector / KV Offload 子系统
 
+> [!warning] STALE NOTICE (2026-08-18)：本页正文基于 vLLM 5f7fab88。本期增量（→ d29dc3ab）`vllm/distributed/kv_transfer/` 有 54 文件 +17333/-6313 的大 churn：**P2pNcclConnector 整体删除**、NIXL 重构为 base/pull/push 分层（新增 push 模式）、Mooncake 新增 `store/` 子树（`MooncakeStoreConnector`）、offloading 大幅膨胀、HTTP 前端 `entrypoints/serve/disagg/` 迁至 `entrypoints/scale_out/`。**注册 connector 数 14 → 16**。骨架级修正见 [§Increment 2026-08-18](#increment-2026-08-18-vllm-5f7fab88--d29dc3ab)；§3.2/§3.3/§3.5 等 backend 内部行号未逐一重核（见 §Notes VERIFY）。
+
 ## Summary
 
-vLLM 用 **`KVConnectorBase_V1` 抽象类**（[base.py:170-662](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\base.py)）把"远端 / 异构 KV 传输"做成 **scheduler ↔ worker 双角色钩子** —— scheduler 端通过 `get_num_new_matched_tokens` / `build_connector_meta` / `request_finished` 控制语义，worker 端通过 `register_kv_caches` / `start_load_kv` / `wait_for_save` / `get_finished` 执行实际拷贝。`KVConnectorFactory`（[factory.py:149-228](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\factory.py)）注册了 **14 个 v1 connector**（含 4 个外部 backend NIXL/Mooncake/MoRIIO/HF3FS + 3 LMCache 变体 + 3 P2P/Offloading/SimpleCPUOffload + 4 wrapper/example：MultiConnector/FlexKVConnectorV1/DecodeBenchConnector/Example*）。`v1/kv_offload/`（[abstract.py](d:\design\vllm\vllm\v1\kv_offload\abstract.py) + [factory.py](d:\design\vllm\vllm\v1\kv_offload\factory.py) + [spec.py](d:\design\vllm\vllm\v1\kv_offload\spec.py) + cpu/ + worker/）是被 `OffloadingConnector` 复用的**底层块管理层**（`OffloadingManager` + `OffloadingHandler` + `LoadStoreSpec` + `CanonicalKVCaches`），与 connector 形成"协议 + 块管理"两层结构。
+vLLM 用 **`KVConnectorBase_V1` 抽象类**（现 [base.py:171](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\base.py)）把"远端 / 异构 KV 传输"做成 **scheduler ↔ worker 双角色钩子** —— scheduler 端通过 `get_num_new_matched_tokens` / `build_connector_meta` / `request_finished` 控制语义，worker 端通过 `register_kv_caches` / `start_load_kv` / `wait_for_save` / `get_finished` 执行实际拷贝。`KVConnectorFactory`~~注册了 **14 个 v1 connector**~~ **RESOLVED 2026-08-18**：现注册 **16 个 v1 connector**（[factory.py:152-260](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\factory.py)）——P2pNcclConnector 已删除，新增 `NixlPullConnector` / `NixlPushConnector` / `MooncakeStoreConnector`，详见 §Increment.2。`v1/kv_offload/`（[abstract.py](d:\design\vllm\vllm\v1\kv_offload\abstract.py) + [factory.py](d:\design\vllm\vllm\v1\kv_offload\factory.py) + [spec.py](d:\design\vllm\vllm\v1\kv_offload\spec.py) + cpu/ + worker/）是被 `OffloadingConnector` 复用的**底层块管理层**（`OffloadingManager` + `OffloadingHandler` + `LoadStoreSpec` + `CanonicalKVCaches`），与 connector 形成"协议 + 块管理"两层结构。
 
 > synthesis: 与 [comparison/topics/pd-disaggregation.md §3](../../comparison/topics/pd-disaggregation.md) 对照，vLLM 是三家中**唯一把"PD 分离 + KV offload + 多级 cache"统一到同一个 connector 抽象**的项目，代价是抽象很深（base 660 行 + 13 backend），优势是 `MultiConnector` 可以"同一进程同时跑多个 storage layer connector"，例如 `mooncake_store + LMCache` 二级 cache。
 
@@ -156,6 +167,8 @@ class KVConnectorRole(enum.Enum):
 由 `KVConnectorFactory` 显式区分两次构造（[factory.py:69-82](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\factory.py)：`# v1 connector is explicitly separated into two roles`），所以 **每个 backend 通常分 `XxxScheduler` + `XxxWorker` 两个内部实现类**（NIXL / Mooncake / MoRIIO / Offloading 都遵循该模式，详见 §3）。
 
 ### 1.1 核心方法（双视角）
+
+> [!warning] STALE (2026-08-18)：base.py 本期 +87 行，下表行号为 5f7fab88 快照，方法集合本身经抽查未见删减。已在 d29dc3ab 重核的新行号：`KVConnectorBase_V1` 类 L171 / `register_kv_caches` L272 / `start_load_kv` L314 / `wait_for_save` L368 / `get_finished` L378 / `get_block_ids_with_load_errors` L396 / `get_num_new_matched_tokens` L475 / `build_connector_meta` L536 / `request_finished` L568 / `get_finished_count` L651；辅助 ABC：`SupportsHMA` L85 / `KVConnectorRole` L124 / `KVConnectorHandshakeMetadata` L132 / `KVConnectorMetadata` L141 / `KVConnectorWorkerMetadata` L150（[base.py](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\base.py)）。其余行号偏移 +10~+20 未逐一核。
 
 | 方法 | 行号 | role | 必须 override | 语义 |
 |---|---|---|---|---|
@@ -298,7 +311,9 @@ finally:
 
 ---
 
-## 3. 14 个 v1 backend 实现矩阵
+## 3. ~~14~~ 16 个 v1 backend 实现矩阵
+
+> [!warning] STALE (2026-08-18)：本表为 5f7fab88 快照。d29dc3ab 注册表变动：**删** `P2pNcclConnector`（p2p/ 目录整体移除，-1436 行）；**增** `NixlPullConnector` / `NixlPushConnector`（`NixlConnector` 降级为 `NixlPullConnector` 的向后兼容别名，[nixl/connector.py:12, 390](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\nixl\connector.py)）与 `MooncakeStoreConnector`（[mooncake/store/connector.py](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\mooncake\store\connector.py)）。16 个注册名单见 §Increment.2。
 
 ### 3.1 完整注册表（来自 [factory.py:149-228](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\factory.py)）
 
@@ -310,7 +325,7 @@ finally:
 | 4 | `LMCacheConnectorV1` | [lmcache_connector.py](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\lmcache_connector.py) | 文件式 wrapper | 取决于子实现 | LMCache python pkg（含 `use_native` 二选一，见 §3.4） | LMCache 内部 |
 | 5 | `LMCacheMPConnector` | [lmcache_mp_connector.py](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\lmcache_mp_connector.py) | 文件式（1132 行） | 异步多进程 | LMCache MP adapter | ZMQ + 共享内存 |
 | 6 | `HF3FSKVConnector` | [hf3fs/](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\hf3fs) | **目录式 (3 文件 + utils + metadata server)** | 异步 store-fetch | `hf3fs_fuse.io` FUSE binding | 文件系统 + 独立 metadata server |
-| 7 | `P2pNcclConnector` | [p2p/](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\p2p) | 目录式（3 文件） | 异步 P→D | NCCL P2P + tensor memory pool | NCCL pipe |
+| 7 | ~~`P2pNcclConnector`~~ **RESOLVED 2026-08-18**：p2p/ 目录整体删除（p2p_nccl_connector.py / p2p_nccl_engine.py / tensor_memory_pool.py 均已不在 d29dc3ab） | — | — | — | — | — |
 | 8 | `OffloadingConnector` | [offloading_connector.py](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\offloading_connector.py) + [offloading/](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\offloading) | 文件 + 目录（4 子文件） | 异步 store-fetch | `v1/kv_offload/` 块管理层 + `OffloadingSpecFactory` | 进程内 thread pool |
 | 9 | `MultiConnector` | [multi_connector.py](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\multi_connector.py) | wrapper | 取决于子 connector | 任意子集 | 委派 |
 | 10 | `FlexKVConnectorV1` | [flexkv_connector.py](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\flexkv_connector.py) | thin wrapper | 异步（scheduler 端管理） | `flexkv.integration.vllm.vllm_v1_adapter` | FlexKV server |
@@ -324,6 +339,8 @@ finally:
 > synthesis (与 [comparison/topics/pd-disaggregation.md §3](../../comparison/topics/pd-disaggregation.md) 校准): pd-disaggregation 称 "13+ 实现"——本页清点后 **factory 注册 14 个 + lmcache_integration 是被 LMCacheConnectorV1 内部 lazy-import 的 helper 模块**（含 `vllm_v1_adapter` 与 `multi_process_adapter`，[lmcache_integration/__init__.py:5-11](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\lmcache_integration\__init__.py)），不算独立 connector，所以**真实独立 connector 数 = 14**（本页将 pd-disaggregation 的 "13+" 锁定为 14）。
 
 ### 3.2 NixlConnector — 异步 D-pull 范式
+
+> [!warning] STALE (2026-08-18)：NIXL 子树已重构为 **base / pull / push 三层**（新增 8 文件：`base_scheduler.py` 510 行 / `base_worker.py` 2619 行 / `pull_scheduler.py` / `pull_worker.py` / `push_scheduler.py` 792 行 / `push_worker.py` / `tp_mapping.py` / `__init__.py`；原 `scheduler.py` -504 行、`worker.py` -2362 行）。本节 D-pull 叙事对 `NixlPullConnector`（= 现 `NixlConnector` 别名）仍近似成立，但行号全部失效；push 模式为全新语义（见 §Increment.3）。
 
 [nixl/connector.py:56-284](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\nixl\connector.py) 是 thin facade：
 
@@ -394,6 +411,8 @@ _NIXL_SUPPORTED_DEVICE = {
 ```
 
 ### 3.3 MooncakeConnector — D-pull 的另一形态
+
+> [!warning] STALE (2026-08-18)：mooncake_connector.py 本期 ±769 行 churn，且 mooncake/ 新增 `rdma_utils.py` / `stats.py` / **`store/` 子树 7 文件（约 4100 行）**——后者是独立注册的 `MooncakeStoreConnector`（Mooncake 分布式 KV store 作为 storage backend，与本节 P/D 直传的 `MooncakeConnector` 不同物），见 §Increment.4。下文类行号未重核。
 
 [mooncake/mooncake_connector.py](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\mooncake\mooncake_connector.py) 共 1693 行。关键类层次：
 
@@ -507,7 +526,7 @@ if async_saves > 1:
 |---|---|---|
 | `MoRIIOConnector` | `_reqs_in_batch` / 与 `do_remote_prefill` / `do_remote_decode` 同 NIXL pattern（[moriio_connector.py](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\moriio\moriio_connector.py)；factory 中 `mori.io.{BackendType, IOEngine, IOEngineConfig}` import [moriio_connector.py:71-76](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\moriio\moriio_connector.py)） | 与 NIXL 互为 GPU 厂商替代（NVIDIA / AMD） |
 | `HF3FSKVConnector` | 含 `AsyncOperationManager`（[hf3fs_connector.py:101-468](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\hf3fs\hf3fs_connector.py)），`HF3FSKVConnector(KVConnectorBase_V1)` 在行 469；FUSE binding `from hf3fs_fuse.io import deregister_fd`（[hf3fs_connector.py:75](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\hf3fs\hf3fs_connector.py)），import 失败时 fallback 到 `Hf3fsClient` mock（[hf3fs_connector.py:82-88](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\hf3fs\hf3fs_connector.py)） | 独立 metadata server 进程 [hf3fs_metadata_server.py](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\hf3fs\hf3fs_metadata_server.py) |
-| `P2pNcclConnector` | `is_producer = self._kv_transfer_config.is_kv_producer`（[p2p_nccl_connector.py:88](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\p2p\p2p_nccl_connector.py)），独立 `P2pNcclEngine` + `tensor_memory_pool`（[p2p_nccl_engine.py](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\p2p\p2p_nccl_engine.py), [tensor_memory_pool.py](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\p2p\tensor_memory_pool.py)） | NCCL 直传，文档 [docs/design/p2p_nccl_connector.md](d:\design\vllm\docs\design\p2p_nccl_connector.md) |
+| ~~`P2pNcclConnector`~~ | **RESOLVED 2026-08-18**：p2p/ 目录（p2p_nccl_connector.py / p2p_nccl_engine.py / tensor_memory_pool.py）在 d29dc3ab 已整体删除 | — |
 | `FlexKVConnectorV1` | `start_load_kv` 是 no-op；KV transfer 由 **scheduler 端 `build_connector_meta`/`update_connector_output`** 全权管理（[flexkv_connector.py:82-90](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\flexkv_connector.py)）注释明示 "similar to how NIXL operates" | 依赖 `flexkv.integration.vllm.vllm_v1_adapter.FlexKVConnectorV1Impl`（[flexkv_connector.py:65-72](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\flexkv_connector.py)） |
 | `SimpleCPUOffloadConnector` | `(KVConnectorBase_V1, SupportsHMA)`（[simple_cpu_offload_connector.py:45](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\simple_cpu_offload_connector.py)），自带极简 `vllm.v1.simple_kv_offload.*` | 默认 8GB CPU buffer（[simple_cpu_offload_connector.py:42](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\simple_cpu_offload_connector.py)） |
 | `DecodeBenchConnector` | "Emulates a prefill-decode disaggregated setting by filling the KV cache with dummy values"（[decode_bench_connector.py:6-9](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\decode_bench_connector.py)），`fill_mean` / `fill_std` 配置正态分布填充 | 纯 benchmark，无外部依赖 |
@@ -594,7 +613,9 @@ class TransferResult:
 
 ---
 
-## 5. entrypoints/serve/disagg/ — HTTP 前端
+## 5. ~~entrypoints/serve/disagg/~~ entrypoints/scale_out/ — HTTP 前端
+
+> [!warning] STALE (2026-08-18) **RESOLVED 2026-08-18**：`vllm/entrypoints/serve/disagg/` 目录在 d29dc3ab **已不存在**。"tokens-in/tokens-out"前端迁至 [vllm/entrypoints/scale_out/token_in_token_out/](d:\design\vllm\vllm\entrypoints\scale_out\token_in_token_out)（api_router.py / serving.py / protocol.py / mm_serde.py，`ServingTokens` 与 `/inference/v1/generate` 端点在此），`scale_out/` 下另有 `derender/`、`render/`、`factories.py`。下文 3 文件表按旧路径书写，类名/端点语义经 grep 确认仍在新路径（`ServingTokens` 命中 scale_out/token_in_token_out/serving.py）。
 
 3 文件构成"**Disaggregated Everything**"前端：
 
@@ -668,7 +689,7 @@ NIXL worker 端实现：在 `recv_complete` 失败时 `self._invalid_block_ids.u
 | HF3FS | `from hf3fs_fuse.io import deregister_fd`（[hf3fs_connector.py:75](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\hf3fs\hf3fs_connector.py)）—— **FUSE 文件系统 binding**；import 失败时 fallback 到 `Hf3fsClient` mock 实现（[utils/hf3fs_mock_client.py](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\hf3fs\utils\hf3fs_mock_client.py)）保证 unit test 能跑 |
 | LMCache | `from lmcache.integration.vllm.vllm_v1_adapter import LMCacheConnectorV1Impl`（默认 path，[lmcache_connector.py:107-109](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\lmcache_connector.py)）；MP 版 `from lmcache.integration.vllm.vllm_multi_process_adapter import LMCacheMPSchedulerAdapter, LMCacheMPWorkerAdapter`（[lmcache_mp_connector.py:25-31](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\lmcache_mp_connector.py)） |
 | FlexKV | `from flexkv.integration.vllm.vllm_v1_adapter import FlexKVConnectorV1Impl`（[flexkv_connector.py:65-72](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\flexkv_connector.py)）（lazy in `__init__`，import 失败给"see github 安装说明"友好错误） |
-| P2P-NCCL | 直接用 vLLM 自带的 `vllm.distributed.parallel_state.get_world_group`（[p2p_nccl_connector.py:19](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\p2p\p2p_nccl_connector.py)）无外部 native lib，但 NCCL 本身是 native |
+| ~~P2P-NCCL~~ | **RESOLVED 2026-08-18**：p2p/ 目录已随 `P2pNcclConnector` 删除 |
 
 > synthesis: vLLM 的"connector 多 backend"实质是 **"统一 ABC + 14 个独立 native lib lazy import"** —— 任意一个 backend 不存在不影响其它 backend 启动，import 失败 fallback 到 mock 或 raise 友好错误。这是与 SGLang `disaggregation/{nixl,mooncake,mori,ascend}/conn.py` "同位平铺"风格的最大差异。
 
@@ -759,7 +780,44 @@ NIXL worker 端实现：在 `recv_complete` 失败时 `self._invalid_block_ids.u
 
 ---
 
+## Increment 2026-08-18 (vLLM 5f7fab88 → d29dc3ab)
+
+> 摸底命令：`git -C <vllm> diff 5f7fab88..HEAD --stat -- vllm/distributed/kv_transfer`（54 文件，+17333/-6313）。本节行号已在 d29dc3ab 实地核对。
+
+### Inc.1 base.py / mixin / output 骨架漂移（语义未变，位置变）
+
+- `KVConnectorBase_V1` 现 [base.py:171](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\base.py)（+87 行 diff）；关键方法新行号见 §1.1 顶部 banner。
+- `KVConnectorOutput` 从 outputs.py:127-153 移至 [v1/outputs.py:264](d:\design\vllm\vllm\v1\outputs.py)。
+- `KVConnectorModelRunnerMixin`：`kv_connector_no_forward` 现 L36、新增 **`maybe_get_kv_connector_output`**（L51）、`_get_kv_connector_output` 现 L78（[kv_connector_model_runner_mixin.py](d:\design\vllm\vllm\v1\worker\kv_connector_model_runner_mixin.py)）。
+- `KVTransferConfig` 仍在 [config/kv_transfer.py:23](d:\design\vllm\vllm\config\kv_transfer.py)，`kv_load_failure_policy: Literal["recompute","fail"] = "fail"` 现 L69。
+- 新文件 [ssm_conv_transfer_utils.py](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\ssm_conv_transfer_utils.py)（±210 行）：Mamba/SSM conv state 的传输辅助（未细读）。
+
+### Inc.2 注册表：14 → 16 个 connector
+
+d29dc3ab 的 `KVConnectorFactory` 注册名单（[factory.py:152-260](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\factory.py)，按注册顺序）：`ExampleConnector` / `ExampleHiddenStatesConnector` / `LMCacheConnectorV1` / `LMCacheMPConnector` / `NixlConnector` / **`NixlPullConnector`（新）** / **`NixlPushConnector`（新）** / `MultiConnector` / `MoRIIOConnector` / `OffloadingConnector` / `DecodeBenchConnector` / `MooncakeConnector` / **`MooncakeStoreConnector`（新）** / `FlexKVConnectorV1` / `SimpleCPUOffloadConnector` / `HF3FSKVConnector`。**删除**：`P2pNcclConnector`（p2p/ 目录 3 文件 -1436 行整体移除）。
+
+### Inc.3 NIXL：单一 D-pull → base / pull / push 三层
+
+- 类层次重排：`NixlBaseConnector(KVConnectorBase_V1, SupportsHMA)`（[nixl/connector.py:79](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\nixl\connector.py)）→ `NixlPullConnector`（L326，"Pull-based (READ)"）+ `NixlPushConnector`（L354，"Push-based (WRITE)"）；`NixlConnector` 是 `NixlPullConnector` 的**向后兼容别名**（[connector.py:12, 390](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\nixl\connector.py)）。
+- 新文件：`base_scheduler.py`（`NixlBaseConnectorScheduler`，510 行）/ `base_worker.py`（`NixlBaseConnectorWorker`，**2619 行**，原 worker.py 主体迁入）/ `pull_scheduler.py` + `pull_worker.py` / `push_scheduler.py` + `push_worker.py`（792 行）/ `tp_mapping.py`（异构 TP 映射，142 行）/ [`nixl/__init__.py`](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\nixl\__init__.py)（统一导出 16 个符号）。
+- **push 模式语义**（[push_worker.py:1-32](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\nixl\push_worker.py) module docstring 直接观察）：专属 `nixl-push-writer` 线程独占所有 push NIXL ops——D 端发 `PUSH_REG` 注册，P 端把 finished blocks 与 D 注册配对后发 WRITE（`make_prepped_xfer`/`transfer`）；engine 主线程经 `_reg_send_inbox` / `_finished_blocks_inbox` / `_pending_completion_notifs` 三队列喂 writer，event-driven 唤醒 + 仅在有未配对块时自轮询。synthesis: 这补上了旧页 §8 对比表里"vLLM 只有 D-pull"的空缺——vLLM 现在 pull（D 读）/ push（P 写）双范式，与 SGLang mooncake（P write）/ MindIE LLMDataDist（pull）的对照关系需要在 comparison 页更新（本组不动 comparison 页，留给主 agent）。
+- 另注意 [connector.py:128](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\nixl\connector.py)：`kv_role='kv_both'` 用于 NixlConnector 已标 deprecated。
+
+### Inc.4 Mooncake：新增 store/ 子树（`MooncakeStoreConnector`）
+
+[mooncake/store/](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\mooncake\store) 7 文件（connector.py 372 / coordinator.py 412 / data.py 472 / metrics.py 189 / protocol.py 40 / scheduler.py 500 / worker.py **2113** 行）——把 Mooncake 分布式 KV store 作为 **storage backend**（类似 LMCache 定位），与既有 P/D 直传的 `MooncakeConnector` 并列注册。mooncake/ 一级另新增 `rdma_utils.py`（46 行）与 `stats.py`（146 行）。未细读，见 VERIFY。
+
+### Inc.5 Offloading 子系统膨胀
+
+`offloading/scheduler.py` +1705 行；新增 `config.py`（222 行，`SchedulerOffloadConfig` 独立成文件）/ `events.py`（413 行）/ `canonical_mapping.py`（456 行）/ `metrics.py` +517。`offloading_connector.py` ±80。旧页 §3.5 的行号与字段清单需整体重核（见 VERIFY）。
+
+### Inc.6 HTTP 前端迁移
+
+`entrypoints/serve/disagg/` → [entrypoints/scale_out/token_in_token_out/](d:\design\vllm\vllm\entrypoints\scale_out\token_in_token_out)（详见 §5 banner）。`entrypoints/serve/` 现存子目录为 dev / elastic_ep / engine / exception_handling / fault_tolerance / instrumentator / lora / middleware / profile / sagemaker / tokenize / utils（实地 ls）。
+
 ## Notes / Caveats
+
+> [!todo] VERIFY (increment 2026-08-18): NIXL base/pull/push 拆分后，旧页 §3.2 的 scheduler 端字段（`_reqs_need_recv` 等）现落在 `base_scheduler.py` 还是 `pull_scheduler.py` 未核对；`tp_mapping.py`（异构 TP）的语义未读；Mooncake store/ 子树 4100 行、offloading 增量 ~3300 行均未细读；`example_hidden_states_connector.py`（±541）与 `kv_connector/utils.py`（±794）大改未分析。
 
 > [!todo] VERIFY: NIXL `_nixl_handshake_listener` 后台线程在 `set_xfer_handshake_metadata` 仅被 scheduler 端调用，但对应的 D 端获取 metadata 的代码路径需追到 `worker.py` 的 `_background_nixl_handshake`（[worker.py:1872-1875](d:\design\vllm\vllm\distributed\kv_transfer\kv_connector\v1\nixl\worker.py)）—— D 端 worker 是否通过 ZMQ REQ 主动 pull 还是 P 端 push？源码注释 "Initiate handshake with remote engine to exchange metadata" 暗示 pull。
 
