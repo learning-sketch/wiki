@@ -3,8 +3,11 @@ type: module
 project: sglang
 status: stale
 confidence: high
-verified_against: 2026-04-19
+verified_against: 2026-08-18 (increment pass; 正文主体锚点仍为 2026-04-19 版，见 Increment 小节)
 sources:
+  - d:\design\sglang\python\sglang\srt\multimodal\cache\preprocess_cache.py
+  - d:\design\sglang\python\sglang\srt\multimodal\transport\cuda_ipc.py
+  - d:\design\sglang\python\sglang\srt\multimodal\media_artifacts\base.py
   - d:\design\sglang\python\sglang\srt\multimodal\mm_utils.py
   - d:\design\sglang\python\sglang\srt\multimodal\processors\base_processor.py
   - d:\design\sglang\python\sglang\srt\multimodal\customized_mm_processor_utils.py
@@ -24,7 +27,7 @@ related:
 
 ## Summary
 
-[`multimodal`](d:\design\sglang\python\sglang\srt\multimodal)（**46** 个 `.py`，Glob 核对；**无** 包级 `__init__.py`）承载 **VLM/语音多模态的 HF Processor 封装、占位符切分、I/O 并行加载与特征张量组织**：核心抽象为 [`BaseMultimodalProcessor`](d:\design\sglang\python\sglang\srt\multimodal\processors\base_processor.py) + [`MultimodalSpecialTokens`](d:\design\sglang\python\sglang\srt\multimodal\processors\base_processor.py)；**按模型架构类名** 在 [`PROCESSOR_MAPPING`](d:\design\sglang\python\sglang\srt\managers\multimodal_processor.py) 注册（[`import_processors`](d:\design\sglang\python\sglang\srt\managers\multimodal_processor.py) 扫描 [`processors/`](d:\design\sglang\python\sglang\srt\multimodal\processors)）。
+[`multimodal`](d:\design\sglang\python\sglang\srt\multimodal)（@f7101b0a **81** 个 `.py`，2026-08-18 实地统计；~~46 个、无包级 `__init__.py`~~ 为 2026-04-19 旧口径，详见 Increment 小节）承载 **VLM/语音多模态的 HF Processor 封装、占位符切分、I/O 并行加载与特征张量组织**：核心抽象为 [`BaseMultimodalProcessor`](d:\design\sglang\python\sglang\srt\multimodal\processors\base_processor.py) + [`MultimodalSpecialTokens`](d:\design\sglang\python\sglang\srt\multimodal\processors\base_processor.py)；**按模型架构类名** 在 [`PROCESSOR_MAPPING`](d:\design\sglang\python\sglang\srt\managers\multimodal_processor.py) 注册（[`import_processors`](d:\design\sglang\python\sglang\srt\managers\multimodal_processor.py) 扫描 [`processors/`](d:\design\sglang\python\sglang\srt\multimodal\processors)）。
 
 **Vision 编码器本体**在 [`srt/models/*`](d:\design\sglang\python\sglang\srt\models)（如 Qwen-VL / LLaVA / InternVL）；本目录提供 **DP 分片 ViT 辅助**（[`mm_utils.py`](d:\design\sglang\python\sglang\srt\multimodal\mm_utils.py)）、**CUDA Graph ViT runner**（[`vit_cuda_graph_runner.py`](d:\design\sglang\python\sglang\srt\multimodal\vit_cuda_graph_runner.py)）、**EVS 视频 token 剪枝**（[`evs/`](d:\design\sglang\python\sglang\srt\multimodal\evs)）。
 
@@ -211,6 +214,17 @@ flowchart TD
 | `BaseMultimodalProcessor` 具体子类（含同一文件内多个注册类） | **约 40**（手工自 `processors/` 内 `class ...(` 与 `models=` 枚举；精确 CI 可用 AST 再扫） |
 | 模态枚举 | **3**：`IMAGE`、`VIDEO`、`AUDIO`（[`base_processor.py:67-76`](d:\design\sglang\python\sglang\srt\multimodal\processors\base_processor.py)） |
 
+## Increment 2026-08-18 (06f32bab → f7101b0a)
+
+pin 移动后本目录新增 **3 个子包 + 2 个独立新文件**，文件数从 index @06f32bab 记录的 70 增至 **81 个 `.py`**（实地 `rg --files` 统计：根 10 + `processors/` 53 + `inkling/` 5 + `evs/` 4 + `cache/` 3 + `transport/` 3 + `media_artifacts/` 3；正文旧口径 46/37 系 2026-04-19 数据，已双重失效）。包级 [`__init__.py`](d:\design\sglang\python\sglang\srt\multimodal\__init__.py) 现已存在（1 行注释），正文「无包级 `__init__.py`」论断失效。
+
+- **`multimodal/cache/`**（commit `e8c7dddfa0` "[VLM] add content-addressed preprocessing cache infrastructure" #34398）：[`identity.py`](d:\design\sglang\python\sglang\srt\multimodal\cache\identity.py) 提供多模态输入与 processor 产物的**内容寻址稳定标识**（`MediaSnapshot` [L65](d:\design\sglang\python\sglang\srt\multimodal\cache\identity.py)、`snapshot_media` [L144](d:\design\sglang\python\sglang\srt\multimodal\cache\identity.py)、`build_artifact_key` [L309](d:\design\sglang\python\sglang\srt\multimodal\cache\identity.py)、`build_processor_fingerprint` [L378](d:\design\sglang\python\sglang\srt\multimodal\cache\identity.py)）；[`preprocess_cache.py`](d:\design\sglang\python\sglang\srt\multimodal\cache\preprocess_cache.py) 为**按字节记账的 LRU CPU 存储 + single-flight 并发去重**（docstring [L1-6](d:\design\sglang\python\sglang\srt\multimodal\cache\preprocess_cache.py)；核心类 `MultimodalPreprocessCache` [L121](d:\design\sglang\python\sglang\srt\multimodal\cache\preprocess_cache.py)）。
+- **`multimodal/transport/`**（commit `443b62db57` "stream-order cuda-ipc feature pool lifecycle and streamline multimodal transport module" #33949）：原 `utils/cuda_ipc_transport_utils.py` 的 CUDA IPC 特征传输**迁入本目录**——[`cuda_ipc.py`](d:\design\sglang\python\sglang\srt\multimodal\transport\cuda_ipc.py) 含 `MmItemMemoryPool`（[L92](d:\design\sglang\python\sglang\srt\multimodal\transport\cuda_ipc.py)）与 `CudaIpcTensorTransportProxy`（[L170](d:\design\sglang\python\sglang\srt\multimodal\transport\cuda_ipc.py)）；[`memory_pool.py`](d:\design\sglang\python\sglang\srt\multimodal\transport\memory_pool.py) 提供 stream-ordered GPU 特征池生命周期（`StreamOrderedMmFeaturePool` [L156](d:\design\sglang\python\sglang\srt\multimodal\transport\memory_pool.py)、`StreamOrderedPoolConsumerMixin` [L80](d:\design\sglang\python\sglang\srt\multimodal\transport\memory_pool.py)、`PoolLease` [L146](d:\design\sglang\python\sglang\srt\multimodal\transport\memory_pool.py)）。正文「CUDA IPC 特征池」小节指向 `utils/cuda_ipc_transport_utils.py` 的锚点需按此更新。
+- **`multimodal/media_artifacts/`**（commit `3d3194f6c3` "vlm: cache kimi-k3 per-image processor artifacts" #34404）：[`base.py`](d:\design\sglang\python\sglang\srt\multimodal\media_artifacts\base.py) 定义 **prompt 无关、可复用的 per-media 产物契约**（`MediaArtifact` Protocol [L49](d:\design\sglang\python\sglang\srt\multimodal\media_artifacts\base.py)、`MediaArtifactCacheMixin` [L94](d:\design\sglang\python\sglang\srt\multimodal\media_artifacts\base.py)）；[`kimi_k3.py`](d:\design\sglang\python\sglang\srt\multimodal\media_artifacts\kimi_k3.py) 为 Kimi-K3 每图 processor 产物缓存实现。synthesis: `media_artifacts/` 产出的产物即存入 `cache/preprocess_cache.py`（其 docstring 明言"Model processors store prompt-independent ``MediaArtifact`` values here"，[preprocess_cache.py:L3-4](d:\design\sglang\python\sglang\srt\multimodal\cache\preprocess_cache.py)）——三个新子包构成一条「标识 → 缓存 → 产物」链。
+- **独立新文件**：[`encoder_preprocessing.py`](d:\design\sglang\python\sglang\srt\multimodal\encoder_preprocessing.py)（commit `418975ba64` "[EPD] pipeline owner-only multimodal preprocessing" #34206；`EncoderPreprocessOutput` [L58](d:\design\sglang\python\sglang\srt\multimodal\encoder_preprocessing.py)）、[`processors/muse_glimmer.py`](d:\design\sglang\python\sglang\srt\multimodal\processors\muse_glimmer.py)（commit `fde9ad2531` Muse Glimmer 模型族 #34262，Processor matrix 需增行）。
+
+> [!todo] VERIFY: 本 increment 仅覆盖新增子包与文件数；正文 Processor matrix（37 → 53 个 processors 文件）、`inkling/` 子包（Rust 图像预处理，关联 [rust_extensions.md](rust_extensions.md)）与既有锚点行号未逐一重核。
+
 ## Notes / Caveats
 
 > [!todo] VERIFY: pin 从 `34fef07a` → `06f32bab`（2026-08-10 increment）后本页未深 verify；文件数量/行号可能漂移。优先对照 [entities/Scheduler.md](../entities/Scheduler.md) / 新模块页。
@@ -229,6 +243,7 @@ flowchart TD
 ## See also
 
 - [sglang/modules/disaggregation.md](disaggregation.md)（EPD / encode_server）
+- [sglang/modules/rust_extensions.md](rust_extensions.md)（`inkling/` Rust 图像预处理经 `_multimodal` 扩展）
 - [sglang/modules/hardware_backend.md](hardware_backend.md)（`ViTNpuGraphRunner` 子类化 `ViTCudaGraphRunner`）
 - [sglang/index.md](../index.md)
 - 源码根：[`d:\design\sglang\python\sglang\srt\multimodal\`](d:\design\sglang\python\sglang\srt\multimodal)
