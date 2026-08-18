@@ -3,7 +3,7 @@ type: module
 project: sglang
 status: stale
 confidence: high
-verified_against: 2026-04-19
+verified_against: 2026-08-18 (increment pass; 正文主体锚点为 2026-04-19 版)
 sources:
   - d:\design\sglang\python\sglang\srt\distributed
   - d:\design\sglang\python\sglang\srt\distributed\parallel_state.py
@@ -226,6 +226,12 @@ flowchart LR
 | 跨语言 C++ 绑定 | C++ side 主导（process_group.h） | 0 自研 C++ kernel for distributed | **仅 1 算子** `sgl_kernel::shm_allreduce`（CPU SHM allreduce） |
 
 详细 9 子维度对比（进程组抽象 / TP collectives / PP 完成度 / DP 双语义 / EP+EPLB+Elastic / scheduler rank 维度数 / CP-SP 链回 / 目录布局 / 与 PD 优化关联）见 [`comparison/topics/distributed.md`](../../comparison/topics/distributed.md)；维度索引见 [`comparison/dimensions.md §dim-distributed`](../../comparison/dimensions.md)。
+
+## Increment 2026-08-18 (06f32bab → f7101b0a)
+
+- **VMM 辅助迁出本模块**：`distributed/device_communicators/vmm_utils.py` → 顶层 [`srt/cuda_vmm_utils.py`](d:\design\sglang\python\sglang\srt\cuda_vmm_utils.py)（迁移 + 大幅扩展，`git diff -M` 记 +414 行；移动发生在 commit `df986c4d5e` "Consolidate CUDA VMM allocation helpers" #34199，import 修正在 commit `13aeb91b6e` "[Fix] Update multimodal CUDA VMM helper import" #34358）。synthesis: 迁出的动机是该 helper 的消费方已远超 distributed——全仓 grep `cuda_vmm_utils` 命中 [`multimodal/transport/memory_pool.py`](d:\design\sglang\python\sglang\srt\multimodal\transport\memory_pool.py)、[`mem_cache/kv_vmm_backing.py`](d:\design\sglang\python\sglang\srt\mem_cache\kv_vmm_backing.py)、`layers/moe/dwdp/` 4 文件、[`utils/cuda_vmm_transport_utils.py`](d:\design\sglang\python\sglang\srt\utils\cuda_vmm_transport_utils.py)，本模块内仍有 [`custom_all_reduce_utils.py`](d:\design\sglang\python\sglang\srt\distributed\device_communicators\custom_all_reduce_utils.py) / [`custom_all_reduce_v2.py`](d:\design\sglang\python\sglang\srt\distributed\device_communicators\custom_all_reduce_v2.py) 两个使用方。
+- **文件数重核**：`git ls-tree` @06f32bab = **29**（与 index 记录一致）→ HEAD = **28**（-1，即 vmm_utils 迁出）。正文「22 `.py` / 17 device_communicators」为 2026-04-19 旧口径。
+- 其余 churn：[`parallel_state.py`](d:\design\sglang\python\sglang\srt\distributed\parallel_state.py) +156 行、[`bootstrap.py`](d:\design\sglang\python\sglang\srt\distributed\bootstrap.py) +67 行（该文件 pin 时已存在，本期为扩展非新增；文件清单 diff 唯一变化即 vmm_utils 迁出）、custom allreduce 小改；正文 `GroupCoordinator` 主锚点未重核，保持 stale。
 
 ## Notes / Caveats
 

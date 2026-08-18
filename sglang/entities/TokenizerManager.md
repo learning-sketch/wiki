@@ -3,7 +3,7 @@ type: entity
 project: sglang
 status: verified
 confidence: high
-verified_against: 2026-08-10
+verified_against: 2026-08-18
 sources:
   - d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py
   - d:\design\sglang\python\sglang\srt\managers\detokenizer_manager.py
@@ -23,9 +23,9 @@ related:
 `TokenizerManager` 是 SGLang 的**前端进程主体**——跑在主进程，承担 tokenize / 请求路由 / abort / 流式聚合 / metrics。`DetokenizerManager` 是反向的镜像，跑在独立子进程，把 token id 流式 detokenize 后回送。两者通过 ZMQ socket 与 `Scheduler` 子进程通信。HEAD `06f32bab` 上控制面 mixin 已从 `TokenizerCommunicatorMixin` 重命名为 [`TokenizerControlMixin`](d:\design\sglang\python\sglang\srt\managers\tokenizer_control_mixin.py)（`tokenizer_communicator_mixin.py` **已删除**）。
 
 ## Sources
-- [tokenizer_manager.py](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)（~3644 行；`ReqState` L200；`TokenizerManager` L373；`SignalHandler` L3599）
-- [detokenizer_manager.py](d:\design\sglang\python\sglang\srt\managers\detokenizer_manager.py)（`DecodeStatus` L64；`DetokenizerManager` L91）
-- mixin：[tokenizer_control_mixin.py](d:\design\sglang\python\sglang\srt\managers\tokenizer_control_mixin.py)（`TokenizerControlMixin` L147）、[tokenizer_manager_score_mixin.py](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager_score_mixin.py)、[multi_tokenizer_mixin.py](d:\design\sglang\python\sglang\srt\managers\multi_tokenizer_mixin.py)
+- [tokenizer_manager.py](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)（~3665 行；`ReqState` L215；`TokenizerManager` L386；`SignalHandler` L3620）
+- [detokenizer_manager.py](d:\design\sglang\python\sglang\srt\managers\detokenizer_manager.py)（`DecodeStatus` L65；`DetokenizerManager` L92）
+- mixin：[tokenizer_control_mixin.py](d:\design\sglang\python\sglang\srt\managers\tokenizer_control_mixin.py)（`TokenizerControlMixin` L148）、[tokenizer_manager_score_mixin.py](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager_score_mixin.py)、[multi_tokenizer_mixin.py](d:\design\sglang\python\sglang\srt\managers\multi_tokenizer_mixin.py)
 
 ## 类层次
 
@@ -79,15 +79,15 @@ classDiagram
     DetokenizerManager o-- DecodeStatus
 ```
 
-精确 MRO：[tokenizer_manager.py:373](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)
+精确 MRO：[tokenizer_manager.py:386](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)
 
 ```python
 class TokenizerManager(TokenizerControlMixin, TokenizerManagerScoreMixin):
 ```
 
-`TokenizerControlMixin` docstring 标明职责为 control-plane（weights / cache / lora / profile / internal state），经 `FanOutCommunicator` 与 scheduler 通信，区别于按 `rid` 复用的 data-plane 推理路径 — [tokenizer_control_mixin.py:147-151](d:\design\sglang\python\sglang\srt\managers\tokenizer_control_mixin.py)。
+`TokenizerControlMixin` docstring 标明职责为 control-plane（weights / cache / lora / profile / internal state），经 `FanOutCommunicator` 与 scheduler 通信，区别于按 `rid` 复用的 data-plane 推理路径 — [tokenizer_control_mixin.py:148-152](d:\design\sglang\python\sglang\srt\managers\tokenizer_control_mixin.py)。
 
-## `ReqState` （[tokenizer_manager.py:200-280](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)）
+## `ReqState` （[tokenizer_manager.py:215-295](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)）
 
 每个活跃请求一个，状态机：
 
@@ -101,76 +101,77 @@ class TokenizerManager(TokenizerControlMixin, TokenizerManagerScoreMixin):
 
 | 方法 | 行号 | 说明 |
 |---|---|---|
-| `append_text(chunk)` | [221-223](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) | 追加文本 chunk |
-| `get_text()` | [225-229](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) | flush `text_chunks` 后返回累积文本 |
-| `get_crash_dump_output()` | [231-237](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) | 崩溃 dump |
+| `append_text(chunk)` | [236-238](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) | 追加文本 chunk |
+| `get_text()` | [240-244](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) | flush `text_chunks` 后返回累积文本 |
+| `get_crash_dump_output()` | [246-252](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) | 崩溃 dump |
 
-> synthesis: 旧页曾写 `rid` 字段在 `ReqState` 上；当前 dataclass **无** `rid` 字段——`rid` 是 `rid_to_state` 字典的 key（[tokenizer_manager.py:568](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)）。
+> synthesis: 旧页曾写 `rid` 字段在 `ReqState` 上；当前 dataclass **无** `rid` 字段——`rid` 是 `rid_to_state` 字典的 key（[tokenizer_manager.py:581](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)）。
 
-## `TokenizerManager.__init__` （[tokenizer_manager.py:386-446](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)）
+## `TokenizerManager.__init__` （[tokenizer_manager.py:399-460](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)）
 
-初始化序列（每步是独立 init 方法）：
+初始化序列（每步是独立 init 方法；开头先 `set_global_server_args_for_tokenizer(server_args)`，[L408-410](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)，见 §Increment 2026-08-18）：
 
 ```python
-self.init_model_config()                    # 448
-self._validate_cuda_vmm_feature_transport_support()  # 520
-self.init_tokenizer_and_processor()         # 465
-self.init_ipc_channels(port_args)           # 533
-self.init_running_status()                  # 566
-self.init_request_logging_and_dumping()     # 583
-self.init_weight_update()                   # 610
-self.init_lora()                            # 627
-self.init_disaggregation(...)               # 646
-self.init_metric_collector_watchdog()       # 684
-self.init_request_dispatcher()              # 731（内部调 init_communicators）
-# 最后构造 CudaVmmFeatureTransport          # 444-446
+self.init_model_config()                    # 462
+self._validate_cuda_vmm_feature_transport_support()  # 534
+self.init_tokenizer_and_processor()         # 479
+self.init_ipc_channels(port_args)           # 547
+self.init_running_status()                  # 579
+self.init_request_logging_and_dumping()     # 596
+self.init_weight_update()                   # 623
+self.init_lora()                            # 640
+self.init_disaggregation(...)               # 659
+self.init_metric_collector_watchdog()       # 695
+self.init_request_dispatcher()              # 742（内部调 init_communicators）
+# 最后构造 CudaVmmFeatureTransport          # 458-460
 ```
 
 ### 关键初始化
 
-#### `init_tokenizer_and_processor` （[tokenizer_manager.py:465-518](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)）
-- 多模态：`get_mm_processor(...)` + `get_tokenizer_from_processor(self.processor)` + `os.environ["TOKENIZERS_PARALLELISM"] = "false"`（[469-492](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)）
-- 非多模态：`get_tokenizer(server_args.tokenizer_path, ...)`（[493-505](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)）
-- 动态 batch tokenize：条件启用 `AsyncDynamicbatchTokenizer(...)`（[507-518](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)）
+#### `init_tokenizer_and_processor` （[tokenizer_manager.py:479-532](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)）
+- 多模态（且非 `language_model_only`）：`get_mm_processor(...)` + `get_tokenizer_from_processor(self.processor)` + `os.environ["TOKENIZERS_PARALLELISM"] = "false"`（[483-506](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)）
+- 非多模态：`get_tokenizer(get_serving().tokenizer_path, ...)`（[507-519](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)）
+- 动态 batch tokenize：条件启用 `AsyncDynamicbatchTokenizer(...)`（[521-532](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)）
 
-#### `init_ipc_channels` （[tokenizer_manager.py:533-554](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)）
-- `recv_from_detokenizer = get_zmq_socket(context, zmq.PULL, port_args.tokenizer_ipc_name, True)` ([535-537](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py))
-- 单 tokenizer worker：`send_to_scheduler = get_zmq_socket(..., zmq.PUSH, port_args.scheduler_input_ipc_name, True)` ([538-542](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py))
-- 多 tokenizer worker：PUSH 到 `port_args.tokenizer_worker_ipc_name`，并保存 `self.tokenizer_ipc_name = port_args.tokenizer_ipc_name` 供 `_dispatch_to_scheduler` 调用 `stamp_http_worker_ipc`（[543-548](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)、[556-559](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)、[3635-3644](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)）
+#### `init_ipc_channels` （[tokenizer_manager.py:547-567](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)）
+- `recv_from_detokenizer = get_zmq_socket(context, zmq.PULL, port_args.tokenizer_ipc_name, True)` ([549-551](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py))
+- 单 tokenizer worker：`send_to_scheduler = get_zmq_socket(..., zmq.PUSH, port_args.scheduler_input_ipc_name, True)` ([552-556](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py))
+- 多 tokenizer worker：PUSH 到 `port_args.tokenizer_worker_ipc_name`，并保存 `self.tokenizer_ipc_name = port_args.tokenizer_ipc_name` 供 `_dispatch_to_scheduler` 调用 `stamp_http_worker_ipc`（[557-562](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)、[569-572](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)、[3656-3665](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)）
+- 末尾创建 `load_snapshot_reader = create_load_snapshot_reader(port_args, caller="TokenizerManager")`（[564-567](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)；本期去掉了 `server_args` 首参）
 
 > synthesis: 旧页写的 `SenderWrapper` 包装路径已移除；多 worker 路由改为 `stamp_http_worker_ipc` + `MultiTokenizerRouter`（[multi_tokenizer_mixin.py:429](d:\design\sglang\python\sglang\srt\managers\multi_tokenizer_mixin.py)）。
 
-#### `init_running_status` （[tokenizer_manager.py:566-581](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)）
-- `rid_to_state: Dict[str, ReqState] = {}`（[568](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)）— **响应路由表**
-- `server_status: ServerStatus = ServerStatus.Starting`（[573](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)）
-- `gracefully_exit = False`（[574](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)）
-- `last_receive_tstamp = real_time()`（[575](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)）
-- session：`session_futures = {}`（[578](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)）
-- `_subprocess_watchdog = None`（外部填，[580-581](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)）
+#### `init_running_status` （[tokenizer_manager.py:579-594](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)）
+- `rid_to_state: Dict[str, ReqState] = {}`（[581](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)）— **响应路由表**
+- `server_status: ServerStatus = ServerStatus.Starting`（[586](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)）
+- `gracefully_exit = False`（[587](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)）
+- `last_receive_tstamp = real_time()`（[588](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)）
+- session：`session_futures = {}`（[591](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)）
+- `_subprocess_watchdog = None`（外部填，[592-594](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)）
 
-#### `init_request_dispatcher` + control communicators（[tokenizer_manager.py:731-752](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)）
-- 注册 abort / session / weight / health / elastic 等结果类型后调用 `self.init_communicators(self.server_args)`（[749](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)）→ [`TokenizerControlMixin.init_communicators`](d:\design\sglang\python\sglang\srt\managers\tokenizer_control_mixin.py)（[153-165](d:\design\sglang\python\sglang\srt\managers\tokenizer_control_mixin.py)）
+#### `init_request_dispatcher` + control communicators（[tokenizer_manager.py:742-763](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)）
+- 注册 abort / session / weight / health / elastic 等结果类型后调用 `self.init_communicators(self.server_args)`（[761](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)）→ [`TokenizerControlMixin.init_communicators`](d:\design\sglang\python\sglang\srt\managers\tokenizer_control_mixin.py)（[154-167](d:\design\sglang\python\sglang\srt\managers\tokenizer_control_mixin.py)；`FanOutCommunicator` fan-out 现读 `get_parallel().dp_size`）
 
 ## 关键 API
 
 | 方法 | 行号 | 说明 |
 |---|---|---|
-| `_dispatch_to_scheduler(obj)` | [556-559](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) | 统一发往 scheduler（多 worker 时 stamp IPC） |
-| `_send_one_request(...)` | [1547-1568](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) | 单个请求 → scheduler（含 cuda_vmm prepare） |
-| `_send_batch_request(...)` | [1569-1600](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) | batch 请求 → scheduler |
-| `_coalesce_streaming_chunks(...)` | [1602-1637](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) | 流式 chunk 合并 |
-| `abort_request(rid, abort_all)` | [1941-1958](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) | abort（`AbortReq` → `_dispatch_to_scheduler`） |
-| `_validate_one_request(...)` | [1147-...](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) | 输入校验 |
-| `_validate_mm_limits(...)` | [1240-...](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) | 多模态限制校验 |
-| `_validate_input_ids_in_vocab(...)` | [1303-...](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) | vocab 校验 |
-| `_create_tokenized_object(...)` | [1321-...](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) | 构造 TokenizedGenerateReqInput |
-| `_should_use_batch_tokenization(...)` | [1531-1545](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) | batch tokenize 决策 |
-| `_handle_batch_output(...)` | [2174-...](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) | 处理来自 detokenizer 的 batch 输出 |
-| `add_logprob_to_meta_info(...)` | [2467-...](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) | logprobs 添加 |
-| `convert_logprob_style(...)` | [2608-...](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) | logprobs 格式 |
-| `detokenize_logprob_tokens(...)` | [2685-...](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) | logprobs detokenize |
-| `auto_create_handle_loop()` | [2134-2157](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) | 启动 asyncio 接收循环（`handle_loop` 在 [2159-2172](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)） |
-| `dump_requests` / `dump_requests_before_crash` | [2880](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) / [2962](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) | crash dump |
+| `_dispatch_to_scheduler(obj)` | [569-572](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) | 统一发往 scheduler（多 worker 时 stamp IPC；async 变体 `_async_dispatch_to_scheduler` 在 [574-577](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)） |
+| `_send_one_request(...)` | [1597-1617](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) | 单个请求 → scheduler（含 cuda_vmm prepare） |
+| `_send_batch_request(...)` | [1619-1650](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) | batch 请求 → scheduler |
+| `_coalesce_streaming_chunks(...)` | [1652-1687](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) | 流式 chunk 合并 |
+| `abort_request(rid, abort_all)` | [1991-2008](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) | abort（`AbortReq` → `_dispatch_to_scheduler`） |
+| `_validate_one_request(...)` | [1196-...](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) | 输入校验 |
+| `_validate_mm_limits(...)` | [1289-...](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) | 多模态限制校验 |
+| `_validate_input_ids_in_vocab(...)` | [1352-...](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) | vocab 校验 |
+| `_create_tokenized_object(...)` | [1370-...](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) | 构造 TokenizedGenerateReqInput |
+| `_should_use_batch_tokenization(...)` | [1581-1595](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) | batch tokenize 决策 |
+| `_handle_batch_output(...)` | [2214-...](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) | 处理来自 detokenizer 的 batch 输出 |
+| `add_logprob_to_meta_info(...)` | [2507-...](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) | logprobs 添加 |
+| `convert_logprob_style(...)` | [2648-...](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) | logprobs 格式 |
+| `detokenize_logprob_tokens(...)` | [2725-...](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) | logprobs detokenize |
+| `auto_create_handle_loop()` | [2174-2197](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) | 启动 asyncio 接收循环（`handle_loop` 在 [2199-2212](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py)） |
+| `dump_requests` / `dump_requests_before_crash` | [2920](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) / [3002](d:\design\sglang\python\sglang\srt\managers\tokenizer_manager.py) | crash dump |
 
 ## `DetokenizerManager` （[detokenizer_manager.py](d:\design\sglang\python\sglang\srt\managers\detokenizer_manager.py)）
 

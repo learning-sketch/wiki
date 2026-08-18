@@ -111,7 +111,7 @@ class Scheduler(
 ):
 ```
 
-`SchedulerMlxOverlapMixin`：`is_mps()` 时从 [hardware_backend/mlx/scheduler_mixin.py](d:\design\sglang\python\sglang\srt\hardware_backend\mlx\scheduler_mixin.py) 导入；否则在 [scheduler.py:330-331](d:\design\sglang\python\sglang\srt\managers\scheduler.py) 定义为空 stub（[scheduler.py:324-331](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）。
+`SchedulerMlxOverlapMixin`：`is_mps()` 时从 [hardware_backend/mlx/scheduler_mixin.py](d:\design\sglang\python\sglang\srt\hardware_backend\mlx\scheduler_mixin.py) 导入；否则在 [scheduler.py:338-339](d:\design\sglang\python\sglang\srt\managers\scheduler.py) 定义为空 stub（[scheduler.py:332-339](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）。
 
 ### 为什么残留 mixin、横切职责改 composition
 
@@ -122,30 +122,30 @@ synthesis: 取舍可从代码布局直接读出：
 | **Mixin 多继承** | 6 个残留基类 | 需要**替换 / 提供整套 `event_loop_*`** 或大量与主循环交织的方法（PD / PP / PDMux / DLLM / MLX overlap） |
 | **Composition** | `scheduler_components/` 对象挂在 `self.*` | 正交横切职责（IPC、结果处理、metrics、weights、profiler、DP-attn sync、pool 不变量）——可单测、可替换实现，不必进 MRO |
 
-证据：`process_batch_result` 已不再调 mixin 方法做普通 prefill/decode，而是委托 `self.batch_result_processor` / `self.metrics_reporter`，仅 DLLM / PD-prefill 仍走 mixin（[scheduler.py:3887-3918](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）。
+证据：`process_batch_result` 已不再调 mixin 方法做普通 prefill/decode，而是委托 `self.batch_result_processor` / `self.metrics_reporter`，仅 DLLM / PD-prefill 仍走 mixin（[scheduler.py:3922-3957](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）。
 
 ## 6 Mixin 拆解表
 
 | # | Mixin | 主要职责 | 关键方法（mixin 文件内） | 触发条件 |
 |---|---|---|---|---|
-| 1 | `SchedulerDisaggregationDecodeMixin` | PD-decode：等 KV、prebuilt decode | `event_loop_normal_disagg_decode`（[L2114](d:\design\sglang\python\sglang\srt\disaggregation\decode.py)）；`event_loop_overlap_disagg_decode`（[L2148](d:\design\sglang\python\sglang\srt\disaggregation\decode.py)）；`get_next_disagg_decode_batch_to_run`（[L2216](d:\design\sglang\python\sglang\srt\disaggregation\decode.py)）；`process_decode_queue`（[L2317](d:\design\sglang\python\sglang\srt\disaggregation\decode.py)） | `dispatch_event_loop` 在 `DisaggregationMode.DECODE`（[scheduler.py:4883-4889](d:\design\sglang\python\sglang\srt\managers\scheduler.py)） |
-| 2 | `SchedulerDisaggregationPrefillMixin` | PD-prefill：跑 prefill + 发 KV | `event_loop_normal_disagg_prefill`（[L569](d:\design\sglang\python\sglang\srt\disaggregation\prefill.py)）；`event_loop_overlap_disagg_prefill`（[L607](d:\design\sglang\python\sglang\srt\disaggregation\prefill.py)）；`process_batch_result_disagg_prefill`（[L658](d:\design\sglang\python\sglang\srt\disaggregation\prefill.py)）；`send_kv_chunk`（[L1128](d:\design\sglang\python\sglang\srt\disaggregation\prefill.py)） | `dispatch_event_loop` 在 `PREFILL`（[scheduler.py:4876-4882](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）；结果分派见 [L3899-3900](d:\design\sglang\python\sglang\srt\managers\scheduler.py) |
-| 3 | `SchedulerMultiplexMixin` | PD-Multiplexing：SM partition + 多 stream | `init_pdmux`（[L35](d:\design\sglang\python\sglang\srt\multiplex\multiplexing_mixin.py)）；`adjust_stream_groups`（[L50](d:\design\sglang\python\sglang\srt\multiplex\multiplexing_mixin.py)）；`event_loop_pdmux`（[L101](d:\design\sglang\python\sglang\srt\multiplex\multiplexing_mixin.py)） | `enable_pdmux` → `event_loop_pdmux`（[scheduler.py:4866-4867](d:\design\sglang\python\sglang\srt\managers\scheduler.py)） |
-| 4 | `SchedulerPPMixin` | Pipeline Parallel 三套循环 | `event_loop_pp`（[L69](d:\design\sglang\python\sglang\srt\managers\scheduler_pp_mixin.py)）；`event_loop_pp_disagg_prefill`（[L178](d:\design\sglang\python\sglang\srt\managers\scheduler_pp_mixin.py)）；`event_loop_pp_disagg_decode`（[L362](d:\design\sglang\python\sglang\srt\managers\scheduler_pp_mixin.py)）；`init_pp_loop_state`（[L559](d:\design\sglang\python\sglang\srt\managers\scheduler_pp_mixin.py)） | `pp_size > 1` 分支（[scheduler.py:4868-4869](d:\design\sglang\python\sglang\srt\managers\scheduler.py)、[L4877-4878](d:\design\sglang\python\sglang\srt\managers\scheduler.py)、[L4884-4885](d:\design\sglang\python\sglang\srt\managers\scheduler.py)） |
-| 5 | `SchedulerDllmMixin` | Diffusion LLM 调度 | `init_diffusion_llm`（[L23](d:\design\sglang\python\sglang\srt\dllm\mixin\scheduler.py)）；`get_new_batch_dllm`（[L31](d:\design\sglang\python\sglang\srt\dllm\mixin\scheduler.py)）；`process_batch_result_dllm`（[L69](d:\design\sglang\python\sglang\srt\dllm\mixin\scheduler.py)） | `batch.is_dllm()` 时分派（[scheduler.py:3897-3898](d:\design\sglang\python\sglang\srt\managers\scheduler.py)） |
-| 6 | `SchedulerMlxOverlapMixin` | MLX overlap 主循环 | `event_loop_overlap_mlx`（[L116](d:\design\sglang\python\sglang\srt\hardware_backend\mlx\scheduler_mixin.py)）；`_prepare_mlx_launch`（[L92](d:\design\sglang\python\sglang\srt\hardware_backend\mlx\scheduler_mixin.py)） | `enable_overlap_mlx`（[scheduler.py:4870-4871](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）；非 MPS 为空 stub |
+| 1 | `SchedulerDisaggregationDecodeMixin` | PD-decode：等 KV、prebuilt decode | `event_loop_normal_disagg_decode`（[L2139](d:\design\sglang\python\sglang\srt\disaggregation\decode.py)）；`event_loop_overlap_disagg_decode`（[L2173](d:\design\sglang\python\sglang\srt\disaggregation\decode.py)）；`get_next_disagg_decode_batch_to_run`（[L2241](d:\design\sglang\python\sglang\srt\disaggregation\decode.py)）；`process_decode_queue`（[L2342](d:\design\sglang\python\sglang\srt\disaggregation\decode.py)） | `dispatch_event_loop` 在 `DisaggregationMode.DECODE`（[scheduler.py:4923-4929](d:\design\sglang\python\sglang\srt\managers\scheduler.py)） |
+| 2 | `SchedulerDisaggregationPrefillMixin` | PD-prefill：跑 prefill + 发 KV | `event_loop_normal_disagg_prefill`（[L569](d:\design\sglang\python\sglang\srt\disaggregation\prefill.py)）；`event_loop_overlap_disagg_prefill`（[L607](d:\design\sglang\python\sglang\srt\disaggregation\prefill.py)）；`process_batch_result_disagg_prefill`（[L658](d:\design\sglang\python\sglang\srt\disaggregation\prefill.py)）；`send_kv_chunk`（[L1139](d:\design\sglang\python\sglang\srt\disaggregation\prefill.py)） | `dispatch_event_loop` 在 `PREFILL`（[scheduler.py:4916-4922](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）；结果分派见 [L3937-3938](d:\design\sglang\python\sglang\srt\managers\scheduler.py) |
+| 3 | `SchedulerMultiplexMixin` | PD-Multiplexing：SM partition + 多 stream | `init_pdmux`（[L35](d:\design\sglang\python\sglang\srt\multiplex\multiplexing_mixin.py)）；`adjust_stream_groups`（[L50](d:\design\sglang\python\sglang\srt\multiplex\multiplexing_mixin.py)）；`event_loop_pdmux`（[L101](d:\design\sglang\python\sglang\srt\multiplex\multiplexing_mixin.py)） | `enable_pdmux` → `event_loop_pdmux`（[scheduler.py:4906-4907](d:\design\sglang\python\sglang\srt\managers\scheduler.py)） |
+| 4 | `SchedulerPPMixin` | Pipeline Parallel 三套循环 | `event_loop_pp`（[L69](d:\design\sglang\python\sglang\srt\managers\scheduler_pp_mixin.py)）；`event_loop_pp_disagg_prefill`（[L178](d:\design\sglang\python\sglang\srt\managers\scheduler_pp_mixin.py)）；`event_loop_pp_disagg_decode`（[L364](d:\design\sglang\python\sglang\srt\managers\scheduler_pp_mixin.py)）；`init_pp_loop_state`（[L561](d:\design\sglang\python\sglang\srt\managers\scheduler_pp_mixin.py)） | `configured_pp_size() > 1` 分支（[scheduler.py:4908-4909](d:\design\sglang\python\sglang\srt\managers\scheduler.py)、[L4917-4918](d:\design\sglang\python\sglang\srt\managers\scheduler.py)、[L4924-4925](d:\design\sglang\python\sglang\srt\managers\scheduler.py)） |
+| 5 | `SchedulerDllmMixin` | Diffusion LLM 调度 | `init_diffusion_llm`（[L23](d:\design\sglang\python\sglang\srt\dllm\mixin\scheduler.py)）；`get_new_batch_dllm`（[L31](d:\design\sglang\python\sglang\srt\dllm\mixin\scheduler.py)）；`process_batch_result_dllm`（[L69](d:\design\sglang\python\sglang\srt\dllm\mixin\scheduler.py)） | `batch.is_dllm()` 时分派（[scheduler.py:3935-3936](d:\design\sglang\python\sglang\srt\managers\scheduler.py)） |
+| 6 | `SchedulerMlxOverlapMixin` | MLX overlap 主循环 | `event_loop_overlap_mlx`（[L116](d:\design\sglang\python\sglang\srt\hardware_backend\mlx\scheduler_mixin.py)）；`_prepare_mlx_launch`（[L92](d:\design\sglang\python\sglang\srt\hardware_backend\mlx\scheduler_mixin.py)） | `enable_overlap_mlx`（[scheduler.py:4910-4911](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）；非 MPS 为空 stub |
 
 ## 前 mixin → 现 composition 映射
 
 | 旧 mixin（源文件已删） | 现组件 / 归属 | 初始化锚点 |
 |---|---|---|
-| `SchedulerOutputProcessorMixin` | `SchedulerBatchResultProcessor` + `SchedulerOutputStreamer` + `SchedulerLogprobResultProcessor` | [scheduler.py:2112-2147](d:\design\sglang\python\sglang\srt\managers\scheduler.py) |
-| `SchedulerUpdateWeightsMixin` | `SchedulerWeightUpdaterManager` | [scheduler.py:1913-1923](d:\design\sglang\python\sglang\srt\managers\scheduler.py)（见 [entities/Scheduler.md](../entities/Scheduler.md)） |
-| `SchedulerProfilerMixin` | `SchedulerProfilerManager` | [scheduler.py:1906-1911](d:\design\sglang\python\sglang\srt\managers\scheduler.py) |
-| `SchedulerMetricsMixin` | `SchedulerMetricsReporter` + `SchedulerKvEventsPublisher` + `SchedulerLoadInquirer`；（Prometheus collector 仍在 `observability/metrics_collector.py` 的 `SchedulerMetricsCollector`） | [scheduler.py:2066-2110](d:\design\sglang\python\sglang\srt\managers\scheduler.py) |
-| `SchedulerRuntimeCheckerMixin` | `SchedulerInvariantChecker` + `SchedulerPoolStatsObserver` + `create_scheduler_watchdog` | [scheduler.py:2031-2064](d:\design\sglang\python\sglang\srt\managers\scheduler.py) |
-| `SchedulerDPAttnMixin` | `SchedulerDPAttnAdapter` | [scheduler.py:2008-2029](d:\design\sglang\python\sglang\srt\managers\scheduler.py) |
-| （同文件辅助）`IdleSleeper` | [idle_sleeper.py:15](d:\design\sglang\python\sglang\srt\managers\scheduler_components\idle_sleeper.py) | [scheduler.py:770-784](d:\design\sglang\python\sglang\srt\managers\scheduler.py) |
+| `SchedulerOutputProcessorMixin` | `SchedulerBatchResultProcessor` + `SchedulerOutputStreamer` + `SchedulerLogprobResultProcessor` | [scheduler.py:2139-2176](d:\design\sglang\python\sglang\srt\managers\scheduler.py) |
+| `SchedulerUpdateWeightsMixin` | `SchedulerWeightUpdaterManager` | [scheduler.py:1940-1950](d:\design\sglang\python\sglang\srt\managers\scheduler.py)（见 [entities/Scheduler.md](../entities/Scheduler.md)） |
+| `SchedulerProfilerMixin` | `SchedulerProfilerManager` | [scheduler.py:1933-1939](d:\design\sglang\python\sglang\srt\managers\scheduler.py) |
+| `SchedulerMetricsMixin` | `SchedulerMetricsReporter` + `SchedulerKvEventsPublisher` + `SchedulerLoadInquirer`；（Prometheus collector 仍在 `observability/metrics_collector.py` 的 `SchedulerMetricsCollector`） | `init_metrics_reporter` @ [scheduler.py:1198](d:\design\sglang\python\sglang\srt\managers\scheduler.py)（已前移）；publisher/inquirer @ [L2093-2138](d:\design\sglang\python\sglang\srt\managers\scheduler.py) |
+| `SchedulerRuntimeCheckerMixin` | `SchedulerInvariantChecker` + `SchedulerPoolStatsObserver` + `create_scheduler_watchdog` | [scheduler.py:2058-2092](d:\design\sglang\python\sglang\srt\managers\scheduler.py) |
+| `SchedulerDPAttnMixin` | `SchedulerDPAttnAdapter` | [scheduler.py:2035-2057](d:\design\sglang\python\sglang\srt\managers\scheduler.py) |
+| （同文件辅助）`IdleSleeper` | [idle_sleeper.py:15](d:\design\sglang\python\sglang\srt\managers\scheduler_components\idle_sleeper.py) | [scheduler.py:777-790](d:\design\sglang\python\sglang\srt\managers\scheduler.py) |
 | （同文件辅助）`SenderWrapper` | [output_sender.py:8](d:\design\sglang\python\sglang\srt\managers\scheduler_components\output_sender.py)；经 `SchedulerIpcChannels` | [ipc_channels.py:67-68](d:\design\sglang\python\sglang\srt\managers\scheduler_components\ipc_channels.py) |
 
 ## `scheduler_components/` 组件表
@@ -160,9 +160,9 @@ synthesis: 取舍可从代码布局直接读出：
 | [output_streamer.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\output_streamer.py) | `SchedulerOutputStreamer`（[L45](d:\design\sglang\python\sglang\srt\managers\scheduler_components\output_streamer.py)） | 向 detokenizer / Rust egress 推流 |
 | [logprob_result_processor.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\logprob_result_processor.py) | `SchedulerLogprobResultProcessor`（[L23](d:\design\sglang\python\sglang\srt\managers\scheduler_components\logprob_result_processor.py)） | logprob 后处理 |
 | [weight_updater.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\weight_updater.py) | `SchedulerWeightUpdaterManager`（[L76](d:\design\sglang\python\sglang\srt\managers\scheduler_components\weight_updater.py)） | 在线权重 / IPC / memory occupation |
-| [profiler_manager.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\profiler_manager.py) | `SchedulerProfilerManager`（[L51](d:\design\sglang\python\sglang\srt\managers\scheduler_components\profiler_manager.py)） | torch/CUDA profiler RPC |
-| [metrics_reporter.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\metrics_reporter.py) | `SchedulerMetricsReporter`（[L92](d:\design\sglang\python\sglang\srt\managers\scheduler_components\metrics_reporter.py)） | 步级 metrics + FPM |
-| [dp_attn.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\dp_attn.py) | `SchedulerDPAttnAdapter`（[L387](d:\design\sglang\python\sglang\srt\managers\scheduler_components\dp_attn.py)） | DP-attn MLP sync batch |
+| [profiler_manager.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\profiler_manager.py) | `SchedulerProfilerManager`（[L53](d:\design\sglang\python\sglang\srt\managers\scheduler_components\profiler_manager.py)） | torch/CUDA profiler RPC |
+| [metrics_reporter.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\metrics_reporter.py) | `SchedulerMetricsReporter`（[L93](d:\design\sglang\python\sglang\srt\managers\scheduler_components\metrics_reporter.py)） | 步级 metrics + FPM |
+| [dp_attn.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\dp_attn.py) | `SchedulerDPAttnAdapter`（[L395](d:\design\sglang\python\sglang\srt\managers\scheduler_components\dp_attn.py)） | DP-attn MLP sync batch |
 | [invariant_checker.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\invariant_checker.py) | `SchedulerInvariantChecker`（[L44](d:\design\sglang\python\sglang\srt\managers\scheduler_components\invariant_checker.py)）、`create_scheduler_watchdog`（[L462](d:\design\sglang\python\sglang\srt\managers\scheduler_components\invariant_checker.py)） | pool/tree 不变量 + watchdog 工厂 |
 | [pool_stats_observer.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\pool_stats_observer.py) | `SchedulerPoolStatsObserver`（[L142](d:\design\sglang\python\sglang\srt\managers\scheduler_components\pool_stats_observer.py)） | KV/req pool 用量观察 |
 | [load_inquirer.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\load_inquirer.py) | `SchedulerLoadInquirer`（[L34](d:\design\sglang\python\sglang\srt\managers\scheduler_components\load_inquirer.py)） | `/v1/loads` 等负载查询 |
@@ -172,17 +172,17 @@ synthesis: 取舍可从代码布局直接读出：
 | [new_token_ratio_tracker.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\new_token_ratio_tracker.py) | `NewTokenRatioTracker`（[L14](d:\design\sglang\python\sglang\srt\managers\scheduler_components\new_token_ratio_tracker.py)） | 新 token 比例估计 |
 | [memory_usage.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\memory_usage.py) | `build_memory_usage` 等 | 内存用量汇总 helper |
 
-`__init__` 末尾装配顺序：[init_request_receiver → init_dp_attn_adapter → init_pool_stats_observer → init_invariant_checker → init_kv_events_publisher → init_load_inquirer → init_output_streamer → init_batch_result_processor](d:\design\sglang\python\sglang\srt\managers\scheduler.py)（[L634-648](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）。
+`__init__` 末尾装配顺序：[init_request_receiver → init_dp_attn_adapter → init_pool_stats_observer → init_invariant_checker → init_kv_events_publisher → init_load_inquirer → init_output_streamer → init_batch_result_processor](d:\design\sglang\python\sglang\srt\managers\scheduler.py)（[L642-656](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）。
 
 ## 跨 mixin / 组件协作链
 
 ### Chain 1：`dispatch_event_loop` → 残留 mixin 的 `event_loop_*`
 
-[scheduler.py:4861-4889](d:\design\sglang\python\sglang\srt\managers\scheduler.py) 按 `disaggregation_mode × enable_pdmux × pp_size × enable_overlap(_mlx)` 分派到各 mixin（或基类 `event_loop_normal` / `event_loop_overlap`）。
+[scheduler.py:4902-4929](d:\design\sglang\python\sglang\srt\managers\scheduler.py) 按 `disaggregation_mode × enable_pdmux × configured_pp_size() × enable_overlap(_mlx)` 分派到各 mixin（或基类 `event_loop_normal` / `event_loop_overlap`）。PP 判定现调用模块级 `configured_pp_size()` 而非实例属性（MLX stub 下 live PP property 会在 torch.distributed 初始化前 assert，见 [scheduler.py:4903 注释](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）。
 
 ### Chain 2：基类 `process_batch_result` → composition + 残留 mixin
 
-[scheduler.py:3887-3918](d:\design\sglang\python\sglang\srt\managers\scheduler.py)：
+[scheduler.py:3922-3957](d:\design\sglang\python\sglang\srt\managers\scheduler.py)：
 
 - decode / 普通 extend / prebuilt / idle → `batch_result_processor.*`
 - extend + `batch.is_dllm()` → `process_batch_result_dllm`（`SchedulerDllmMixin`）
@@ -191,19 +191,34 @@ synthesis: 取舍可从代码布局直接读出：
 
 ### Chain 3：`get_next_batch_to_run` → `dp_attn_adapter`
 
-DP-attn 同步不再是 mixin 方法，而是 `self.dp_attn_adapter.maybe_prepare_mlp_sync_batch`（见 [entities/Scheduler.md](../entities/Scheduler.md) §关键 step 函数；adapter 定义 [dp_attn.py:387](d:\design\sglang\python\sglang\srt\managers\scheduler_components\dp_attn.py)）。
+DP-attn 同步不再是 mixin 方法，而是 `self.dp_attn_adapter.maybe_prepare_mlp_sync_batch`（见 [entities/Scheduler.md](../entities/Scheduler.md) §关键 step 函数；adapter 定义 [dp_attn.py:395](d:\design\sglang\python\sglang\srt\managers\scheduler_components\dp_attn.py)）。
 
 ### Chain 4：PP / PDMux 仍复刻 step，但结果路径走 composition
 
 `event_loop_pp` / `event_loop_pdmux` 仍由 mixin 提供完整循环；其内部调用的 `process_batch_result` / metrics 路径已落到组件上——synthesis: **循环结构留在 mixin，横切处理进 composition**。
 
+## Increment 2026-08-18 (06f32bab → f7101b0a)
+
+本期 `scheduler.py` +109/-70、`scheduler_components/` 6 文件小改（合计 +278/-147）。**结构性结论全部不变**：MRO 仍是 6 mixin（DisaggDecode / DisaggPrefill / Multiplex / PP / Dllm / MlxOverlap，[scheduler.py:L383-L390](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）；`scheduler_components/` 仍是 **19 模块 + `__init__.py`**（实地 ls 复核，无增删文件）。本页锚点整体下移 6-45 行，具体：
+
+- **`class Scheduler(` 从 L375 → [L383](d:\design\sglang\python\sglang\srt\managers\scheduler.py)**；`dispatch_event_loop` 从 L4861 → [L4902](d:\design\sglang\python\sglang\srt\managers\scheduler.py)；`process_batch_result` 从 L3887 → [L3922](d:\design\sglang\python\sglang\srt\managers\scheduler.py)。
+- **`dispatch_event_loop` 的 PP 判定改用模块级 `configured_pp_size()`**（[scheduler.py:L4908](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）而非 `scheduler.pp_size` 实例属性——MLX stub 下 live PP property 会在 torch.distributed 初始化前 assert（[L4903 注释](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）。分派拓扑（pdmux → pp → overlap_mlx → overlap → normal）不变。
+- **`init_metrics_reporter` 从组件装配区（原 L2066+）前移至 [scheduler.py:L1198](d:\design\sglang\python\sglang\srt\managers\scheduler.py)**；其余 `init_*` 组件装配仍集中在 [L2035-L2176](d:\design\sglang\python\sglang\srt\managers\scheduler.py)，`__init__` 末尾装配调用序（[L642-L656](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）顺序不变。
+- 组件内部小改（类定义行随之漂移）：
+  - [metrics_reporter.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\metrics_reporter.py) +61/-15：prefill FLOPs 估计修正（#34316，计入 prefix + per-request causal pairs）、EPLB balancedness 报告模式（#34998）；类 @ [L93](d:\design\sglang\python\sglang\srt\managers\scheduler_components\metrics_reporter.py)。
+  - [batch_result_processor.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\batch_result_processor.py) +43/-29：config bags 读取改造（#35026）+ HiCache Mamba track-boundary 修复（#29792）；类仍 @ [L77](d:\design\sglang\python\sglang\srt\managers\scheduler_components\batch_result_processor.py)。
+  - [dp_attn.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\dp_attn.py) +25/-17：DP attention sync 收敛为单次 D2H copy（#34338）+ world-size-one aliasing 修复（#34997）；`SchedulerDPAttnAdapter` L387 → [L395](d:\design\sglang\python\sglang\srt\managers\scheduler_components\dp_attn.py)。
+  - [profiler_manager.py](d:\design\sglang\python\sglang\srt\managers\scheduler_components\profiler_manager.py) +24/-1：Profiling Enhancements [2/3] 详细执行步注解（#24911）；`SchedulerProfilerManager` L51 → [L53](d:\design\sglang\python\sglang\srt\managers\scheduler_components\profiler_manager.py)。
+- `process_batch_result` 新增步骤（不改分派结构）：入口 `flush_trace_batch` + `publish_load_snapshot`（[scheduler.py:L3929-L3930](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）、收尾 `_record_step_counters`（[L3946](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）；DLLM / PD-prefill 仍走 mixin（[L3935-L3938](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）。
+- synthesis: 本期对本页叙事无架构级影响——「循环留 mixin、横切进 composition」结论继续成立；变化集中在 metrics/profiling 精度与 config-bags（`get_observability()` 等配置袋替代散读 `server_args`）迁移。
+
 ## Notes / Caveats
 
 > synthesis: 旧「11 mixin / Internal 6 + External 5」叙事在 HEAD 上失效；对比页 [comparison/topics/scheduler-architecture.md](../../comparison/topics/scheduler-architecture.md) 等仍可能写 11 mixin，需单独 verify（本页不改 comparison）。
 
-> [!todo] VERIFY: `dispatch_event_loop` 未出现 `pp_size > 1` × `enable_pdmux` 组合（[scheduler.py:4865-4875](d:\design\sglang\python\sglang\srt\managers\scheduler.py) 先判 pdmux 再判 pp）——疑似互斥；与 [topics/pd-disaggregation.md](pd-disaggregation.md) 的 PD-Disagg vs PD-Mux 互斥正交。
+> [!todo] VERIFY: `dispatch_event_loop` 未出现 `configured_pp_size() > 1` × `enable_pdmux` 组合（[scheduler.py:4905-4915](d:\design\sglang\python\sglang\srt\managers\scheduler.py) 先判 pdmux 再判 pp）——疑似互斥；与 [topics/pd-disaggregation.md](pd-disaggregation.md) 的 PD-Disagg vs PD-Mux 互斥正交。
 
-> [!todo] VERIFY: `event_loop_overlap_disagg_decode`（[decode.py:2148](d:\design\sglang\python\sglang\srt\disaggregation\decode.py)）与基类 `event_loop_overlap`（[scheduler.py:1727](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）的 `result_queue` 是否各自局部 `deque`——粗读为各循环自建。
+> [!todo] VERIFY: `event_loop_overlap_disagg_decode`（[decode.py:2173](d:\design\sglang\python\sglang\srt\disaggregation\decode.py)，`result_queue` @ [L2174](d:\design\sglang\python\sglang\srt\disaggregation\decode.py)）与基类 `event_loop_overlap`（[scheduler.py:1754](d:\design\sglang\python\sglang\srt\managers\scheduler.py)，`result_queue` @ [L1756](d:\design\sglang\python\sglang\srt\managers\scheduler.py)）的 `result_queue` 是否各自局部 `deque`——粗读为各循环自建。
 
 ## See also
 

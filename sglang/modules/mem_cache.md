@@ -3,13 +3,13 @@ type: module
 project: sglang
 status: stale
 confidence: high
-verified_against: 2026-04-19
+verified_against: 2026-08-18
 sources:
   - d:\design\sglang\python\sglang\srt\mem_cache
   - d:\design\sglang\python\sglang\srt\mem_cache\base_prefix_cache.py
   - d:\design\sglang\python\sglang\srt\mem_cache\radix_cache.py
   - d:\design\sglang\python\sglang\srt\mem_cache\hiradix_cache.py
-  - d:\design\sglang\python\sglang\srt\mem_cache\allocator.py
+  - d:\design\sglang\python\sglang\srt\mem_cache\allocator\
   - d:\design\sglang\python\sglang\srt\mem_cache\memory_pool.py
   - d:\design\sglang\python\sglang\srt\mem_cache\hicache_storage.py
 related:
@@ -26,7 +26,7 @@ related:
 synthesis: SGLang 的 KV cache 体系是三个项目里**最大、最分散**的——`srt/mem_cache/` 单目录就有 **62 个 .py 文件**。它通过 4 层抽象组合：(1) `BasePrefixCache` 接口 + 多种 prefix cache 实现（RadixCache / HiRadixCache / SWA / Mamba / ChunkCache）；(2) `BaseTokenToKVPoolAllocator` 接口 + 2 种 allocator（标准 / Paged）；(3) 各种 `KVCache` pool 实现（MHA / MLA / NSA / DoubleSparse 等，含 FP4 量化版）；(4) `HiCache` 多层存储后端（mooncake / nixl / hf3fs / lmcache / aibrix / eic / simm）。
 
 ## Sources
-- 模块根：[d:\design\sglang\python\sglang\srt\mem_cache\](d:\design\sglang\python\sglang\srt\mem_cache)（62 文件）
+- 模块根：[d:\design\sglang\python\sglang\srt\mem_cache\](d:\design\sglang\python\sglang\srt\mem_cache)（正文写作时 62 文件；**HEAD f7101b0a 实测 119 `.py`**，详 §Increment） 
 - 接口：[base_prefix_cache.py](d:\design\sglang\python\sglang\srt\mem_cache\base_prefix_cache.py), [allocator.py](d:\design\sglang\python\sglang\srt\mem_cache\allocator.py), [hicache_storage.py](d:\design\sglang\python\sglang\srt\mem_cache\hicache_storage.py)
 - 主 prefix cache：[radix_cache.py](d:\design\sglang\python\sglang\srt\mem_cache\radix_cache.py), [hiradix_cache.py](d:\design\sglang\python\sglang\srt\mem_cache\hiradix_cache.py), [chunk_cache.py](d:\design\sglang\python\sglang\srt\mem_cache\chunk_cache.py)
 - 主 KV pool：[memory_pool.py](d:\design\sglang\python\sglang\srt\mem_cache\memory_pool.py)（约 2070 行）
@@ -289,11 +289,26 @@ classDiagram
 | 多层存储 | HiCache 一等公民 | 通过 KVConnector 钩子 |
 | 量化 | FP4 独立子类 | 通过 `KVQuantMode` enum |
 
+## Increment 2026-08-18 (06f32bab → f7101b0a)
+
+本页正文仍是 pin `34fef07a` 时代的叙事（`status: stale` 维持不变，正文骨架未重写）；本小节记录 06f32bab → f7101b0a 的增量事实（`git diff --stat` = 47 文件 / +2914/-1469），与 [topics/kv-cache.md](../topics/kv-cache.md) 的同名小节互为镜像：
+
+- **文件数**：`.py` 116 → **119**（`find mem_cache -name '*.py' | wc -l` @ f7101b0a）。
+- **子目录结构**（骨架复核）：现为 9 个子目录——`allocator/`、`cpp_radix_tree/`、`cpp_utils/`、`hybrid_cache/`、`layout/`、`pool_host/`、`sparsity/`、`storage/`、`unified_cache/`（[d:\design\sglang\python\sglang\srt\mem_cache\](d:\design\sglang\python\sglang\srt\mem_cache)）。正文 §4 的 `unified_cache_components/` 早已更名为 `unified_cache/`（06f32bab 时已如此）。
+- **`MambaPoolHost` 迁出 `memory_pool_host.py`**（#31180）：该文件 -698 行，类移入新文件 [pool_host/mamba.py:L42](d:\design\sglang\python\sglang\srt\mem_cache\pool_host\mamba.py)（+610 行）；`memory_pool_host.py` 剩 `LogicalHostPool` @ [L61](d:\design\sglang\python\sglang\srt\mem_cache\memory_pool_host.py)、`DeepSeekV4PagedHostPool` @ [L183](d:\design\sglang\python\sglang\srt\mem_cache\memory_pool_host.py)、`HostPoolGroup` @ [L988](d:\design\sglang\python\sglang\srt\mem_cache\memory_pool_host.py) 等。正文 §3 "`memory_pool_host.py` | Host (CPU) KV pool" 一行现应理解为 host pool **家族**分布在 `memory_pool_host.py` + `pool_host/{base,common,hisparse,mamba,mha,mla}.py`。
+- **嵌入缓存脱离 Mooncake**（#30392）：`storage/mooncake_store/embedding_cache_controller.py` **重命名迁至** [mem_cache/embedding_cache_controller.py](d:\design\sglang\python\sglang\srt\mem_cache\embedding_cache_controller.py)（`EmbeddingCacheController` @ [L344](d:\design\sglang\python\sglang\srt\mem_cache\embedding_cache_controller.py)）；新增 [embedding_store.py](d:\design\sglang\python\sglang\srt\mem_cache\embedding_store.py)（+127；`EmbeddingStore(ABC)` @ [L14](d:\design\sglang\python\sglang\srt\mem_cache\embedding_store.py)）。正文 §6 "Mooncake Store（含 embedding store）"的 controller 部分已不在 `storage/mooncake_store/`（`mooncake_embedding_store.py` 仍在）。
+- **新文件 [l2_transfer.py](d:\design\sglang\python\sglang\srt\mem_cache\l2_transfer.py)**（+127，#34793）：`L2TransferEngine` @ [L49](d:\design\sglang\python\sglang\srt\mem_cache\l2_transfer.py)，把 HiCache L2 传输执行从 [hybrid_cache/hybrid_cache_controller.py](d:\design\sglang\python\sglang\srt\mem_cache\hybrid_cache\hybrid_cache_controller.py)（-226/+125）扁平化抽出，另被 `managers/cache_controller.py` / `unified_radix_cache.py` 消费。
+- **PD retraction 保 KV**（#34801）：新增 [`resolve_decode_retraction_backup`](d:\design\sglang\python\sglang\srt\mem_cache\kv_cache_builder.py)（[kv_cache_builder.py:L142-L190](d:\design\sglang\python\sglang\srt\mem_cache\kv_cache_builder.py)）与工厂链 host_pool 分支（[registry.py:L85-L89](d:\design\sglang\python\sglang\srt\mem_cache\registry.py)）；#33362 使 `--enable-unified-memory` 支持 PD 分离（[unified_radix_cache.py](d:\design\sglang\python\sglang\srt\mem_cache\unified_radix_cache.py) +278/293 行区间，类定义 L133→**L139**）。
+- **其它文件级 churn**：[kv_cache_configurator.py](d:\design\sglang\python\sglang\srt\mem_cache\kv_cache_configurator.py) +156/-37（`KVCacheConfigurator` @ [L212](d:\design\sglang\python\sglang\srt\mem_cache\kv_cache_configurator.py)）；[hybrid_cache/hybrid_pool_assembler.py](d:\design\sglang\python\sglang\srt\mem_cache\hybrid_cache\hybrid_pool_assembler.py) +143/-75（`StackStrategy` 策略族 @ [L1159-L1577](d:\design\sglang\python\sglang\srt\mem_cache\hybrid_cache\hybrid_pool_assembler.py)）；[kv_cache_builder.py](d:\design\sglang\python\sglang\srt\mem_cache\kv_cache_builder.py) +82（`build_kv_cache` L133→**L193**）；[storage/umbp/umbp_store.py](d:\design\sglang\python\sglang\srt\mem_cache\storage\umbp\umbp_store.py) +279（`KVEventsSubscriber` @ [L1495](d:\design\sglang\python\sglang\srt\mem_cache\storage\umbp\umbp_store.py)）；[kv_vmm_backing.py](d:\design\sglang\python\sglang\srt\mem_cache\kv_vmm_backing.py) +30/-101（VMM helper 收敛 #34199）。
+- **KV cache events 带 cache salt**（#30827）：`RadixKey` 增 `cache_salt`（[radix_cache.py:L62](d:\design\sglang\python\sglang\srt\mem_cache\radix_cache.py)），事件发布带 `BlockStoredMetadata(cache_salt=...)`（[events.py:L128-L133](d:\design\sglang\python\sglang\srt\mem_cache\events.py)）。
+- 正文锚点漂移复核（本页仍引用的骨架锚点）：`HiCacheStorage(ABC)` 正文写 L95 → 现 [hicache_storage.py:L150](d:\design\sglang\python\sglang\srt\mem_cache\hicache_storage.py)；`HiCacheFile` 正文写 L274 → 现 [L361](d:\design\sglang\python\sglang\srt\mem_cache\hicache_storage.py)（两者在 06f32bab 即已漂移，见下方 CONTRADICTION）。
+- synthesis: 正文四层抽象结论（PrefixCache / Allocator / KVCache / Storage）在 f7101b0a 仍成立；但正文的文件清单、工厂描述、行号已两代 stale，重读时以 [topics/kv-cache.md](../topics/kv-cache.md)（2026-08-18 已增量核对）为准。
+
 ## Notes / Caveats
 
-> [!todo] VERIFY: pin 从 `34fef07a` → `06f32bab`（2026-08-10 increment）后本页未深 verify；文件数量/行号可能漂移。优先对照 [entities/Scheduler.md](../entities/Scheduler.md) / 新模块页。
+> [!todo] VERIFY: pin 从 `34fef07a` → `06f32bab`（2026-08-10 increment）后本页未深 verify；文件数量/行号可能漂移。优先对照 [entities/Scheduler.md](../entities/Scheduler.md) / 新模块页。（2026-08-18 增量：骨架论断已按 §Increment 复核，正文行号仍未逐条重写。）
 
-> [!warning] CONTRADICTION: 本页仍描述 `init_cache_with_memory_pool` / 62 文件 / 单体 `allocator.py` / 7 HiCache 后端。HEAD `06f32bab` 已改为 [`kv_cache_builder.build_kv_cache`](d:\design\sglang\python\sglang\srt\mem_cache\kv_cache_builder.py) + [`registry.create_tree_cache`](d:\design\sglang\python\sglang\srt\mem_cache\registry.py)、**116** `.py`、`allocator/` 包、**9** 个 storage 注册名；`HiMambaRadixCache`/`session_aware_cache` 已删。权威工厂矩阵见 [topics/kv-cache.md](../topics/kv-cache.md)（re-ingest 2026-08-10）。
+> [!warning] CONTRADICTION: 本页仍描述 `init_cache_with_memory_pool` / 62 文件 / 单体 `allocator.py` / 7 HiCache 后端。HEAD 已改为 [`kv_cache_builder.build_kv_cache`](d:\design\sglang\python\sglang\srt\mem_cache\kv_cache_builder.py) + [`registry.create_tree_cache`](d:\design\sglang\python\sglang\srt\mem_cache\registry.py)、**119** `.py`（f7101b0a @ 2026-08-18；06f32bab 时为 116）、`allocator/` 包、**9** 个 storage 注册名；`HiMambaRadixCache`/`session_aware_cache` 已删。权威工厂矩阵见 [topics/kv-cache.md](../topics/kv-cache.md)（re-ingest 2026-08-10，增量核对 2026-08-18）。
 > [!todo] VERIFY: ~~`unified_cache_components/` 与 `unified_radix_cache.py` 的关系（疑是新一代统一接口，旧 RadixCache 在迁移）。~~
 > **RESOLVED 2026-04-19**: `unified_cache_components/` 提供 `FullComponent` / `SWAComponent` / `MambaComponent` / `TreeComponent` 等组件（[unified_radix_cache.py L31-L41 import](d:\design\sglang\python\sglang\srt\mem_cache\unified_radix_cache.py)），由 `UnifiedRadixCache(BasePrefixCache)` 组合 `tree_components` 元组（FULL + 可选 SWA/MAMBA）。**触发**：env `SGLANG_ENABLE_UNIFIED_RADIX_TREE`（[scheduler.py L854-L868](d:\design\sglang\python\sglang\srt\managers\scheduler.py)），优先级位于 hierarchical/HiCache 之后、`SWARadixCache`/`MambaRadixCache` 之前——确认是新一代统一接口，旧多个 RadixCache 子类按 env 显式切换，**未默认启用**。
 > [!todo] VERIFY: ~~`multimodal_cache.py` 与各 entrypoint 的串联（多模态 encoder 输出 cache）。~~
